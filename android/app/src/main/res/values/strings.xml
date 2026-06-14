@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">SkinStock</string>
+    <string name="title_activity_main">SkinStock</string>
+    <string name="package_name">com.artjombecker.skinstock</string>
+    <string name="custom_url_scheme">com.artjombecker.skinstock</string>
+</resources>
