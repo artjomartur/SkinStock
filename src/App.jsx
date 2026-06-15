@@ -1,17 +1,16 @@
-import React, { useState, useEffect, useMemo, useRef } from 'react'
-import { createChart } from 'lightweight-charts'
+import { useState, useEffect, useMemo, useRef, useCallback } from 'react'
+import { createChart, CandlestickSeries } from 'lightweight-charts'
+
+const lang = typeof navigator !== 'undefined' && navigator.language && navigator.language.startsWith('de') ? 'de' : 'en';
 import { 
   TrendingUp, 
   TrendingDown, 
   Wallet, 
   Bell, 
   History, 
-  ArrowUpRight, 
-  ArrowDownRight, 
   Activity,
   Plus,
-  Trash2,
-  AlertTriangle
+  Trash2
 } from 'lucide-react'
 import './App.css'
 
@@ -187,7 +186,7 @@ function SkinChart({ data, currentPrice }) {
     })
     chartRef.current = chart
 
-    const candlestickSeries = chart.addCandlestickSeries({
+    const candlestickSeries = chart.addSeries(CandlestickSeries, {
       upColor: '#00ff66',
       downColor: '#ff3b30',
       borderUpColor: '#00ff66',
@@ -256,6 +255,48 @@ export default function App() {
     return skins.find((s) => s.id === selectedSkinId)
   }, [skins, selectedSkinId])
 
+  const playAlertSoundNotification = useCallback((skinName, type, target, currentPrice) => {
+    playTradeSound('alert')
+    const id = Date.now() + Math.random()
+    const msg = type === 'above' 
+      ? `Stieg über €${target.toFixed(2)} (Aktuell: €${currentPrice.toFixed(2)})`
+      : `Fiel unter €${target.toFixed(2)} (Aktuell: €${currentPrice.toFixed(2)})`
+    
+    setToasts((prev) => [...prev, { id, skinName, msg }])
+    
+    setTimeout(() => {
+      setToasts((prev) => prev.filter((t) => t.id !== id))
+    }, 4000)
+  }, [])
+
+  const checkPriceAlerts = useCallback((skinId, price, skinName) => {
+    setAlerts((prevAlerts) => {
+      const triggered = []
+      const remaining = []
+
+      prevAlerts.forEach((alert) => {
+        if (alert.skinId === skinId) {
+          if (alert.type === 'above' && price >= alert.target) {
+            triggered.push(alert)
+          } else if (alert.type === 'below' && price <= alert.target) {
+            triggered.push(alert)
+          } else {
+            remaining.push(alert)
+          }
+        } else {
+          remaining.push(alert)
+        }
+      })
+
+      triggered.forEach((alert) => {
+        // Trigger Toast & Play Sound
+        playAlertSoundNotification(skinName, alert.type, alert.target, price)
+      })
+
+      return remaining
+    })
+  }, [playAlertSoundNotification])
+
   // Price Simulation loop
   useEffect(() => {
     const interval = setInterval(() => {
@@ -295,49 +336,7 @@ export default function App() {
     }, 3000)
 
     return () => clearInterval(interval)
-  }, [alerts])
-
-  const checkPriceAlerts = (skinId, price, skinName) => {
-    setAlerts((prevAlerts) => {
-      const triggered = []
-      const remaining = []
-
-      prevAlerts.forEach((alert) => {
-        if (alert.skinId === skinId) {
-          if (alert.type === 'above' && price >= alert.target) {
-            triggered.push(alert)
-          } else if (alert.type === 'below' && price <= alert.target) {
-            triggered.push(alert)
-          } else {
-            remaining.push(alert)
-          }
-        } else {
-          remaining.push(alert)
-        }
-      })
-
-      triggered.forEach((alert) => {
-        // Trigger Toast & Play Sound
-        playAlertSoundNotification(skinName, alert.type, alert.target, price)
-      })
-
-      return remaining
-    })
-  }
-
-  const playAlertSoundNotification = (skinName, type, target, currentPrice) => {
-    playTradeSound('alert')
-    const id = Date.now() + Math.random()
-    const msg = type === 'above' 
-      ? `Stieg über €${target.toFixed(2)} (Aktuell: €${currentPrice.toFixed(2)})`
-      : `Fiel unter €${target.toFixed(2)} (Aktuell: €${currentPrice.toFixed(2)})`
-    
-    setToasts((prev) => [...prev, { id, skinName, msg }])
-    
-    setTimeout(() => {
-      setToasts((prev) => prev.filter((t) => t.id !== id))
-    }, 4000)
-  }
+  }, [checkPriceAlerts])
 
   // Trading actions
   const handleBuy = () => {
@@ -462,10 +461,6 @@ export default function App() {
     }
   }, [holdings, skins, balance])
 
-  const maxAffordableQty = useMemo(() => {
-    if (!selectedSkin) return 0
-    return Math.floor(balance / selectedSkin.price)
-  }, [balance, selectedSkin])
 
   const holdingQty = useMemo(() => {
     return holdings[selectedSkinId]?.qty || 0
@@ -655,7 +650,7 @@ export default function App() {
                       <div className="skin-info-right">
                         <span className="skin-price">€{currentVal.toFixed(2)}</span>
                         <span className={`pnl-badge ${itemPnl >= 0 ? 'pnl-badge--up' : 'pnl-badge--down'}`}>
-                          {itemPnl >= 0 ? '+' : ''}€{itemPnl.toFixed(2)}
+                          {itemPnl >= 0 ? '+' : ''}€{itemPnl.toFixed(2)} ({itemPnlPct}%)
                         </span>
                       </div>
                     </div>
