@@ -245,7 +245,7 @@ function SkinChart({ data, currentPrice, isPositive }) {
 
 export default function App() {
   const [activeTab, setActiveTab] = useState('market') // 'market' | 'portfolio' | 'alerts'
-  const [skins, setSkins] = useState(INITIAL_SKINS)
+  const [skins, setSkins] = useState([])
   const [realInventoryItems, setRealInventoryItems] = useState(() => {
     try {
       const stored = localStorage.getItem('skinstock_real_inventory')
@@ -460,6 +460,26 @@ export default function App() {
     playTradeSound('sell')
   }, [])
 
+  // Add item to watchlist
+  const handleAddToWatchlist = useCallback((item) => {
+    setSkins((prev) => {
+      if (prev.some(s => s.id === item.id)) return prev
+      const updated = [...prev, {
+        id: item.id,
+        name: item.name,
+        marketHashName: item.marketHashName,
+        wear: item.wear,
+        price: item.price,
+        basePrice: item.basePrice,
+        prevPrice: item.prevPrice,
+        change: item.change,
+        img: item.img
+      }]
+      return updated
+    })
+    playTradeSound('buy')
+  }, [])
+
   // Fresh prices fetch on mount for real inventory
   useEffect(() => {
     if (realInventoryItems.length > 0) {
@@ -504,10 +524,23 @@ export default function App() {
   }, [realInventoryItems])
 
   const selectedSkin = useMemo(() => {
+    let found = null
     if (selectedSkinId.startsWith('real-')) {
-      return realInventoryItems.find((s) => s.id === selectedSkinId)
+      found = realInventoryItems.find((s) => s.id === selectedSkinId)
+    } else {
+      found = skins.find((s) => s.id === selectedSkinId)
     }
-    return skins.find((s) => s.id === selectedSkinId)
+    return found || {
+      id: 'none',
+      name: lang === 'de' ? 'Kein Item ausgewählt' : 'No Item Selected',
+      price: 0,
+      basePrice: 0,
+      prevPrice: 0,
+      change: 0,
+      wear: '',
+      qty: 0,
+      img: ''
+    }
   }, [skins, selectedSkinId, realInventoryItems])
 
   const playAlertSoundNotification = useCallback((skinName, type, target, currentPrice) => {
@@ -757,6 +790,16 @@ export default function App() {
                       {((selectedSkin.price - selectedSkin.basePrice) * selectedSkin.qty).toFixed(2)}€ ({selectedSkin.basePrice > 0 ? (((selectedSkin.price - selectedSkin.basePrice) / selectedSkin.basePrice * 100).toFixed(2)) : 0}%)
                     </span>
                   </div>
+                  {!skins.some(s => s.id === selectedSkin.id) && (
+                    <button 
+                      onClick={() => handleAddToWatchlist(selectedSkin)}
+                      className="steam-import-btn"
+                      style={{ marginTop: '12px', height: '36px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', fontSize: '12px' }}
+                    >
+                      <Plus size={14} />
+                      {lang === 'de' ? 'Zu Beobachtungsliste hinzufügen' : 'Add to Watchlist'}
+                    </button>
+                  )}
                 </div>
               </div>
             ) : (
@@ -807,31 +850,51 @@ export default function App() {
                 </span>
               </div>
               <div className="watchlist">
-                {skins.map((skin) => (
-                  <div 
-                    key={skin.id} 
-                    className={`skin-row ${selectedSkinId === skin.id ? 'skin-row--selected' : ''} ${flashStates[skin.id] === 'up' ? 'flash-up' : flashStates[skin.id] === 'down' ? 'flash-down' : ''}`}
-                    onClick={() => {
-                      setSelectedSkinId(skin.id)
-                    }}
-                  >
-                    <div className="skin-info-left">
-                      <div className="skin-icon-container">
-                        <img src={skin.img} alt={skin.name} className="skin-img" />
-                      </div>
-                      <div className="skin-meta">
-                        <span className="skin-name">{skin.name}</span>
-                        <span className="skin-wear-badge">Float: {skin.wear}</span>
-                      </div>
-                    </div>
-                    <div className="skin-info-right">
-                      <span className="skin-price">€{skin.price.toFixed(2)}</span>
-                      <span className={`skin-change ${skin.change >= 0 ? 'price-up' : 'price-down'}`}>
-                        {skin.change >= 0 ? '+' : ''}{skin.change}%
-                      </span>
-                    </div>
+                {skins.length === 0 ? (
+                  <div className="empty-state">
+                    {lang === 'de' 
+                      ? 'Deine Beobachtungsliste ist leer. Tippe im Depot auf ein Item und füge es hinzu.' 
+                      : 'Your watchlist is empty. Tap an item in the Depot to add it here.'}
                   </div>
-                ))}
+                ) : (
+                  skins.map((skin) => (
+                    <div 
+                      key={skin.id} 
+                      className={`skin-row ${selectedSkinId === skin.id ? 'skin-row--selected' : ''} ${flashStates[skin.id] === 'up' ? 'flash-up' : flashStates[skin.id] === 'down' ? 'flash-down' : ''}`}
+                      onClick={() => {
+                        setSelectedSkinId(skin.id)
+                      }}
+                    >
+                      <div className="skin-info-left">
+                        <div className="skin-icon-container">
+                          <img src={skin.img} alt={skin.name} className="skin-img" />
+                        </div>
+                        <div className="skin-meta">
+                          <span className="skin-name">{skin.name}</span>
+                          <span className="skin-wear-badge">Float: {skin.wear}</span>
+                        </div>
+                      </div>
+                      <div className="skin-info-right">
+                        <span className="skin-price">€{skin.price.toFixed(2)}</span>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                          <span className={`skin-change ${skin.change >= 0 ? 'price-up' : 'price-down'}`}>
+                            {skin.change >= 0 ? '+' : ''}{skin.change.toFixed(2)}%
+                          </span>
+                          <button 
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              setSkins(prev => prev.filter(s => s.id !== skin.id))
+                            }}
+                            className="alert-delete-btn"
+                            style={{ padding: '2px', border: 'none', background: 'transparent' }}
+                          >
+                            <Trash2 size={14} />
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  ))
+                )}
               </div>
             </div>
           </div>
