@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo, useRef, useCallback } from 'react'
-import { createChart, CandlestickSeries } from 'lightweight-charts'
+import { createChart, AreaSeries } from 'lightweight-charts'
 
 const lang = typeof navigator !== 'undefined' && navigator.language && navigator.language.startsWith('de') ? 'de' : 'en';
 import { 
@@ -154,7 +154,7 @@ function playTradeSound(type) {
 }
 
 // Chart Component using lightweight-charts
-function SkinChart({ data, currentPrice }) {
+function SkinChart({ data, currentPrice, isPositive }) {
   const chartContainerRef = useRef()
   const seriesRef = useRef()
   const chartRef = useRef()
@@ -165,12 +165,12 @@ function SkinChart({ data, currentPrice }) {
     const chart = createChart(chartContainerRef.current, {
       layout: {
         background: { color: 'transparent' },
-        textColor: '#64748b',
-        fontFamily: 'Outfit, sans-serif'
+        textColor: '#8e8e93',
+        fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif'
       },
       grid: {
-        vertLines: { color: 'rgba(255,255,255,0.01)' },
-        horzLines: { color: 'rgba(255,255,255,0.01)' }
+        vertLines: { visible: false },
+        horzLines: { visible: false }
       },
       timeScale: {
         borderVisible: false
@@ -179,25 +179,45 @@ function SkinChart({ data, currentPrice }) {
         borderVisible: false
       },
       crosshair: {
-        vertLine: { color: 'rgba(0, 240, 255, 0.12)', labelVisible: false },
-        horzLine: { color: 'rgba(0, 240, 255, 0.12)', labelVisible: false }
+        vertLine: {
+          color: 'rgba(255, 255, 255, 0.15)',
+          width: 1,
+          style: 3, // dashed
+          labelVisible: false
+        },
+        horzLine: {
+          visible: false,
+          labelVisible: false
+        }
       },
       width: chartContainerRef.current.clientWidth,
       height: 220
     })
     chartRef.current = chart
 
-    const candlestickSeries = chart.addSeries(CandlestickSeries, {
-      upColor: '#00f0ff',
-      downColor: '#ff2a85',
-      borderUpColor: '#00f0ff',
-      borderDownColor: '#ff2a85',
-      wickUpColor: '#00f0ff',
-      wickDownColor: '#ff2a85'
-    })
-    seriesRef.current = candlestickSeries
+    const isUp = isPositive !== false
+    const lineColor = isUp ? '#00d182' : '#ff3b30'
+    const topColor = isUp ? 'rgba(0, 209, 130, 0.15)' : 'rgba(255, 59, 48, 0.15)'
+    const bottomColor = 'rgba(0, 0, 0, 0.0)'
 
-    candlestickSeries.setData(data)
+    const areaSeries = chart.addSeries(AreaSeries, {
+      lineColor: lineColor,
+      topColor: topColor,
+      bottomColor: bottomColor,
+      lineWidth: 2,
+      priceLineVisible: false,
+      crosshairMarkerVisible: true,
+      crosshairMarkerRadius: 4,
+      crosshairMarkerBorderColor: '#ffffff',
+      crosshairMarkerBackgroundColor: lineColor
+    })
+    seriesRef.current = areaSeries
+
+    const areaData = data.map(item => ({
+      time: item.time,
+      value: item.close
+    }))
+    areaSeries.setData(areaData)
 
     const handleResize = () => {
       chart.applyOptions({ width: chartContainerRef.current.clientWidth })
@@ -208,15 +228,15 @@ function SkinChart({ data, currentPrice }) {
       window.removeEventListener('resize', handleResize)
       chart.remove()
     }
-  }, [data])
+  }, [data, isPositive])
 
   useEffect(() => {
     if (seriesRef.current && data.length > 0 && currentPrice) {
-      const lastCandle = { ...data[data.length - 1] }
-      lastCandle.close = currentPrice
-      if (currentPrice > lastCandle.high) lastCandle.high = currentPrice
-      if (currentPrice < lastCandle.low) lastCandle.low = currentPrice
-      seriesRef.current.update(lastCandle)
+      const lastItem = data[data.length - 1]
+      seriesRef.current.update({
+        time: lastItem.time,
+        value: currentPrice
+      })
     }
   }, [currentPrice, data])
 
@@ -229,7 +249,13 @@ export default function App() {
   const [realInventoryItems, setRealInventoryItems] = useState(() => {
     try {
       const stored = localStorage.getItem('skinstock_real_inventory')
-      return stored ? JSON.parse(stored) : defaultInventory
+      if (stored) {
+        const parsed = JSON.parse(stored)
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          return parsed
+        }
+      }
+      return defaultInventory
     } catch {
       return defaultInventory
     }
@@ -237,7 +263,13 @@ export default function App() {
   const [selectedSkinId, setSelectedSkinId] = useState(() => {
     try {
       const stored = localStorage.getItem('skinstock_real_inventory')
-      const items = stored ? JSON.parse(stored) : defaultInventory
+      let items = defaultInventory
+      if (stored) {
+        const parsed = JSON.parse(stored)
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          items = parsed
+        }
+      }
       return items && items.length > 0 ? items[0].id : 'ak47-redline'
     } catch {
       return 'ak47-redline'
@@ -681,25 +713,20 @@ export default function App() {
       <main className="app-content scrollbar-hide">
         {activeTab === 'market' && (
           <div className="market-view">
-            {/* Candlestick Chart */}
+            {/* Smooth Line Chart */}
             <div className="chart-card">
-              <div className="chart-header">
-                <div className="chart-title-group">
-                  <h3 className="chart-title">{selectedSkin.name}</h3>
-                  <span className="chart-sub">{lang === 'de' ? 'TradingView Lightweight Chart' : 'TradingView Charts'}</span>
-                </div>
-                <div className="chart-price-group">
-                  <span className="chart-price">€{selectedSkin.price.toFixed(2)}</span>
-                  <span className={`skin-change ${selectedSkin.change >= 0 ? 'price-up' : 'price-down'}`}>
-                    {selectedSkin.change >= 0 ? <TrendingUp size={12} /> : <TrendingDown size={12} />}
-                    {selectedSkin.change >= 0 ? '+' : ''}{selectedSkin.change}%
-                  </span>
+              <div className="chart-header-tr">
+                <h3 className="chart-title-tr">{selectedSkin.name}</h3>
+                <div className="chart-price-tr">€{selectedSkin.price.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
+                <div className={`chart-change-tr ${selectedSkin.change >= 0 ? 'price-up' : 'price-down'}`}>
+                  {selectedSkin.change >= 0 ? '+' : ''}{selectedSkin.change.toFixed(2)}% {lang === 'de' ? 'Heute' : 'Today'}
                 </div>
               </div>
               <div className="chart-body-container">
                 <SkinChart 
                   data={historicalDataMap[selectedSkinId]} 
                   currentPrice={selectedSkin.price} 
+                  isPositive={selectedSkin.change >= 0}
                 />
               </div>
             </div>
@@ -885,16 +912,11 @@ export default function App() {
               <>
                 {/* Real Inventory Summary Card */}
                 <div className="portfolio-summary">
-                  <div className="stat-item">
-                    <span className="stat-label">{lang === 'de' ? 'Gesamtwert' : 'Total Net Worth'}</span>
-                    <span className="stat-value">€{realInventorySummary.totalValue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
-                  </div>
-                  <div className="stat-item" style={{ alignItems: 'flex-end' }}>
-                    <span className="stat-label">{lang === 'de' ? 'Entwicklung seit Import' : 'Return since import'}</span>
-                    <span className={`stat-value ${realInventorySummary.pnlVal >= 0 ? 'pnl-positive' : 'pnl-negative'}`}>
-                      {realInventorySummary.pnlVal >= 0 ? '+' : ''}€{realInventorySummary.pnlVal.toFixed(2)} ({realInventorySummary.pnlPct}%)
-                    </span>
-                  </div>
+                  <span className="stat-label-tr">{lang === 'de' ? 'Gesamtwert' : 'Total Net Worth'}</span>
+                  <span className="stat-value-tr">€{realInventorySummary.totalValue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                  <span className={`stat-change-tr ${realInventorySummary.pnlVal >= 0 ? 'pnl-positive' : 'pnl-negative'}`}>
+                    {realInventorySummary.pnlVal >= 0 ? '+' : ''}€{realInventorySummary.pnlVal.toFixed(2)} ({realInventorySummary.pnlPct}%) {lang === 'de' ? 'Gesamt' : 'Total'}
+                  </span>
                 </div>
 
                 <div className="section-header">
