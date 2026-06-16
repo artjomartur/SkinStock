@@ -13,6 +13,7 @@ import {
   AlertTriangle
 } from 'lucide-react'
 import './App.css'
+import defaultInventory from './defaultInventory.json'
 
 // Initial skins list
 const INITIAL_SKINS = [
@@ -164,12 +165,12 @@ function SkinChart({ data, currentPrice }) {
     const chart = createChart(chartContainerRef.current, {
       layout: {
         background: { color: 'transparent' },
-        textColor: '#94a3b8',
+        textColor: '#64748b',
         fontFamily: 'Outfit, sans-serif'
       },
       grid: {
-        vertLines: { color: 'rgba(255,255,255,0.02)' },
-        horzLines: { color: 'rgba(255,255,255,0.02)' }
+        vertLines: { color: 'rgba(255,255,255,0.01)' },
+        horzLines: { color: 'rgba(255,255,255,0.01)' }
       },
       timeScale: {
         borderVisible: false
@@ -178,8 +179,8 @@ function SkinChart({ data, currentPrice }) {
         borderVisible: false
       },
       crosshair: {
-        vertLine: { color: 'rgba(0, 255, 102, 0.15)', labelVisible: false },
-        horzLine: { color: 'rgba(0, 255, 102, 0.15)', labelVisible: false }
+        vertLine: { color: 'rgba(0, 240, 255, 0.12)', labelVisible: false },
+        horzLine: { color: 'rgba(0, 240, 255, 0.12)', labelVisible: false }
       },
       width: chartContainerRef.current.clientWidth,
       height: 220
@@ -187,12 +188,12 @@ function SkinChart({ data, currentPrice }) {
     chartRef.current = chart
 
     const candlestickSeries = chart.addSeries(CandlestickSeries, {
-      upColor: '#00ff66',
-      downColor: '#ff3b30',
-      borderUpColor: '#00ff66',
-      borderDownColor: '#ff3b30',
-      wickUpColor: '#00ff66',
-      wickDownColor: '#ff3b30'
+      upColor: '#00f0ff',
+      downColor: '#ff2a85',
+      borderUpColor: '#00f0ff',
+      borderDownColor: '#ff2a85',
+      wickUpColor: '#00f0ff',
+      wickDownColor: '#ff2a85'
     })
     seriesRef.current = candlestickSeries
 
@@ -225,18 +226,27 @@ function SkinChart({ data, currentPrice }) {
 export default function App() {
   const [activeTab, setActiveTab] = useState('market') // 'market' | 'portfolio' | 'alerts'
   const [skins, setSkins] = useState(INITIAL_SKINS)
-  const [selectedSkinId, setSelectedSkinId] = useState('ak47-redline')
+  const [realInventoryItems, setRealInventoryItems] = useState(() => {
+    try {
+      const stored = localStorage.getItem('skinstock_real_inventory')
+      return stored ? JSON.parse(stored) : defaultInventory
+    } catch {
+      return defaultInventory
+    }
+  })
+  const [selectedSkinId, setSelectedSkinId] = useState(() => {
+    try {
+      const stored = localStorage.getItem('skinstock_real_inventory')
+      const items = stored ? JSON.parse(stored) : defaultInventory
+      return items && items.length > 0 ? items[0].id : 'ak47-redline'
+    } catch {
+      return 'ak47-redline'
+    }
+  })
   const [flashStates, setFlashStates] = useState({}) // skinId -> 'up' | 'down'
   
   // Real Steam Inventory state
-  const [steamIdInput, setSteamIdInput] = useState(() => localStorage.getItem('skinstock_steam_id') || '')
-  const [realInventoryItems, setRealInventoryItems] = useState(() => {
-    try {
-      return JSON.parse(localStorage.getItem('skinstock_real_inventory')) || []
-    } catch {
-      return []
-    }
-  })
+  const [steamIdInput, setSteamIdInput] = useState(() => localStorage.getItem('skinstock_steam_id') || '76561198308463275')
   const [isFetchingInventory, setIsFetchingInventory] = useState(false)
   const [inventoryError, setInventoryError] = useState('')
   const [showManualImport, setShowManualImport] = useState(false)
@@ -254,7 +264,7 @@ export default function App() {
     if (pricesDb) return pricesDb
     setLoadingPrices(true)
     try {
-      const res = await fetch('https://prices.csgotrader.app/latest/prices_v6.json')
+      const res = await fetch('https://prices.csgotrader.app/latest/steam.json')
       const data = await res.json()
       setPricesDb(data)
       setLoadingPrices(false)
@@ -315,7 +325,7 @@ export default function App() {
       let price = 0
       if (prices && prices[hashName]) {
         const itemPrices = prices[hashName]
-        price = itemPrices.steam?.last_24h || itemPrices.steam?.suggested || itemPrices.buff163?.starting_at || itemPrices.bitskins?.price || 0
+        price = itemPrices.last_24h || itemPrices.last_7d || itemPrices.last_30d || itemPrices.last_90d || 0
       }
       
       if (!price) {
@@ -429,7 +439,7 @@ export default function App() {
                 const hashName = item.marketHashName
                 if (prices[hashName]) {
                   const itemPrices = prices[hashName]
-                  const price = itemPrices.steam?.last_24h || itemPrices.steam?.suggested || itemPrices.buff163?.starting_at || itemPrices.bitskins?.price || item.price
+                  const price = itemPrices.last_24h || itemPrices.last_7d || itemPrices.last_30d || itemPrices.last_90d || item.price
                   return {
                     ...item,
                     price: parseFloat(price.toFixed(2)),
@@ -659,7 +669,7 @@ export default function App() {
           ) : (
             <>
               <span className="balance-label">{lang === 'de' ? 'Status' : 'Status'}</span>
-              <span className="balance-amount" style={{ color: '#ef4444', textShadow: 'none', fontSize: '13px', fontWeight: '600' }}>
+              <span className="balance-amount" style={{ color: 'var(--color-red)', textShadow: 'none', fontSize: '13px', fontWeight: '600' }}>
                 {lang === 'de' ? 'Nicht verbunden' : 'Not Connected'}
               </span>
             </>
@@ -711,7 +721,7 @@ export default function App() {
                   </div>
                   <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px', fontSize: '13px' }}>
                     <span style={{ color: '#94a3b8' }}>{lang === 'de' ? 'Aktueller Marktwert:' : 'Current Market Value:'}</span>
-                    <span style={{ fontWeight: '600', color: '#00ff66' }}>€{(selectedSkin.price * selectedSkin.qty).toFixed(2)}</span>
+                    <span style={{ fontWeight: '600', color: 'var(--color-green)' }}>€{(selectedSkin.price * selectedSkin.qty).toFixed(2)}</span>
                   </div>
                   <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px' }}>
                     <span style={{ color: '#94a3b8' }}>{lang === 'de' ? 'Wertentwicklung:' : 'Return:'}</span>
@@ -994,8 +1004,8 @@ export default function App() {
                       />
                     </div>
                   </div>
-                  <button type="submit" className="sandbox-btn" style={{ margin: '8px 0 0 0', width: '100%', height: '40px', background: 'linear-gradient(135deg, #ffb700 0%, #ff9500 100%)', boxShadow: '0 4px 15px rgba(255, 183, 0, 0.25)' }}>
-                    <Plus size={16} style={{ marginRight: '4px', verticalAlign: 'middle' }} />
+                  <button type="submit" className="steam-import-btn" style={{ margin: '8px 0 0 0', height: '40px', padding: '0', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}>
+                    <Plus size={16} />
                     {lang === 'de' ? 'Alert hinzufügen' : 'Add Alert'}
                   </button>
                 </div>
