@@ -191,7 +191,7 @@ function SkinChart({ data, currentPrice, isPositive }) {
         }
       },
       width: chartContainerRef.current.clientWidth,
-      height: 220
+      height: chartContainerRef.current.clientHeight || 180
     })
     chartRef.current = chart
 
@@ -240,7 +240,7 @@ function SkinChart({ data, currentPrice, isPositive }) {
     }
   }, [currentPrice, data])
 
-  return <div ref={chartContainerRef} style={{ width: '100%', height: '220px' }} />
+  return <div ref={chartContainerRef} className="chart-canvas" />
 }
 
 export default function App() {
@@ -369,6 +369,10 @@ export default function App() {
       const desc = data.descriptions.find(d => d.market_hash_name === hashName)
       if (!desc) return
 
+      // Check if item is marketable/tradable via Steam API flags
+      const isMarketable = desc.marketable === 1
+      const isTradable = desc.tradable === 1
+
       const count = itemCounts[hashName] || 1
       
       let price = 0
@@ -394,8 +398,17 @@ export default function App() {
         prevPrice: parseFloat(price.toFixed(2)),
         change: 0,
         qty: count,
+        marketable: isMarketable,
+        tradable: isTradable,
         img: desc.icon_url ? `https://community.cloudflare.steamstatic.com/economy/image/${desc.icon_url}/360fx360f` : ''
       })
+    })
+
+    // Sort: marketable items first, then non-marketable
+    parsedItems.sort((a, b) => {
+      if (a.marketable && !b.marketable) return -1
+      if (!a.marketable && b.marketable) return 1
+      return b.price * b.qty - a.price * a.qty
     })
 
     return parsedItems
@@ -705,10 +718,18 @@ export default function App() {
   const realInventorySummary = useMemo(() => {
     let holdingsValue = 0
     let totalInvested = 0
+    let marketableValue = 0
+    let nonMarketableCount = 0
 
     realInventoryItems.forEach((item) => {
-      holdingsValue += item.price * item.qty
+      const itemVal = item.price * item.qty
+      holdingsValue += itemVal
       totalInvested += item.basePrice * item.qty
+      if (item.marketable !== false) {
+        marketableValue += itemVal
+      } else {
+        nonMarketableCount += item.qty
+      }
     })
 
     const pnlVal = parseFloat((holdingsValue - totalInvested).toFixed(2))
@@ -716,6 +737,8 @@ export default function App() {
 
     return {
       totalValue: parseFloat(holdingsValue.toFixed(2)),
+      marketableValue: parseFloat(marketableValue.toFixed(2)),
+      nonMarketableCount,
       pnlVal,
       pnlPct
     }
@@ -852,6 +875,14 @@ export default function App() {
                       <span style={{ fontWeight: '600', color: selectedSkin.price >= selectedSkin.basePrice ? 'var(--color-green)' : 'var(--color-red)' }}>
                         {selectedSkin.price >= selectedSkin.basePrice ? '+' : ''}
                         {((selectedSkin.price - selectedSkin.basePrice) * selectedSkin.qty).toFixed(2)}€ ({selectedSkin.basePrice > 0 ? (((selectedSkin.price - selectedSkin.basePrice) / selectedSkin.basePrice * 100).toFixed(2)) : 0}%)
+                      </span>
+                    </div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '8px', fontSize: '13px', paddingTop: '8px', borderTop: '1px solid rgba(255,255,255,0.05)' }}>
+                      <span style={{ color: '#94a3b8' }}>{lang === 'de' ? 'Verkaufbar:' : 'Marketable:'}</span>
+                      <span style={{ fontWeight: '600', color: selectedSkin.marketable !== false ? 'var(--color-green)' : 'var(--color-red)' }}>
+                        {selectedSkin.marketable !== false 
+                          ? (lang === 'de' ? '✓ Ja' : '✓ Yes') 
+                          : (lang === 'de' ? '✗ Nein' : '✗ No')}
                       </span>
                     </div>
                     {!skins.some(s => s.id === selectedSkin.id) && (
@@ -1048,6 +1079,16 @@ export default function App() {
                     <span className={`stat-change-tr ${realInventorySummary.pnlVal >= 0 ? 'pnl-positive' : 'pnl-negative'}`}>
                       {realInventorySummary.pnlVal >= 0 ? '+' : ''}€{realInventorySummary.pnlVal.toFixed(2)} ({realInventorySummary.pnlPct}%) {lang === 'de' ? 'Gesamt' : 'Total'}
                     </span>
+                    {realInventorySummary.nonMarketableCount > 0 && (
+                      <div className="portfolio-marketable-info">
+                        <span className="marketable-value">
+                          {lang === 'de' ? 'Verkaufbar:' : 'Marketable:'} €{realInventorySummary.marketableValue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                        </span>
+                        <span className="non-marketable-count">
+                          {realInventorySummary.nonMarketableCount} {lang === 'de' ? 'Items nicht verkaufbar' : 'items not marketable'}
+                        </span>
+                      </div>
+                    )}
                   </div>
 
                   {/* Selected Skin Chart (Desktop Only) */}
@@ -1149,10 +1190,18 @@ export default function App() {
                           <div className="skin-info-left">
                             <div className="skin-icon-container">
                               <img src={item.img} alt={item.name} className="skin-img" />
+                              {item.marketable === false && (
+                                <span className="not-marketable-dot" title={lang === 'de' ? 'Nicht verkaufbar' : 'Not marketable'} />
+                              )}
                             </div>
                             <div className="skin-meta">
                               <span className="skin-name">{item.name}</span>
-                              <span className="qty-label">{item.qty}x • {item.wear}</span>
+                              <span className="qty-label">
+                                {item.qty}x • {item.wear}
+                                {item.marketable === false && (
+                                  <span className="not-marketable-tag">{lang === 'de' ? ' • Nicht verkaufbar' : ' • Not marketable'}</span>
+                                )}
+                              </span>
                             </div>
                           </div>
                           <div className="skin-info-right">
