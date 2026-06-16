@@ -79,3 +79,29 @@ body {
   -ms-overflow-style: none;
   scrollbar-width: none;
 }
+
+@media (min-width: 768px) {
+  body {
+    background-color: #000000 !important;
+  }
+  #root {
+    max-width: 1440px;
+    margin: 0 auto;
+    border: none;
+    background-color: #000000;
+    box-shadow: none;
+    position: relative;
+    width: 100vw;
+    height: 100vh;
+    height: 100svh;
+  }
+  .toast-container {
+    max-width: 400px;
+    right: 24px;
+    left: auto;
+    transform: none;
+  }
+  .modal-overlay {
+    background: rgba(0, 0, 0, 0.7);
+  }
+}

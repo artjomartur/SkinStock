@@ -245,7 +245,24 @@ function SkinChart({ data, currentPrice, isPositive }) {
 
 export default function App() {
   const [activeTab, setActiveTab] = useState('market') // 'market' | 'portfolio' | 'alerts'
-  const [skins, setSkins] = useState([])
+  const [skins, setSkins] = useState(() => {
+    try {
+      const stored = localStorage.getItem('skinstock_watchlist')
+      if (stored) {
+        const parsed = JSON.parse(stored)
+        if (Array.isArray(parsed)) {
+          return parsed
+        }
+      }
+      return []
+    } catch {
+      return []
+    }
+  })
+
+  useEffect(() => {
+    localStorage.setItem('skinstock_watchlist', JSON.stringify(skins))
+  }, [skins])
   const [realInventoryItems, setRealInventoryItems] = useState(() => {
     try {
       const stored = localStorage.getItem('skinstock_real_inventory')
@@ -719,8 +736,54 @@ export default function App() {
         ))}
       </div>
 
-      {/* Header */}
-      <header className="app-header">
+      {/* Sidebar for Desktop */}
+      <aside className="app-sidebar">
+        <div className="sidebar-logo">
+          <Activity className="logo-icon" size={24} />
+          <span className="logo-text">SkinStock</span>
+        </div>
+        
+        <nav className="sidebar-nav">
+          <button 
+            className={`sidebar-nav-btn ${activeTab === 'market' ? 'active' : ''}`}
+            onClick={() => setActiveTab('market')}
+          >
+            <Activity size={20} />
+            <span>Ticker</span>
+          </button>
+          <button 
+            className={`sidebar-nav-btn ${activeTab === 'portfolio' ? 'active' : ''}`}
+            onClick={() => setActiveTab('portfolio')}
+          >
+            <Wallet size={20} />
+            <span>{lang === 'de' ? 'Depot' : 'Portfolio'}</span>
+          </button>
+          <button 
+            className={`sidebar-nav-btn ${activeTab === 'alerts' ? 'active' : ''}`}
+            onClick={() => setActiveTab('alerts')}
+          >
+            <Bell size={20} />
+            <span>Alarme</span>
+          </button>
+        </nav>
+
+        <div className="sidebar-footer">
+          {realInventoryItems.length > 0 ? (
+            <div className="sidebar-balance">
+              <span className="balance-label">{lang === 'de' ? 'Inventarwert' : 'Inventory Value'}</span>
+              <span className="balance-amount">€{realInventorySummary.totalValue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+            </div>
+          ) : (
+            <div className="sidebar-status-tag">
+              {lang === 'de' ? 'Nicht verbunden' : 'Not Connected'}
+            </div>
+          )}
+        </div>
+      </aside>
+
+      <div className="app-main-wrapper">
+        {/* Header */}
+        <header className="app-header">
         <div className="logo-group">
           <Activity className="logo-icon" size={24} />
           <h1 className="logo-text">SkinStock</h1>
@@ -745,104 +808,106 @@ export default function App() {
       {/* App Content */}
       <main className="app-content scrollbar-hide">
         {activeTab === 'market' && (
-          <div className="market-view">
-            {/* Smooth Line Chart */}
-            <div className="chart-card">
-              <div className="chart-header-tr">
-                <h3 className="chart-title-tr">{selectedSkin.name}</h3>
-                <div className="chart-price-tr">€{selectedSkin.price.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
-                <div className={`chart-change-tr ${selectedSkin.change >= 0 ? 'price-up' : 'price-down'}`}>
-                  {selectedSkin.change >= 0 ? '+' : ''}{selectedSkin.change.toFixed(2)}% {lang === 'de' ? 'Heute' : 'Today'}
+          <div className="market-view layout-split">
+            <div className="layout-main">
+              {/* Smooth Line Chart */}
+              <div className="chart-card">
+                <div className="chart-header-tr">
+                  <h3 className="chart-title-tr">{selectedSkin.name}</h3>
+                  <div className="chart-price-tr">€{selectedSkin.price.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
+                  <div className={`chart-change-tr ${selectedSkin.change >= 0 ? 'price-up' : 'price-down'}`}>
+                    {selectedSkin.change >= 0 ? '+' : ''}{selectedSkin.change.toFixed(2)}% {lang === 'de' ? 'Heute' : 'Today'}
+                  </div>
+                </div>
+                <div className="chart-body-container">
+                  <SkinChart 
+                    data={historicalDataMap[selectedSkinId]} 
+                    currentPrice={selectedSkin.price} 
+                    isPositive={selectedSkin.change >= 0}
+                  />
                 </div>
               </div>
-              <div className="chart-body-container">
-                <SkinChart 
-                  data={historicalDataMap[selectedSkinId]} 
-                  currentPrice={selectedSkin.price} 
-                  isPositive={selectedSkin.change >= 0}
-                />
-              </div>
+
+              {/* Trade Execution Panel or Real Steam Position details */}
+              {selectedSkinId.startsWith('real-') ? (
+                <div className="trade-box">
+                  <h4 className="section-title" style={{ fontSize: '15px', marginBottom: '12px' }}>
+                    {lang === 'de' ? 'Echte Steam-Position' : 'Real Steam Position'}
+                  </h4>
+                  <div style={{ background: 'rgba(255,255,255,0.03)', borderRadius: '12px', padding: '14px', border: '1px solid rgba(255,255,255,0.05)' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px', fontSize: '13px' }}>
+                      <span style={{ color: '#94a3b8' }}>{lang === 'de' ? 'Menge im Inventar:' : 'Amount in Inventory:'}</span>
+                      <span style={{ fontWeight: '600' }}>{selectedSkin.qty}x</span>
+                    </div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px', fontSize: '13px' }}>
+                      <span style={{ color: '#94a3b8' }}>{lang === 'de' ? 'Einstandswert:' : 'Acquisition Value:'}</span>
+                      <span style={{ fontWeight: '600' }}>€{(selectedSkin.basePrice * selectedSkin.qty).toFixed(2)}</span>
+                    </div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px', fontSize: '13px' }}>
+                      <span style={{ color: '#94a3b8' }}>{lang === 'de' ? 'Aktueller Marktwert:' : 'Current Market Value:'}</span>
+                      <span style={{ fontWeight: '600', color: 'var(--color-green)' }}>€{(selectedSkin.price * selectedSkin.qty).toFixed(2)}</span>
+                    </div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px' }}>
+                      <span style={{ color: '#94a3b8' }}>{lang === 'de' ? 'Wertentwicklung:' : 'Return:'}</span>
+                      <span style={{ fontWeight: '600', color: selectedSkin.price >= selectedSkin.basePrice ? 'var(--color-green)' : 'var(--color-red)' }}>
+                        {selectedSkin.price >= selectedSkin.basePrice ? '+' : ''}
+                        {((selectedSkin.price - selectedSkin.basePrice) * selectedSkin.qty).toFixed(2)}€ ({selectedSkin.basePrice > 0 ? (((selectedSkin.price - selectedSkin.basePrice) / selectedSkin.basePrice * 100).toFixed(2)) : 0}%)
+                      </span>
+                    </div>
+                    {!skins.some(s => s.id === selectedSkin.id) && (
+                      <button 
+                        onClick={() => handleAddToWatchlist(selectedSkin)}
+                        className="steam-import-btn"
+                        style={{ marginTop: '12px', height: '36px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', fontSize: '12px' }}
+                      >
+                        <Plus size={14} />
+                        {lang === 'de' ? 'Zu Beobachtungsliste hinzufügen' : 'Add to Watchlist'}
+                      </button>
+                    )}
+                  </div>
+                </div>
+              ) : (
+                <div className="trade-box">
+                  <h4 className="section-title" style={{ fontSize: '15px', marginBottom: '12px' }}>
+                    {lang === 'de' ? 'Preis-Alarm einrichten' : 'Set Price Alert'}
+                  </h4>
+                  <form onSubmit={handleAddAlert}>
+                    <div style={{ display: 'flex', gap: '12px', marginBottom: '12px' }}>
+                      <div className="trade-input-group" style={{ flex: 1 }}>
+                        <label>{lang === 'de' ? 'Bedingung' : 'Condition'}</label>
+                        <select 
+                          className="trade-input" 
+                          value={alertType}
+                          onChange={(e) => setAlertType(e.target.value)}
+                          style={{ height: '38px', padding: '0 8px' }}
+                        >
+                          <option value="above">{lang === 'de' ? 'Steigt über (>=)' : 'Rises above (>=)'}</option>
+                          <option value="below">{lang === 'de' ? 'Fällt unter (<=)' : 'Drops below (<=)'}</option>
+                        </select>
+                      </div>
+                      <div className="trade-input-group" style={{ flex: 1 }}>
+                        <label>{lang === 'de' ? 'Zielpreis (€)' : 'Target Price (€)'}</label>
+                        <input 
+                          type="number" 
+                          step="0.01"
+                          placeholder="e.g. 19.50"
+                          className="trade-input" 
+                          value={alertTargetPrice}
+                          onChange={(e) => setAlertTargetPrice(e.target.value)}
+                        />
+                      </div>
+                    </div>
+                    <button type="submit" className="steam-import-btn" style={{ height: '40px', padding: '0', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}>
+                      <Plus size={16} />
+                      {lang === 'de' ? 'Alarm hinzufügen' : 'Add Alert'}
+                    </button>
+                  </form>
+                </div>
+              )}
             </div>
 
-            {/* Trade Execution Panel or Real Steam Position details */}
-            {selectedSkinId.startsWith('real-') ? (
-              <div className="trade-box">
-                <h4 className="section-title" style={{ fontSize: '15px', marginBottom: '12px' }}>
-                  {lang === 'de' ? 'Echte Steam-Position' : 'Real Steam Position'}
-                </h4>
-                <div style={{ background: 'rgba(255,255,255,0.03)', borderRadius: '12px', padding: '14px', border: '1px solid rgba(255,255,255,0.05)' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px', fontSize: '13px' }}>
-                    <span style={{ color: '#94a3b8' }}>{lang === 'de' ? 'Menge im Inventar:' : 'Amount in Inventory:'}</span>
-                    <span style={{ fontWeight: '600' }}>{selectedSkin.qty}x</span>
-                  </div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px', fontSize: '13px' }}>
-                    <span style={{ color: '#94a3b8' }}>{lang === 'de' ? 'Einstandswert:' : 'Acquisition Value:'}</span>
-                    <span style={{ fontWeight: '600' }}>€{(selectedSkin.basePrice * selectedSkin.qty).toFixed(2)}</span>
-                  </div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px', fontSize: '13px' }}>
-                    <span style={{ color: '#94a3b8' }}>{lang === 'de' ? 'Aktueller Marktwert:' : 'Current Market Value:'}</span>
-                    <span style={{ fontWeight: '600', color: 'var(--color-green)' }}>€{(selectedSkin.price * selectedSkin.qty).toFixed(2)}</span>
-                  </div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px' }}>
-                    <span style={{ color: '#94a3b8' }}>{lang === 'de' ? 'Wertentwicklung:' : 'Return:'}</span>
-                    <span style={{ fontWeight: '600', color: selectedSkin.price >= selectedSkin.basePrice ? 'var(--color-green)' : 'var(--color-red)' }}>
-                      {selectedSkin.price >= selectedSkin.basePrice ? '+' : ''}
-                      {((selectedSkin.price - selectedSkin.basePrice) * selectedSkin.qty).toFixed(2)}€ ({selectedSkin.basePrice > 0 ? (((selectedSkin.price - selectedSkin.basePrice) / selectedSkin.basePrice * 100).toFixed(2)) : 0}%)
-                    </span>
-                  </div>
-                  {!skins.some(s => s.id === selectedSkin.id) && (
-                    <button 
-                      onClick={() => handleAddToWatchlist(selectedSkin)}
-                      className="steam-import-btn"
-                      style={{ marginTop: '12px', height: '36px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', fontSize: '12px' }}
-                    >
-                      <Plus size={14} />
-                      {lang === 'de' ? 'Zu Beobachtungsliste hinzufügen' : 'Add to Watchlist'}
-                    </button>
-                  )}
-                </div>
-              </div>
-            ) : (
-              <div className="trade-box">
-                <h4 className="section-title" style={{ fontSize: '15px', marginBottom: '12px' }}>
-                  {lang === 'de' ? 'Preis-Alarm einrichten' : 'Set Price Alert'}
-                </h4>
-                <form onSubmit={handleAddAlert}>
-                  <div style={{ display: 'flex', gap: '12px', marginBottom: '12px' }}>
-                    <div className="trade-input-group" style={{ flex: 1 }}>
-                      <label>{lang === 'de' ? 'Bedingung' : 'Condition'}</label>
-                      <select 
-                        className="trade-input" 
-                        value={alertType}
-                        onChange={(e) => setAlertType(e.target.value)}
-                        style={{ height: '38px', padding: '0 8px' }}
-                      >
-                        <option value="above">{lang === 'de' ? 'Steigt über (>=)' : 'Rises above (>=)'}</option>
-                        <option value="below">{lang === 'de' ? 'Fällt unter (<=)' : 'Drops below (<=)'}</option>
-                      </select>
-                    </div>
-                    <div className="trade-input-group" style={{ flex: 1 }}>
-                      <label>{lang === 'de' ? 'Zielpreis (€)' : 'Target Price (€)'}</label>
-                      <input 
-                        type="number" 
-                        step="0.01"
-                        placeholder="e.g. 19.50"
-                        className="trade-input" 
-                        value={alertTargetPrice}
-                        onChange={(e) => setAlertTargetPrice(e.target.value)}
-                      />
-                    </div>
-                  </div>
-                  <button type="submit" className="steam-import-btn" style={{ height: '40px', padding: '0', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}>
-                    <Plus size={16} />
-                    {lang === 'de' ? 'Alarm hinzufügen' : 'Add Alert'}
-                  </button>
-                </form>
-              </div>
-            )}
-
-            {/* Skins Watchlist */}
-            <div style={{ marginTop: '20px' }}>
+            <aside className="layout-side">
+              {/* Skins Watchlist */}
               <div className="section-header">
                 <h3 className="section-title">{lang === 'de' ? 'Beobachtungsliste' : 'Watchlist'}</h3>
                 <span style={{ fontSize: '11px', color: '#94a3b8' }}>
@@ -896,240 +961,301 @@ export default function App() {
                   ))
                 )}
               </div>
-            </div>
+            </aside>
           </div>
         )}
 
         {activeTab === 'portfolio' && (
-          <div className="portfolio-view">
+          <div className="portfolio-view layout-split">
             {realInventoryItems.length === 0 ? (
-              <div className="steam-import-card">
-                <div className="steam-logo-container">
-                  <Activity size={28} />
-                </div>
-                <h4>{lang === 'de' ? 'Steam-Inventar beobachten' : 'Observe Steam Inventory'}</h4>
-                <p>
-                  {lang === 'de' 
-                    ? 'Verbinde dein öffentliches Steam-Inventar, um den Wert deiner CS2-Skins live zu verfolgen – wie bei Trade Republic.' 
-                    : 'Connect your public Steam inventory to track the live value of your CS2 skins – just like Trade Republic.'}
-                </p>
+              <div className="layout-main" style={{ maxWidth: '600px', margin: '0 auto', width: '100%' }}>
+                <div className="steam-import-card">
+                  <div className="steam-logo-container">
+                    <Activity size={28} />
+                  </div>
+                  <h4>{lang === 'de' ? 'Steam-Inventar beobachten' : 'Observe Steam Inventory'}</h4>
+                  <p>
+                    {lang === 'de' 
+                      ? 'Verbinde dein öffentliches Steam-Inventar, um den Wert deiner CS2-Skins live zu verfolgen – wie bei Trade Republic.' 
+                      : 'Connect your public Steam inventory to track the live value of your CS2 skins – just like Trade Republic.'}
+                  </p>
 
-                {inventoryError && (
-                  <div className="alert-box">
-                    <AlertTriangle size={18} style={{ color: 'var(--color-red)', flexShrink: 0, marginTop: '2px' }} />
-                    <div className="alert-box-content">
-                      <div className="alert-box-title">{lang === 'de' ? 'Import fehlgeschlagen' : 'Import Failed'}</div>
-                      <div className="alert-box-desc">{inventoryError}</div>
-                      {resolveSteamId(steamIdInput) && (
-                        <a 
-                          href={`https://steamcommunity.com/inventory/${resolveSteamId(steamIdInput)}/730/2?l=german`} 
-                          target="_blank" 
-                          rel="noopener noreferrer" 
-                          className="alert-box-link"
-                        >
-                          {lang === 'de' ? 'Prüfen, ob dein Inventar-Link im Browser lädt ↗' : 'Check if your inventory link loads in browser ↗'}
-                        </a>
-                      )}
+                  {inventoryError && (
+                    <div className="alert-box">
+                      <AlertTriangle size={18} style={{ color: 'var(--color-red)', flexShrink: 0, marginTop: '2px' }} />
+                      <div className="alert-box-content">
+                        <div className="alert-box-title">{lang === 'de' ? 'Import fehlgeschlagen' : 'Import Failed'}</div>
+                        <div className="alert-box-desc">{inventoryError}</div>
+                        {resolveSteamId(steamIdInput) && (
+                          <a 
+                            href={`https://steamcommunity.com/inventory/${resolveSteamId(steamIdInput)}/730/2?l=german`} 
+                            target="_blank" 
+                            rel="noopener noreferrer" 
+                            className="alert-box-link"
+                          >
+                            {lang === 'de' ? 'Prüfen, ob dein Inventar-Link im Browser lädt ↗' : 'Check if your inventory link loads in browser ↗'}
+                          </a>
+                        )}
+                      </div>
                     </div>
-                  </div>
-                )}
+                  )}
 
-                <form onSubmit={handleImportInventory} className="steam-input-form">
-                  <div className="steam-input-wrapper">
-                    <input
-                      type="text"
-                      className="steam-input"
-                      placeholder={lang === 'de' ? 'SteamID64 eingeben (z.B. 7656119...)' : 'Enter SteamID64 (e.g. 7656119...)'}
-                      value={steamIdInput}
-                      onChange={(e) => setSteamIdInput(e.target.value)}
-                    />
-                  </div>
-                  <button 
-                    type="submit" 
-                    className="steam-import-btn"
-                    disabled={isFetchingInventory}
-                  >
-                    {isFetchingInventory ? (lang === 'de' ? 'Lade Inventar...' : 'Loading Inventory...') : (lang === 'de' ? 'Importieren' : 'Import')}
-                  </button>
-                </form>
+                  <form onSubmit={handleImportInventory} className="steam-input-form">
+                    <div className="steam-input-wrapper">
+                      <input
+                        type="text"
+                        className="steam-input"
+                        placeholder={lang === 'de' ? 'SteamID64 eingeben (z.B. 7656119...)' : 'Enter SteamID64 (e.g. 7656119...)'}
+                        value={steamIdInput}
+                        onChange={(e) => setSteamIdInput(e.target.value)}
+                      />
+                    </div>
+                    <button 
+                      type="submit" 
+                      className="steam-import-btn"
+                      disabled={isFetchingInventory}
+                    >
+                      {isFetchingInventory ? (lang === 'de' ? 'Lade Inventar...' : 'Loading Inventory...') : (lang === 'de' ? 'Importieren' : 'Import')}
+                    </button>
+                  </form>
 
-                <div className="import-help-links">
-                  <a 
-                    href="https://steamid.io" 
-                    target="_blank" 
-                    rel="noopener noreferrer" 
-                    className="import-help-btn"
-                  >
-                    {lang === 'de' ? 'Wo finde ich meine SteamID?' : 'Where is my SteamID?'}
-                  </a>
-                  <button 
-                    type="button" 
-                    className="import-help-btn"
-                    onClick={() => setShowManualImport(true)}
-                  >
-                    {lang === 'de' ? 'Manuell einfügen (JSON)' : 'Insert manually (JSON)'}
-                  </button>
+                  <div className="import-help-links">
+                    <a 
+                      href="https://steamid.io" 
+                      target="_blank" 
+                      rel="noopener noreferrer" 
+                      className="import-help-btn"
+                    >
+                      {lang === 'de' ? 'Wo finde ich meine SteamID?' : 'Where is my SteamID?'}
+                    </a>
+                    <button 
+                      type="button" 
+                      className="import-help-btn"
+                      onClick={() => setShowManualImport(true)}
+                    >
+                      {lang === 'de' ? 'Manuell einfügen (JSON)' : 'Insert manually (JSON)'}
+                    </button>
+                  </div>
                 </div>
               </div>
             ) : (
               <>
-                {/* Real Inventory Summary Card */}
-                <div className="portfolio-summary">
-                  <span className="stat-label-tr">{lang === 'de' ? 'Gesamtwert' : 'Total Net Worth'}</span>
-                  <span className="stat-value-tr">€{realInventorySummary.totalValue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
-                  <span className={`stat-change-tr ${realInventorySummary.pnlVal >= 0 ? 'pnl-positive' : 'pnl-negative'}`}>
-                    {realInventorySummary.pnlVal >= 0 ? '+' : ''}€{realInventorySummary.pnlVal.toFixed(2)} ({realInventorySummary.pnlPct}%) {lang === 'de' ? 'Gesamt' : 'Total'}
-                  </span>
-                </div>
+                <div className="layout-main">
+                  {/* Real Inventory Summary Card */}
+                  <div className="portfolio-summary">
+                    <span className="stat-label-tr">{lang === 'de' ? 'Gesamtwert' : 'Total Net Worth'}</span>
+                    <span className="stat-value-tr">€{realInventorySummary.totalValue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                    <span className={`stat-change-tr ${realInventorySummary.pnlVal >= 0 ? 'pnl-positive' : 'pnl-negative'}`}>
+                      {realInventorySummary.pnlVal >= 0 ? '+' : ''}€{realInventorySummary.pnlVal.toFixed(2)} ({realInventorySummary.pnlPct}%) {lang === 'de' ? 'Gesamt' : 'Total'}
+                    </span>
+                  </div>
 
-                <div className="section-header">
-                  <h3 className="section-title">{lang === 'de' ? 'Dein Steam-Bestand' : 'Your Steam Holdings'}</h3>
-                  <span style={{ fontSize: '11px', color: '#94a3b8' }}>
-                    {lang === 'de' ? 'Preise ticken live' : 'Prices tick live'}
-                  </span>
-                </div>
-
-                <div className="portfolio-list">
-                  {realInventoryItems.map((item) => {
-                    const currentVal = item.price * item.qty
-                    const investedVal = item.basePrice * item.qty
-                    const itemPnl = parseFloat((currentVal - investedVal).toFixed(2))
-                    const itemPnlPct = parseFloat((investedVal > 0 ? (itemPnl / investedVal * 100) : 0).toFixed(2))
-
-                    return (
-                      <div 
-                        key={item.id} 
-                        className={`portfolio-card skin-row ${selectedSkinId === item.id ? 'skin-row--selected' : ''} ${flashStates[item.id] === 'up' ? 'flash-up' : flashStates[item.id] === 'down' ? 'flash-down' : ''}`}
-                        style={{ cursor: 'pointer' }}
-                        onClick={() => {
-                          setSelectedSkinId(item.id)
-                          setActiveTab('market')
-                        }}
-                      >
-                        <div className="skin-info-left">
-                          <div className="skin-icon-container">
-                            <img src={item.img} alt={item.name} className="skin-img" />
-                          </div>
-                          <div className="skin-meta">
-                            <span className="skin-name">{item.name}</span>
-                            <span className="qty-label">{item.qty}x • {item.wear}</span>
-                          </div>
+                  {/* Selected Skin Chart (Desktop Only) */}
+                  {selectedSkinId && (
+                    <div className="chart-card desktop-portfolio-chart">
+                      <div className="chart-header-tr">
+                        <h3 className="chart-title-tr">{selectedSkin.name} ({lang === 'de' ? 'Live Chart' : 'Live Chart'})</h3>
+                        <div className="chart-price-tr">€{selectedSkin.price.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
+                        <div className={`chart-change-tr ${selectedSkin.change >= 0 ? 'price-up' : 'price-down'}`}>
+                          {selectedSkin.change >= 0 ? '+' : ''}{selectedSkin.change.toFixed(2)}% {lang === 'de' ? 'Heute' : 'Today'}
                         </div>
-                        <div className="skin-info-right">
-                          <span className="skin-price">€{currentVal.toFixed(2)}</span>
-                          <span className={`pnl-badge ${itemPnl >= 0 ? 'pnl-badge--up' : 'pnl-badge--down'}`}>
-                            {itemPnl >= 0 ? '+' : ''}€{itemPnl.toFixed(2)} ({itemPnlPct}%)
+                      </div>
+                      <div className="chart-body-container">
+                        <SkinChart 
+                          data={historicalDataMap[selectedSkinId] || []} 
+                          currentPrice={selectedSkin.price} 
+                          isPositive={selectedSkin.change >= 0}
+                        />
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Selected Position details (Desktop Only) */}
+                  {selectedSkinId && selectedSkinId.startsWith('real-') && (
+                    <div className="trade-box desktop-portfolio-trade" style={{ marginTop: '0' }}>
+                      <h4 className="section-title" style={{ fontSize: '15px', marginBottom: '12px' }}>
+                        {lang === 'de' ? 'Echte Steam-Position' : 'Real Steam Position'}
+                      </h4>
+                      <div style={{ background: 'rgba(255,255,255,0.03)', borderRadius: '12px', padding: '14px', border: '1px solid rgba(255,255,255,0.05)' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px', fontSize: '13px' }}>
+                          <span style={{ color: '#94a3b8' }}>{lang === 'de' ? 'Menge im Inventar:' : 'Amount in Inventory:'}</span>
+                          <span style={{ fontWeight: '600' }}>{selectedSkin.qty}x</span>
+                        </div>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px', fontSize: '13px' }}>
+                          <span style={{ color: '#94a3b8' }}>{lang === 'de' ? 'Einstandswert:' : 'Acquisition Value:'}</span>
+                          <span style={{ fontWeight: '600' }}>€{(selectedSkin.basePrice * selectedSkin.qty).toFixed(2)}</span>
+                        </div>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px', fontSize: '13px' }}>
+                          <span style={{ color: '#94a3b8' }}>{lang === 'de' ? 'Aktueller Marktwert:' : 'Current Market Value:'}</span>
+                          <span style={{ fontWeight: '600', color: 'var(--color-green)' }}>€{(selectedSkin.price * selectedSkin.qty).toFixed(2)}</span>
+                        </div>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px' }}>
+                          <span style={{ color: '#94a3b8' }}>{lang === 'de' ? 'Wertentwicklung:' : 'Return:'}</span>
+                          <span style={{ fontWeight: '600', color: selectedSkin.price >= selectedSkin.basePrice ? 'var(--color-green)' : 'var(--color-red)' }}>
+                            {selectedSkin.price >= selectedSkin.basePrice ? '+' : ''}
+                            {((selectedSkin.price - selectedSkin.basePrice) * selectedSkin.qty).toFixed(2)}€ ({selectedSkin.basePrice > 0 ? (((selectedSkin.price - selectedSkin.basePrice) / selectedSkin.basePrice * 100).toFixed(2)) : 0}%)
                           </span>
                         </div>
                       </div>
-                    )
-                  })}
+                    </div>
+                  )}
+
+                  <div className="disconnect-wrapper" style={{ marginTop: '24px' }}>
+                    <button 
+                      type="button" 
+                      className="import-help-btn"
+                      onClick={handleDisconnectInventory}
+                      style={{ color: 'var(--color-red)' }}
+                    >
+                      {lang === 'de' ? 'Verbindung trennen' : 'Disconnect Account'}
+                    </button>
+                    <button 
+                      type="button" 
+                      className="import-help-btn"
+                      onClick={() => handleImportInventory()}
+                      disabled={isFetchingInventory}
+                    >
+                      {isFetchingInventory ? (lang === 'de' ? 'Aktualisiere...' : 'Refreshing...') : (lang === 'de' ? 'Inventar neu laden ↻' : 'Reload Inventory ↻')}
+                    </button>
+                  </div>
                 </div>
 
-                <div className="disconnect-wrapper">
-                  <button 
-                    type="button" 
-                    className="import-help-btn"
-                    onClick={handleDisconnectInventory}
-                    style={{ color: 'var(--color-red)' }}
-                  >
-                    {lang === 'de' ? 'Verbindung trennen' : 'Disconnect Account'}
-                  </button>
-                  <button 
-                    type="button" 
-                    className="import-help-btn"
-                    onClick={() => handleImportInventory()}
-                    disabled={isFetchingInventory}
-                  >
-                    {isFetchingInventory ? (lang === 'de' ? 'Aktualisiere...' : 'Refreshing...') : (lang === 'de' ? 'Inventar neu laden ↻' : 'Reload Inventory ↻')}
-                  </button>
-                </div>
+                <aside className="layout-side">
+                  <div className="section-header">
+                    <h3 className="section-title">{lang === 'de' ? 'Dein Steam-Bestand' : 'Your Steam Holdings'}</h3>
+                    <span style={{ fontSize: '11px', color: '#94a3b8' }}>
+                      {lang === 'de' ? 'Preise ticken live' : 'Prices tick live'}
+                    </span>
+                  </div>
+                  <div className="portfolio-list">
+                    {realInventoryItems.map((item) => {
+                      const currentVal = item.price * item.qty
+                      const investedVal = item.basePrice * item.qty
+                      const itemPnl = parseFloat((currentVal - investedVal).toFixed(2))
+                      const itemPnlPct = parseFloat((investedVal > 0 ? (itemPnl / investedVal * 100) : 0).toFixed(2))
+
+                      return (
+                        <div 
+                          key={item.id} 
+                          className={`portfolio-card skin-row ${selectedSkinId === item.id ? 'skin-row--selected' : ''} ${flashStates[item.id] === 'up' ? 'flash-up' : flashStates[item.id] === 'down' ? 'flash-down' : ''}`}
+                          style={{ cursor: 'pointer' }}
+                          onClick={() => {
+                            setSelectedSkinId(item.id)
+                            if (window.matchMedia('(max-width: 767px)').matches) {
+                              setActiveTab('market')
+                            }
+                          }}
+                        >
+                          <div className="skin-info-left">
+                            <div className="skin-icon-container">
+                              <img src={item.img} alt={item.name} className="skin-img" />
+                            </div>
+                            <div className="skin-meta">
+                              <span className="skin-name">{item.name}</span>
+                              <span className="qty-label">{item.qty}x • {item.wear}</span>
+                            </div>
+                          </div>
+                          <div className="skin-info-right">
+                            <span className="skin-price">€{currentVal.toFixed(2)}</span>
+                            <span className={`pnl-badge ${itemPnl >= 0 ? 'pnl-badge--up' : 'pnl-badge--down'}`}>
+                              {itemPnl >= 0 ? '+' : ''}€{itemPnl.toFixed(2)} ({itemPnlPct}%)
+                            </span>
+                          </div>
+                        </div>
+                      )
+                    })}
+                  </div>
+                </aside>
               </>
             )}
           </div>
         )}
 
         {activeTab === 'alerts' && (
-          <div className="alerts-view">
-            {/* Create Alert Form */}
-            <div className="trade-box" style={{ marginBottom: '20px' }}>
-              <h4 className="section-title" style={{ fontSize: '15px', marginBottom: '12px' }}>
-                {lang === 'de' ? 'Neuen Preis-Alert erstellen' : 'Create Price Alert'}
-              </h4>
-              <form onSubmit={handleAddAlert}>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                  <div className="trade-input-group">
-                    <label>{lang === 'de' ? 'Ausgewählter Skin' : 'Selected Skin'}</label>
-                    <div className="trade-input" style={{ background: 'rgba(0,0,0,0.1)', borderStyle: 'solid' }}>
-                      {selectedSkin.name}
-                    </div>
-                  </div>
-                  <div style={{ display: 'flex', gap: '12px' }}>
-                    <div className="trade-input-group" style={{ flexGrow: 1 }}>
-                      <label>{lang === 'de' ? 'Bedingung' : 'Condition'}</label>
-                      <select 
-                        className="trade-input" 
-                        value={alertType}
-                        onChange={(e) => setAlertType(e.target.value)}
-                        style={{ height: '38px', padding: '0 8px' }}
-                      >
-                        <option value="above">{lang === 'de' ? 'Steigt über (>=)' : 'Rises above (>=)'}</option>
-                        <option value="below">{lang === 'de' ? 'Fällt unter (<=)' : 'Drops below (<=)'}</option>
-                      </select>
-                    </div>
-                    <div className="trade-input-group" style={{ flexGrow: 1 }}>
-                      <label>{lang === 'de' ? 'Zielpreis (€)' : 'Target Price (€)'}</label>
-                      <input 
-                        type="number" 
-                        step="0.01"
-                        placeholder="e.g. 19.50"
-                        className="trade-input" 
-                        value={alertTargetPrice}
-                        onChange={(e) => setAlertTargetPrice(e.target.value)}
-                      />
-                    </div>
-                  </div>
-                  <button type="submit" className="steam-import-btn" style={{ margin: '8px 0 0 0', height: '40px', padding: '0', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}>
-                    <Plus size={16} />
-                    {lang === 'de' ? 'Alert hinzufügen' : 'Add Alert'}
-                  </button>
-                </div>
-              </form>
-            </div>
-
-            <div className="section-header">
-              <h3 className="section-title">{lang === 'de' ? 'Aktive Alarme' : 'Active Alerts'}</h3>
-            </div>
-
-            {alerts.length === 0 ? (
-              <div className="empty-state">
-                <Bell size={36} style={{ marginBottom: '10px', opacity: 0.3 }} />
-                <div>{lang === 'de' ? 'Keine aktiven Alarme eingerichtet.' : 'No active alerts set.'}</div>
+          <div className="alerts-view layout-split">
+            <div className="layout-main">
+              <div className="section-header">
+                <h3 className="section-title">{lang === 'de' ? 'Aktive Alarme' : 'Active Alerts'}</h3>
               </div>
-            ) : (
-              <div className="alerts-list">
-                {alerts.map((alert) => (
-                  <div key={alert.id} className="alert-card">
-                    <div className="alert-details">
-                      <Bell size={16} style={{ color: 'var(--color-amber)' }} />
-                      <div style={{ display: 'flex', flexDirection: 'column' }}>
-                        <span className="skin-name" style={{ fontSize: '13px' }}>{alert.skinName}</span>
-                        <span className="alert-condition">
-                          {alert.type === 'above' ? (
-                            <>{lang === 'de' ? 'Wenn Preis steigt über' : 'If price goes above'} <span className="alert-trigger-price">€{alert.target.toFixed(2)}</span></>
-                          ) : (
-                            <>{lang === 'de' ? 'Wenn Preis fällt unter' : 'If price goes below'} <span className="alert-trigger-price">€{alert.target.toFixed(2)}</span></>
-                          )}
-                        </span>
+
+              {alerts.length === 0 ? (
+                <div className="empty-state">
+                  <Bell size={36} style={{ marginBottom: '10px', opacity: 0.3 }} />
+                  <div>{lang === 'de' ? 'Keine aktiven Alarme eingerichtet.' : 'No active alerts set.'}</div>
+                </div>
+              ) : (
+                <div className="alerts-list">
+                  {alerts.map((alert) => (
+                    <div key={alert.id} className="alert-card">
+                      <div className="alert-details">
+                        <Bell size={16} style={{ color: 'var(--color-amber)' }} />
+                        <div style={{ display: 'flex', flexDirection: 'column' }}>
+                          <span className="skin-name" style={{ fontSize: '13px' }}>{alert.skinName}</span>
+                          <span className="alert-condition">
+                            {alert.type === 'above' ? (
+                              <>{lang === 'de' ? 'Wenn Preis steigt über' : 'If price goes above'} <span className="alert-trigger-price">€{alert.target.toFixed(2)}</span></>
+                            ) : (
+                              <>{lang === 'de' ? 'Wenn Preis fällt unter' : 'If price goes below'} <span className="alert-trigger-price">€{alert.target.toFixed(2)}</span></>
+                            )}
+                          </span>
+                        </div>
+                      </div>
+                      <button className="alert-delete-btn" onClick={() => handleDeleteAlert(alert.id)}>
+                        <Trash2 size={16} />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            <aside className="layout-side">
+              {/* Create Alert Form */}
+              <div className="trade-box" style={{ marginTop: '0' }}>
+                <h4 className="section-title" style={{ fontSize: '15px', marginBottom: '12px' }}>
+                  {lang === 'de' ? 'Neuen Preis-Alert erstellen' : 'Create Price Alert'}
+                </h4>
+                <form onSubmit={handleAddAlert}>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                    <div className="trade-input-group">
+                      <label>{lang === 'de' ? 'Ausgewählter Skin' : 'Selected Skin'}</label>
+                      <div className="trade-input" style={{ background: 'rgba(0,0,0,0.1)', borderStyle: 'solid' }}>
+                        {selectedSkin.name}
                       </div>
                     </div>
-                    <button className="alert-delete-btn" onClick={() => handleDeleteAlert(alert.id)}>
-                      <Trash2 size={16} />
+                    <div style={{ display: 'flex', gap: '12px' }}>
+                      <div className="trade-input-group" style={{ flexGrow: 1 }}>
+                        <label>{lang === 'de' ? 'Bedingung' : 'Condition'}</label>
+                        <select 
+                          className="trade-input" 
+                          value={alertType}
+                          onChange={(e) => setAlertType(e.target.value)}
+                          style={{ height: '38px', padding: '0 8px' }}
+                        >
+                          <option value="above">{lang === 'de' ? 'Steigt über (>=)' : 'Rises above (>=)'}</option>
+                          <option value="below">{lang === 'de' ? 'Fällt unter (<=)' : 'Drops below (<=)'}</option>
+                        </select>
+                      </div>
+                      <div className="trade-input-group" style={{ flexGrow: 1 }}>
+                        <label>{lang === 'de' ? 'Zielpreis (€)' : 'Target Price (€)'}</label>
+                        <input 
+                          type="number" 
+                          step="0.01"
+                          placeholder="e.g. 19.50"
+                          className="trade-input" 
+                          value={alertTargetPrice}
+                          onChange={(e) => setAlertTargetPrice(e.target.value)}
+                        />
+                      </div>
+                    </div>
+                    <button type="submit" className="steam-import-btn" style={{ margin: '8px 0 0 0', height: '40px', padding: '0', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}>
+                      <Plus size={16} />
+                      {lang === 'de' ? 'Alert hinzufügen' : 'Add Alert'}
                     </button>
                   </div>
-                ))}
+                </form>
               </div>
-            )}
+            </aside>
           </div>
         )}
 
@@ -1159,6 +1285,7 @@ export default function App() {
           <span>Alarme</span>
         </button>
       </nav>
+      </div>
 
       {/* Manual Import Modal */}
       {showManualImport && (

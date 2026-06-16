@@ -793,3 +793,188 @@
   margin-top: 14px;
 }
 
+/* Responsive Desktop Layout (Trade Republic Style Dashboard) */
+.app-sidebar {
+  display: none;
+}
+
+.app-main-wrapper {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  width: 100%;
+  overflow: hidden;
+}
+
+.desktop-portfolio-chart, .desktop-portfolio-trade {
+  display: none !important;
+}
+
+@media (min-width: 768px) {
+  .app-layout {
+    display: flex;
+    flex-direction: row;
+    height: 100vh;
+    width: 100vw;
+    overflow: hidden;
+    background: #000000;
+  }
+
+  .app-sidebar {
+    display: flex;
+    flex-direction: column;
+    width: 240px;
+    border-right: 1px solid var(--border);
+    padding: 32px 24px;
+    background: #000000;
+    height: 100%;
+    flex-shrink: 0;
+    justify-content: space-between;
+  }
+
+  .sidebar-logo {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 40px;
+  }
+
+  .sidebar-logo .logo-icon {
+    color: var(--color-green);
+  }
+
+  .sidebar-logo .logo-text {
+    font-size: 20px;
+    font-weight: 700;
+    letter-spacing: -0.5px;
+    color: #ffffff;
+    margin: 0;
+  }
+
+  .sidebar-nav {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    flex-grow: 1;
+  }
+
+  .sidebar-nav-btn {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    background: transparent;
+    border: none;
+    padding: 12px 16px;
+    border-radius: 10px;
+    color: var(--text-secondary);
+    font-family: var(--sans);
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    text-align: left;
+    transition: all 0.15s ease;
+    width: 100%;
+  }
+
+  .sidebar-nav-btn:hover {
+    background: #0c0c0c;
+    color: #ffffff;
+  }
+
+  .sidebar-nav-btn.active {
+    background: #1c1c1e;
+    color: #ffffff;
+  }
+
+  .sidebar-footer {
+    border-top: 1px solid var(--border);
+    padding-top: 24px;
+  }
+
+  .sidebar-balance {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+
+  .sidebar-status-tag {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--color-red);
+  }
+
+  .app-main-wrapper {
+    flex-grow: 1;
+    height: 100%;
+    overflow: hidden;
+  }
+
+  .app-header {
+    display: none !important;
+  }
+
+  .tab-bar {
+    display: none !important;
+  }
+
+  .app-content {
+    padding: 40px 48px;
+    padding-bottom: 40px;
+    height: 100%;
+    overflow-y: auto;
+  }
+
+  /* Layout split */
+  .layout-split {
+    display: grid;
+    grid-template-columns: 1fr 340px;
+    gap: 48px;
+    align-items: start;
+    max-width: 1200px;
+    margin: 0 auto;
+    width: 100%;
+  }
+
+  .layout-main {
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+  }
+
+  .layout-side {
+    position: sticky;
+    top: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+  }
+
+  .watchlist, .portfolio-list {
+    max-height: calc(100vh - 220px);
+    overflow-y: auto;
+    padding-right: 8px;
+    scrollbar-width: thin;
+    scrollbar-color: #262629 transparent;
+  }
+
+  .watchlist::-webkit-scrollbar, .portfolio-list::-webkit-scrollbar {
+    width: 4px;
+  }
+  .watchlist::-webkit-scrollbar-thumb, .portfolio-list::-webkit-scrollbar-thumb {
+    background-color: #262629;
+    border-radius: 4px;
+  }
+  .watchlist::-webkit-scrollbar-track, .portfolio-list::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  /* Desktop elements visibility */
+  .desktop-portfolio-chart {
+    display: flex !important;
+  }
+  
+  .desktop-portfolio-trade {
+    display: block !important;
+  }
+}
+
