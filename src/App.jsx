@@ -7,7 +7,6 @@ import {
   TrendingDown, 
   Wallet, 
   Bell, 
-  History, 
   Activity,
   Plus,
   Trash2,
@@ -224,15 +223,10 @@ function SkinChart({ data, currentPrice }) {
 }
 
 export default function App() {
-  const [activeTab, setActiveTab] = useState('market') // 'market' | 'portfolio' | 'alerts' | 'activity'
+  const [activeTab, setActiveTab] = useState('market') // 'market' | 'portfolio' | 'alerts'
   const [skins, setSkins] = useState(INITIAL_SKINS)
   const [selectedSkinId, setSelectedSkinId] = useState('ak47-redline')
   const [flashStates, setFlashStates] = useState({}) // skinId -> 'up' | 'down'
-  
-  // Wallet / Paper Trading state
-  const [balance, setBalance] = useState(1000.00)
-  const [holdings, setHoldings] = useState({}) // skinId -> { qty, avgPrice }
-  const [transactions, setTransactions] = useState([])
   
   // Real Steam Inventory state
   const [steamIdInput, setSteamIdInput] = useState(() => localStorage.getItem('skinstock_steam_id') || '')
@@ -243,16 +237,12 @@ export default function App() {
       return []
     }
   })
-  const [portfolioMode, setPortfolioMode] = useState('paper') // 'paper' | 'real'
   const [isFetchingInventory, setIsFetchingInventory] = useState(false)
   const [inventoryError, setInventoryError] = useState('')
   const [showManualImport, setShowManualImport] = useState(false)
   const [manualJson, setManualJson] = useState('')
   const [pricesDb, setPricesDb] = useState(null)
   const [, setLoadingPrices] = useState(false)
-
-  // Trade Inputs
-  const [tradeQty, setTradeQty] = useState(1)
   
   // Alert states
   const [alerts, setAlerts] = useState([])
@@ -396,11 +386,12 @@ export default function App() {
   }, [steamIdInput, resolveSteamId, fetchPricesDb, parseSteamInventoryData])
 
   // Manual import handler
-  const handleManualImport = useCallback(() => {
+  const handleManualImport = useCallback(async () => {
     try {
       setInventoryError('')
+      const prices = await fetchPricesDb()
       const data = JSON.parse(manualJson)
-      const parsedItems = parseSteamInventoryData(data, pricesDb)
+      const parsedItems = parseSteamInventoryData(data, prices)
       
       setRealInventoryItems(parsedItems)
       localStorage.setItem('skinstock_real_inventory', JSON.stringify(parsedItems))
@@ -416,7 +407,7 @@ export default function App() {
       console.error(err)
       setInventoryError('Ungültiges JSON: ' + (err.message || 'Bitte kopiere das gesamte JSON von Steam.'))
     }
-  }, [manualJson, parseSteamInventoryData, pricesDb])
+  }, [manualJson, parseSteamInventoryData, fetchPricesDb])
 
   // Disconnect inventory handler
   const handleDisconnectInventory = useCallback(() => {
@@ -595,80 +586,6 @@ export default function App() {
     return () => clearInterval(interval)
   }, [checkPriceAlerts])
 
-  // Trading actions
-  const handleBuy = () => {
-    const totalCost = selectedSkin.price * tradeQty
-    if (balance < totalCost) return
-
-    setBalance((prev) => parseFloat((prev - totalCost).toFixed(2)))
-    setHoldings((prev) => {
-      const current = prev[selectedSkinId] || { qty: 0, avgPrice: 0 }
-      const newQty = current.qty + tradeQty
-      const newAvg = parseFloat(((current.qty * current.avgPrice + totalCost) / newQty).toFixed(2))
-      return {
-        ...prev,
-        [selectedSkinId]: { qty: newQty, avgPrice: newAvg }
-      }
-    })
-
-    setTransactions((prev) => [
-      {
-        id: Date.now(),
-        type: 'buy',
-        skinName: selectedSkin.name,
-        qty: tradeQty,
-        price: selectedSkin.price,
-        time: new Date().toLocaleTimeString()
-      },
-      ...prev
-    ])
-
-    playTradeSound('buy')
-    // Trigger mobile vibration if available
-    if (navigator.vibrate) {
-      navigator.vibrate(60)
-    }
-  }
-
-  const handleSell = () => {
-    const currentHolding = holdings[selectedSkinId]
-    if (!currentHolding || currentHolding.qty < tradeQty) return
-
-    const totalRevenue = selectedSkin.price * tradeQty
-    setBalance((prev) => parseFloat((prev + totalRevenue).toFixed(2)))
-    
-    setHoldings((prev) => {
-      const current = prev[selectedSkinId]
-      const newQty = current.qty - tradeQty
-      if (newQty === 0) {
-        const updated = { ...prev }
-        delete updated[selectedSkinId]
-        return updated
-      }
-      return {
-        ...prev,
-        [selectedSkinId]: { ...current, qty: newQty }
-      }
-    })
-
-    setTransactions((prev) => [
-      {
-        id: Date.now(),
-        type: 'sell',
-        skinName: selectedSkin.name,
-        qty: tradeQty,
-        price: selectedSkin.price,
-        time: new Date().toLocaleTimeString()
-      },
-      ...prev
-    ])
-
-    playTradeSound('sell')
-    if (navigator.vibrate) {
-      navigator.vibrate(60)
-    }
-  }
-
   // Alerts configuration
   const handleAddAlert = (e) => {
     e.preventDefault()
@@ -693,31 +610,6 @@ export default function App() {
     playTradeSound('sell')
   }
 
-  // Portfolio PNL Calculations
-  const portfolioSummary = useMemo(() => {
-    let holdingsValue = 0
-    let totalInvested = 0
-    
-    Object.entries(holdings).forEach(([skinId, data]) => {
-      const currentSkin = skins.find((s) => s.id === skinId)
-      if (currentSkin) {
-        holdingsValue += currentSkin.price * data.qty
-        totalInvested += data.avgPrice * data.qty
-      }
-    })
-
-    const totalValue = parseFloat((balance + holdingsValue).toFixed(2))
-    const pnlVal = parseFloat((holdingsValue - totalInvested).toFixed(2))
-    const pnlPct = totalInvested === 0 ? 0 : parseFloat((pnlVal / totalInvested * 100).toFixed(2))
-
-    return {
-      totalValue,
-      holdingsValue: parseFloat(holdingsValue.toFixed(2)),
-      pnlVal,
-      pnlPct
-    }
-  }, [holdings, skins, balance])
-
   const realInventorySummary = useMemo(() => {
     let holdingsValue = 0
     let totalInvested = 0
@@ -736,10 +628,6 @@ export default function App() {
       pnlPct
     }
   }, [realInventoryItems])
-
-  const holdingQty = useMemo(() => {
-    return holdings[selectedSkinId]?.qty || 0
-  }, [holdings, selectedSkinId])
 
   return (
     <div className="app-layout">
@@ -763,8 +651,19 @@ export default function App() {
           <h1 className="logo-text">SkinStock</h1>
         </div>
         <div className="balance-card">
-          <span className="balance-label">{lang === 'de' ? 'Spielgeld-Guthaben' : 'Paper Balance'}</span>
-          <span className="balance-amount">€{balance.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+          {realInventoryItems.length > 0 ? (
+            <>
+              <span className="balance-label">{lang === 'de' ? 'Inventarwert' : 'Inventory Value'}</span>
+              <span className="balance-amount">€{realInventorySummary.totalValue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+            </>
+          ) : (
+            <>
+              <span className="balance-label">{lang === 'de' ? 'Status' : 'Status'}</span>
+              <span className="balance-amount" style={{ color: '#ef4444', textShadow: 'none', fontSize: '13px', fontWeight: '600' }}>
+                {lang === 'de' ? 'Nicht verbunden' : 'Not Connected'}
+              </span>
+            </>
+          )}
         </div>
       </header>
 
@@ -826,42 +725,39 @@ export default function App() {
             ) : (
               <div className="trade-box">
                 <h4 className="section-title" style={{ fontSize: '15px', marginBottom: '12px' }}>
-                  {lang === 'de' ? 'Paper Trading Ausführung' : 'Paper Trade Execution'}
+                  {lang === 'de' ? 'Preis-Alarm einrichten' : 'Set Price Alert'}
                 </h4>
-                <div className="trade-inputs">
-                  <div className="trade-input-group">
-                    <label>{lang === 'de' ? 'Menge' : 'Amount'}</label>
-                    <input 
-                      type="number" 
-                      min="1" 
-                      className="trade-input" 
-                      value={tradeQty} 
-                      onChange={(e) => setTradeQty(Math.max(1, parseInt(e.target.value) || 1))}
-                    />
-                  </div>
-                  <div className="trade-input-group" style={{ flexGrow: 2 }}>
-                    <label>{lang === 'de' ? 'Gesamtsumme' : 'Total Value'}</label>
-                    <div className="trade-input" style={{ background: 'rgba(0,0,0,0.1)', borderStyle: 'dashed', display: 'flex', alignItems: 'center' }}>
-                      €{(selectedSkin.price * tradeQty).toFixed(2)}
+                <form onSubmit={handleAddAlert}>
+                  <div style={{ display: 'flex', gap: '12px', marginBottom: '12px' }}>
+                    <div className="trade-input-group" style={{ flex: 1 }}>
+                      <label>{lang === 'de' ? 'Bedingung' : 'Condition'}</label>
+                      <select 
+                        className="trade-input" 
+                        value={alertType}
+                        onChange={(e) => setAlertType(e.target.value)}
+                        style={{ height: '38px', padding: '0 8px' }}
+                      >
+                        <option value="above">{lang === 'de' ? 'Steigt über (>=)' : 'Rises above (>=)'}</option>
+                        <option value="below">{lang === 'de' ? 'Fällt unter (<=)' : 'Drops below (<=)'}</option>
+                      </select>
+                    </div>
+                    <div className="trade-input-group" style={{ flex: 1 }}>
+                      <label>{lang === 'de' ? 'Zielpreis (€)' : 'Target Price (€)'}</label>
+                      <input 
+                        type="number" 
+                        step="0.01"
+                        placeholder="e.g. 19.50"
+                        className="trade-input" 
+                        value={alertTargetPrice}
+                        onChange={(e) => setAlertTargetPrice(e.target.value)}
+                      />
                     </div>
                   </div>
-                </div>
-                <div className="trade-buttons">
-                  <button 
-                    className="trade-btn trade-btn--buy" 
-                    disabled={balance < selectedSkin.price * tradeQty}
-                    onClick={handleBuy}
-                  >
-                    {lang === 'de' ? 'Kaufen (Long)' : 'Buy (Long)'}
+                  <button type="submit" className="steam-import-btn" style={{ height: '40px', padding: '0', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}>
+                    <Plus size={16} />
+                    {lang === 'de' ? 'Alarm hinzufügen' : 'Add Alert'}
                   </button>
-                  <button 
-                    className="trade-btn trade-btn--sell" 
-                    disabled={holdingQty < tradeQty}
-                    onClick={handleSell}
-                  >
-                    {lang === 'de' ? 'Verkaufen (Short)' : 'Sell (Short)'}
-                  </button>
-                </div>
+                </form>
               </div>
             )}
 
@@ -880,7 +776,6 @@ export default function App() {
                     className={`skin-row ${selectedSkinId === skin.id ? 'skin-row--selected' : ''} ${flashStates[skin.id] === 'up' ? 'flash-up' : flashStates[skin.id] === 'down' ? 'flash-down' : ''}`}
                     onClick={() => {
                       setSelectedSkinId(skin.id)
-                      setTradeQty(1)
                     }}
                   >
                     <div className="skin-info-left">
@@ -907,243 +802,153 @@ export default function App() {
 
         {activeTab === 'portfolio' && (
           <div className="portfolio-view">
-            {/* Segmented Toggle for Portfolio Mode */}
-            <div className="portfolio-toggle">
-              <button 
-                className={`portfolio-toggle-btn ${portfolioMode === 'paper' ? 'active' : ''}`}
-                onClick={() => setPortfolioMode('paper')}
-              >
-                <Wallet size={14} />
-                {lang === 'de' ? 'Spielgeld-Depot' : 'Paper Trading'}
-              </button>
-              <button 
-                className={`portfolio-toggle-btn ${portfolioMode === 'real' ? 'active' : ''}`}
-                onClick={() => setPortfolioMode('real')}
-              >
-                <Activity size={14} />
-                {lang === 'de' ? 'Echtes Steam-Inventar ✦' : 'Real Steam Inventory ✦'}
-              </button>
-            </div>
+            {realInventoryItems.length === 0 ? (
+              <div className="steam-import-card">
+                <div className="steam-logo-container">
+                  <Activity size={28} />
+                </div>
+                <h4>{lang === 'de' ? 'Steam-Inventar beobachten' : 'Observe Steam Inventory'}</h4>
+                <p>
+                  {lang === 'de' 
+                    ? 'Verbinde dein öffentliches Steam-Inventar, um den Wert deiner CS2-Skins live zu verfolgen – wie bei Trade Republic.' 
+                    : 'Connect your public Steam inventory to track the live value of your CS2 skins – just like Trade Republic.'}
+                </p>
 
-            {portfolioMode === 'paper' ? (
+                {inventoryError && (
+                  <div className="alert-box">
+                    <AlertTriangle size={18} style={{ color: 'var(--color-red)', flexShrink: 0, marginTop: '2px' }} />
+                    <div className="alert-box-content">
+                      <div className="alert-box-title">{lang === 'de' ? 'Import fehlgeschlagen' : 'Import Failed'}</div>
+                      <div className="alert-box-desc">{inventoryError}</div>
+                      {resolveSteamId(steamIdInput) && (
+                        <a 
+                          href={`https://steamcommunity.com/inventory/${resolveSteamId(steamIdInput)}/730/2?l=german`} 
+                          target="_blank" 
+                          rel="noopener noreferrer" 
+                          className="alert-box-link"
+                        >
+                          {lang === 'de' ? 'Prüfen, ob dein Inventar-Link im Browser lädt ↗' : 'Check if your inventory link loads in browser ↗'}
+                        </a>
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                <form onSubmit={handleImportInventory} className="steam-input-form">
+                  <div className="steam-input-wrapper">
+                    <input
+                      type="text"
+                      className="steam-input"
+                      placeholder={lang === 'de' ? 'SteamID64 eingeben (z.B. 7656119...)' : 'Enter SteamID64 (e.g. 7656119...)'}
+                      value={steamIdInput}
+                      onChange={(e) => setSteamIdInput(e.target.value)}
+                    />
+                  </div>
+                  <button 
+                    type="submit" 
+                    className="steam-import-btn"
+                    disabled={isFetchingInventory}
+                  >
+                    {isFetchingInventory ? (lang === 'de' ? 'Lade Inventar...' : 'Loading Inventory...') : (lang === 'de' ? 'Importieren' : 'Import')}
+                  </button>
+                </form>
+
+                <div className="import-help-links">
+                  <a 
+                    href="https://steamid.io" 
+                    target="_blank" 
+                    rel="noopener noreferrer" 
+                    className="import-help-btn"
+                  >
+                    {lang === 'de' ? 'Wo finde ich meine SteamID?' : 'Where is my SteamID?'}
+                  </a>
+                  <button 
+                    type="button" 
+                    className="import-help-btn"
+                    onClick={() => setShowManualImport(true)}
+                  >
+                    {lang === 'de' ? 'Manuell einfügen (JSON)' : 'Insert manually (JSON)'}
+                  </button>
+                </div>
+              </div>
+            ) : (
               <>
-                {/* Portfolio Summary Card */}
+                {/* Real Inventory Summary Card */}
                 <div className="portfolio-summary">
                   <div className="stat-item">
                     <span className="stat-label">{lang === 'de' ? 'Gesamtwert' : 'Total Net Worth'}</span>
-                    <span className="stat-value">€{portfolioSummary.totalValue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                    <span className="stat-value">€{realInventorySummary.totalValue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                   </div>
                   <div className="stat-item" style={{ alignItems: 'flex-end' }}>
-                    <span className="stat-label">{lang === 'de' ? 'Rendite (P&L)' : 'Return (P&L)'}</span>
-                    <span className={`stat-value ${portfolioSummary.pnlVal >= 0 ? 'pnl-positive' : 'pnl-negative'}`}>
-                      {portfolioSummary.pnlVal >= 0 ? '+' : ''}€{portfolioSummary.pnlVal.toFixed(2)} ({portfolioSummary.pnlPct}%)
+                    <span className="stat-label">{lang === 'de' ? 'Entwicklung seit Import' : 'Return since import'}</span>
+                    <span className={`stat-value ${realInventorySummary.pnlVal >= 0 ? 'pnl-positive' : 'pnl-negative'}`}>
+                      {realInventorySummary.pnlVal >= 0 ? '+' : ''}€{realInventorySummary.pnlVal.toFixed(2)} ({realInventorySummary.pnlPct}%)
                     </span>
                   </div>
                 </div>
 
                 <div className="section-header">
-                  <h3 className="section-title">{lang === 'de' ? 'Deine Bestände' : 'Your Holdings'}</h3>
+                  <h3 className="section-title">{lang === 'de' ? 'Dein Steam-Bestand' : 'Your Steam Holdings'}</h3>
+                  <span style={{ fontSize: '11px', color: '#94a3b8' }}>
+                    {lang === 'de' ? 'Preise ticken live' : 'Prices tick live'}
+                  </span>
                 </div>
 
-                {Object.keys(holdings).length === 0 ? (
-                  <div className="empty-state">
-                    <Wallet size={36} style={{ marginBottom: '10px', opacity: 0.3 }} />
-                    <div>{lang === 'de' ? 'Keine aktiven Bestände vorhanden. Kaufe Skins auf der Ticker-Seite!' : 'No active holdings. Buy skins on the Ticker page!'}</div>
-                  </div>
-                ) : (
-                  <div className="portfolio-list">
-                    {Object.entries(holdings).map(([skinId, data]) => {
-                      const skin = skins.find((s) => s.id === skinId)
-                      if (!skin) return null
-                      const currentVal = skin.price * data.qty
-                      const investedVal = data.avgPrice * data.qty
-                      const itemPnl = parseFloat((currentVal - investedVal).toFixed(2))
-                      const itemPnlPct = parseFloat((itemPnl / investedVal * 100).toFixed(2))
+                <div className="portfolio-list">
+                  {realInventoryItems.map((item) => {
+                    const currentVal = item.price * item.qty
+                    const investedVal = item.basePrice * item.qty
+                    const itemPnl = parseFloat((currentVal - investedVal).toFixed(2))
+                    const itemPnlPct = parseFloat((investedVal > 0 ? (itemPnl / investedVal * 100) : 0).toFixed(2))
 
-                      return (
-                        <div 
-                          key={skinId} 
-                          className="portfolio-card"
-                          style={{ cursor: 'pointer' }}
-                          onClick={() => {
-                            setSelectedSkinId(skinId)
-                            setTradeQty(1)
-                            setActiveTab('market')
-                          }}
-                        >
-                          <div className="skin-info-left">
-                            <div className="skin-icon-container">
-                              <img src={skin.img} alt={skin.name} className="skin-img" />
-                            </div>
-                            <div className="skin-meta">
-                              <span className="skin-name">{skin.name}</span>
-                              <span className="qty-label">{data.qty}x @ avg. €{data.avgPrice.toFixed(2)}</span>
-                            </div>
+                    return (
+                      <div 
+                        key={item.id} 
+                        className={`portfolio-card skin-row ${selectedSkinId === item.id ? 'skin-row--selected' : ''} ${flashStates[item.id] === 'up' ? 'flash-up' : flashStates[item.id] === 'down' ? 'flash-down' : ''}`}
+                        style={{ cursor: 'pointer' }}
+                        onClick={() => {
+                          setSelectedSkinId(item.id)
+                          setActiveTab('market')
+                        }}
+                      >
+                        <div className="skin-info-left">
+                          <div className="skin-icon-container">
+                            <img src={item.img} alt={item.name} className="skin-img" />
                           </div>
-                          <div className="skin-info-right">
-                            <span className="skin-price">€{currentVal.toFixed(2)}</span>
-                            <span className={`pnl-badge ${itemPnl >= 0 ? 'pnl-badge--up' : 'pnl-badge--down'}`}>
-                              {itemPnl >= 0 ? '+' : ''}€{itemPnl.toFixed(2)} ({itemPnlPct}%)
-                            </span>
+                          <div className="skin-meta">
+                            <span className="skin-name">{item.name}</span>
+                            <span className="qty-label">{item.qty}x • {item.wear}</span>
                           </div>
                         </div>
-                      )
-                    })}
-                  </div>
-                )}
-              </>
-            ) : (
-              <>
-                {realInventoryItems.length === 0 ? (
-                  <div className="steam-import-card">
-                    <div className="steam-logo-container">
-                      <Activity size={28} />
-                    </div>
-                    <h4>{lang === 'de' ? 'Steam-Inventar beobachten' : 'Observe Steam Inventory'}</h4>
-                    <p>
-                      {lang === 'de' 
-                        ? 'Verbinde dein öffentliches Steam-Inventar, um den Wert deiner CS2-Skins live zu verfolgen – wie bei Trade Republic.' 
-                        : 'Connect your public Steam inventory to track the live value of your CS2 skins – just like Trade Republic.'}
-                    </p>
-
-                    {inventoryError && (
-                      <div className="alert-box">
-                        <AlertTriangle size={18} style={{ color: 'var(--color-red)', flexShrink: 0, marginTop: '2px' }} />
-                        <div className="alert-box-content">
-                          <div className="alert-box-title">{lang === 'de' ? 'Import fehlgeschlagen' : 'Import Failed'}</div>
-                          <div className="alert-box-desc">{inventoryError}</div>
-                          {resolveSteamId(steamIdInput) && (
-                            <a 
-                              href={`https://steamcommunity.com/inventory/${resolveSteamId(steamIdInput)}/730/2?l=german`} 
-                              target="_blank" 
-                              rel="noopener noreferrer" 
-                              className="alert-box-link"
-                            >
-                              {lang === 'de' ? 'Prüfen, ob dein Inventar-Link im Browser lädt ↗' : 'Check if your inventory link loads in browser ↗'}
-                            </a>
-                          )}
+                        <div className="skin-info-right">
+                          <span className="skin-price">€{currentVal.toFixed(2)}</span>
+                          <span className={`pnl-badge ${itemPnl >= 0 ? 'pnl-badge--up' : 'pnl-badge--down'}`}>
+                            {itemPnl >= 0 ? '+' : ''}€{itemPnl.toFixed(2)} ({itemPnlPct}%)
+                          </span>
                         </div>
                       </div>
-                    )}
+                    )
+                  })}
+                </div>
 
-                    <form onSubmit={handleImportInventory} className="steam-input-form">
-                      <div className="steam-input-wrapper">
-                        <input
-                          type="text"
-                          className="steam-input"
-                          placeholder={lang === 'de' ? 'SteamID64 eingeben (z.B. 7656119...)' : 'Enter SteamID64 (e.g. 7656119...)'}
-                          value={steamIdInput}
-                          onChange={(e) => setSteamIdInput(e.target.value)}
-                        />
-                      </div>
-                      <button 
-                        type="submit" 
-                        className="steam-import-btn"
-                        disabled={isFetchingInventory}
-                      >
-                        {isFetchingInventory ? (lang === 'de' ? 'Lade Inventar...' : 'Loading Inventory...') : (lang === 'de' ? 'Importieren' : 'Import')}
-                      </button>
-                    </form>
-
-                    <div className="import-help-links">
-                      <a 
-                        href="https://steamid.io" 
-                        target="_blank" 
-                        rel="noopener noreferrer" 
-                        className="import-help-btn"
-                      >
-                        {lang === 'de' ? 'Wo finde ich meine SteamID?' : 'Where is my SteamID?'}
-                      </a>
-                      <button 
-                        type="button" 
-                        className="import-help-btn"
-                        onClick={() => setShowManualImport(true)}
-                      >
-                        {lang === 'de' ? 'Manuell einfügen (JSON)' : 'Insert manually (JSON)'}
-                      </button>
-                    </div>
-                  </div>
-                ) : (
-                  <>
-                    {/* Real Inventory Summary Card */}
-                    <div className="portfolio-summary">
-                      <div className="stat-item">
-                        <span className="stat-label">{lang === 'de' ? 'Gesamtwert' : 'Total Net Worth'}</span>
-                        <span className="stat-value">€{realInventorySummary.totalValue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
-                      </div>
-                      <div className="stat-item" style={{ alignItems: 'flex-end' }}>
-                        <span className="stat-label">{lang === 'de' ? 'Entwicklung seit Import' : 'Return since import'}</span>
-                        <span className={`stat-value ${realInventorySummary.pnlVal >= 0 ? 'pnl-positive' : 'pnl-negative'}`}>
-                          {realInventorySummary.pnlVal >= 0 ? '+' : ''}€{realInventorySummary.pnlVal.toFixed(2)} ({realInventorySummary.pnlPct}%)
-                        </span>
-                      </div>
-                    </div>
-
-                    <div className="section-header">
-                      <h3 className="section-title">{lang === 'de' ? 'Dein Steam-Bestand' : 'Your Steam Holdings'}</h3>
-                      <span style={{ fontSize: '11px', color: '#94a3b8' }}>
-                        {lang === 'de' ? 'Preise ticken live' : 'Prices tick live'}
-                      </span>
-                    </div>
-
-                    <div className="portfolio-list">
-                      {realInventoryItems.map((item) => {
-                        const currentVal = item.price * item.qty
-                        const investedVal = item.basePrice * item.qty
-                        const itemPnl = parseFloat((currentVal - investedVal).toFixed(2))
-                        const itemPnlPct = parseFloat((investedVal > 0 ? (itemPnl / investedVal * 100) : 0).toFixed(2))
-
-                        return (
-                          <div 
-                            key={item.id} 
-                            className={`portfolio-card skin-row ${selectedSkinId === item.id ? 'skin-row--selected' : ''} ${flashStates[item.id] === 'up' ? 'flash-up' : flashStates[item.id] === 'down' ? 'flash-down' : ''}`}
-                            style={{ cursor: 'pointer' }}
-                            onClick={() => {
-                              setSelectedSkinId(item.id)
-                              setTradeQty(1)
-                              setActiveTab('market')
-                            }}
-                          >
-                            <div className="skin-info-left">
-                              <div className="skin-icon-container">
-                                <img src={item.img} alt={item.name} className="skin-img" />
-                              </div>
-                              <div className="skin-meta">
-                                <span className="skin-name">{item.name}</span>
-                                <span className="qty-label">{item.qty}x • {item.wear}</span>
-                              </div>
-                            </div>
-                            <div className="skin-info-right">
-                              <span className="skin-price">€{currentVal.toFixed(2)}</span>
-                              <span className={`pnl-badge ${itemPnl >= 0 ? 'pnl-badge--up' : 'pnl-badge--down'}`}>
-                                {itemPnl >= 0 ? '+' : ''}€{itemPnl.toFixed(2)} ({itemPnlPct}%)
-                              </span>
-                            </div>
-                          </div>
-                        )
-                      })}
-                    </div>
-
-                    <div className="disconnect-wrapper">
-                      <button 
-                        type="button" 
-                        className="import-help-btn"
-                        onClick={handleDisconnectInventory}
-                        style={{ color: 'var(--color-red)' }}
-                      >
-                        {lang === 'de' ? 'Verbindung trennen' : 'Disconnect Account'}
-                      </button>
-                      <button 
-                        type="button" 
-                        className="import-help-btn"
-                        onClick={() => handleImportInventory()}
-                        disabled={isFetchingInventory}
-                      >
-                        {isFetchingInventory ? (lang === 'de' ? 'Aktualisiere...' : 'Refreshing...') : (lang === 'de' ? 'Inventar neu laden ↻' : 'Reload Inventory ↻')}
-                      </button>
-                    </div>
-                  </>
-                )}
+                <div className="disconnect-wrapper">
+                  <button 
+                    type="button" 
+                    className="import-help-btn"
+                    onClick={handleDisconnectInventory}
+                    style={{ color: 'var(--color-red)' }}
+                  >
+                    {lang === 'de' ? 'Verbindung trennen' : 'Disconnect Account'}
+                  </button>
+                  <button 
+                    type="button" 
+                    className="import-help-btn"
+                    onClick={() => handleImportInventory()}
+                    disabled={isFetchingInventory}
+                  >
+                    {isFetchingInventory ? (lang === 'de' ? 'Aktualisiere...' : 'Refreshing...') : (lang === 'de' ? 'Inventar neu laden ↻' : 'Reload Inventory ↻')}
+                  </button>
+                </div>
               </>
             )}
           </div>
@@ -1233,44 +1038,6 @@ export default function App() {
           </div>
         )}
 
-        {activeTab === 'activity' && (
-          <div className="activity-view">
-            <div className="section-header">
-              <h3 className="section-title">{lang === 'de' ? 'Handelsverlauf' : 'Trade History'}</h3>
-            </div>
-
-            {transactions.length === 0 ? (
-              <div className="empty-state">
-                <History size={36} style={{ marginBottom: '10px', opacity: 0.3 }} />
-                <div>{lang === 'de' ? 'Noch keine Transaktionen getätigt.' : 'No transactions recorded yet.'}</div>
-              </div>
-            ) : (
-              <div className="portfolio-list">
-                {transactions.map((tx) => (
-                  <div key={tx.id} className="portfolio-card" style={{ borderLeft: `3px solid ${tx.type === 'buy' ? 'var(--color-green)' : 'var(--color-red)'}` }}>
-                    <div className="skin-info-left" style={{ paddingLeft: '4px' }}>
-                      <div style={{ display: 'flex', flexDirection: 'column' }}>
-                        <span className="skin-name" style={{ fontSize: '14px' }}>{tx.skinName}</span>
-                        <span className="qty-label" style={{ fontSize: '10px' }}>
-                          {tx.type === 'buy' ? (
-                            <span style={{ color: 'var(--color-green)', fontWeight: '700' }}>{lang === 'de' ? 'GEKAUFT' : 'BOUGHT'}</span>
-                          ) : (
-                            <span style={{ color: 'var(--color-red)', fontWeight: '700' }}>{lang === 'de' ? 'VERKAUFT' : 'SOLD'}</span>
-                          )}{' '}
-                          {tx.qty}x @ €{tx.price.toFixed(2)}
-                        </span>
-                      </div>
-                    </div>
-                    <div className="skin-info-right">
-                      <span className="skin-price">€{(tx.price * tx.qty).toFixed(2)}</span>
-                      <span style={{ fontSize: '9px', color: '#64748b', marginTop: '4px' }}>{tx.time}</span>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-        )}
       </main>
 
       {/* Tab Navigation Bar */}
@@ -1295,13 +1062,6 @@ export default function App() {
         >
           <Bell className="tab-icon" />
           <span>Alarme</span>
-        </button>
-        <button 
-          className={`tab-btn ${activeTab === 'activity' ? 'tab-btn--active' : ''}`}
-          onClick={() => setActiveTab('activity')}
-        >
-          <History className="tab-icon" />
-          <span>{lang === 'de' ? 'Verlauf' : 'History'}</span>
         </button>
       </nav>
 
