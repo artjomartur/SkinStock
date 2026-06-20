@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo, useRef, useCallback } from 'react'
-import { createChart, AreaSeries } from 'lightweight-charts'
+import { createChart, AreaSeries, LineSeries } from 'lightweight-charts'
 
 const lang = typeof navigator !== 'undefined' && navigator.language && navigator.language.startsWith('de') ? 'de' : 'en';
 import { 
@@ -158,6 +158,7 @@ function playTradeSound(type) {
 function SkinChart({ data, currentPrice, isPositive }) {
   const chartContainerRef = useRef()
   const seriesRef = useRef()
+  const smaSeriesRef = useRef()
   const chartRef = useRef()
 
   useEffect(() => {
@@ -220,6 +221,27 @@ function SkinChart({ data, currentPrice, isPositive }) {
     }))
     areaSeries.setData(areaData)
 
+    const smaSeries = chart.addSeries(LineSeries, {
+      color: 'rgba(255, 171, 0, 0.8)',
+      lineWidth: 2,
+      crosshairMarkerVisible: false,
+      priceLineVisible: false,
+      lastValueVisible: false,
+    })
+    smaSeriesRef.current = smaSeries
+
+    const smaData = []
+    const windowSize = Math.min(7, Math.floor(data.length / 3) || 1)
+    for (let i = 0; i < areaData.length; i++) {
+      if (i < windowSize - 1) continue
+      let sum = 0
+      for (let j = 0; j < windowSize; j++) {
+        sum += areaData[i - j].value
+      }
+      smaData.push({ time: areaData[i].time, value: sum / windowSize })
+    }
+    smaSeries.setData(smaData)
+
     const handleResize = () => {
       chart.applyOptions({ width: chartContainerRef.current.clientWidth })
     }
@@ -238,6 +260,23 @@ function SkinChart({ data, currentPrice, isPositive }) {
         time: lastItem.time,
         value: currentPrice
       })
+
+      if (smaSeriesRef.current) {
+        const areaData = data.map(d => ({ time: d.time, value: d.close }))
+        areaData[areaData.length - 1].value = currentPrice // update last point in memory
+        
+        const windowSize = Math.min(7, Math.floor(data.length / 3) || 1)
+        if (areaData.length >= windowSize) {
+          let sum = 0
+          for (let j = 0; j < windowSize; j++) {
+            sum += areaData[areaData.length - 1 - j].value
+          }
+          smaSeriesRef.current.update({
+            time: lastItem.time,
+            value: sum / windowSize
+          })
+        }
+      }
     }
   }, [currentPrice, data])
 
@@ -747,6 +786,11 @@ export default function App() {
     let totalInvested = 0
     let marketableValue = 0
     let nonMarketableCount = 0
+    
+    let distKnives = 0;
+    let distGloves = 0;
+    let distCases = 0;
+    let distWeapons = 0;
 
     realInventoryItems.forEach((item) => {
       const itemVal = item.price * item.qty
@@ -756,6 +800,17 @@ export default function App() {
         marketableValue += itemVal
       } else {
         nonMarketableCount += item.qty
+      }
+      
+      const n = item.name.toLowerCase();
+      if (n.includes('★') && !n.includes('glove') && !n.includes('handschuhe') && !n.includes('wrap')) {
+        distKnives += itemVal;
+      } else if ((n.includes('★') && (n.includes('glove') || n.includes('handschuhe') || n.includes('wrap'))) || n.includes('bloodhound') || n.includes('hand wraps')) {
+        distGloves += itemVal;
+      } else if (n.includes('case') || n.includes('kiste') || n.includes('container') || n.includes('capsule')) {
+        distCases += itemVal;
+      } else {
+        distWeapons += itemVal;
       }
     })
 
@@ -767,7 +822,13 @@ export default function App() {
       marketableValue: parseFloat(marketableValue.toFixed(2)),
       nonMarketableCount,
       pnlVal,
-      pnlPct
+      pnlPct,
+      distribution: {
+        knives: distKnives,
+        gloves: distGloves,
+        cases: distCases,
+        weapons: distWeapons
+      }
     }
   }, [realInventoryItems])
 
@@ -1200,6 +1261,25 @@ export default function App() {
                         </span>
                       </div>
                     )}
+                    {realInventorySummary.totalValue > 0 && (
+                      <div className="portfolio-distribution" style={{ marginTop: '12px', width: '100%' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '6px' }}>
+                          <span style={{ fontSize: '11px', color: '#94a3b8', textTransform: 'uppercase' }}>{lang === 'de' ? 'Diversifikation' : 'Diversification'}</span>
+                        </div>
+                        <div style={{ display: 'flex', height: '8px', borderRadius: '4px', overflow: 'hidden', background: '#1c1c1e' }}>
+                          <div style={{ width: `${(realInventorySummary.distribution.knives / realInventorySummary.totalValue) * 100}%`, background: '#fbbf24' }} title="Knives" />
+                          <div style={{ width: `${(realInventorySummary.distribution.gloves / realInventorySummary.totalValue) * 100}%`, background: '#f87171' }} title="Gloves" />
+                          <div style={{ width: `${(realInventorySummary.distribution.weapons / realInventorySummary.totalValue) * 100}%`, background: '#60a5fa' }} title="Weapons" />
+                          <div style={{ width: `${(realInventorySummary.distribution.cases / realInventorySummary.totalValue) * 100}%`, background: '#a78bfa' }} title="Cases" />
+                        </div>
+                        <div style={{ display: 'flex', gap: '12px', marginTop: '6px', fontSize: '10px', color: '#94a3b8' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}><div style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#fbbf24' }}></div>{lang === 'de' ? 'Messer' : 'Knives'}</div>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}><div style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#f87171' }}></div>{lang === 'de' ? 'Handschuhe' : 'Gloves'}</div>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}><div style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#60a5fa' }}></div>{lang === 'de' ? 'Waffen' : 'Weapons'}</div>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}><div style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#a78bfa' }}></div>{lang === 'de' ? 'Kisten' : 'Cases'}</div>
+                        </div>
+                      </div>
+                    )}
                   </div>
 
                   {/* Selected Skin Chart (Desktop Only) */}
@@ -1272,6 +1352,23 @@ export default function App() {
                             {selectedSkin.price >= selectedSkin.basePrice ? '+' : ''}
                             {((selectedSkin.price - selectedSkin.basePrice) * selectedSkin.qty).toFixed(2)}€ ({selectedSkin.basePrice > 0 ? (((selectedSkin.price - selectedSkin.basePrice) / selectedSkin.basePrice * 100).toFixed(2)) : 0}%)
                           </span>
+                        </div>
+                        <div className="advanced-pnl" style={{ marginTop: '12px', paddingTop: '12px', borderTop: '1px dashed rgba(255,255,255,0.1)' }}>
+                          <h5 style={{ fontSize: '11px', color: '#94a3b8', marginBottom: '8px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                            {lang === 'de' ? 'Profit & Loss Rechner' : 'Profit & Loss Calc'}
+                          </h5>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '6px', fontSize: '13px' }}>
+                            <span style={{ color: '#94a3b8' }} title={lang === 'de' ? 'Steam Gebühr 15%' : 'Steam Fee 15%'}>{lang === 'de' ? 'Steam Break-Even:' : 'Steam Break-Even:'}</span>
+                            <span style={{ fontWeight: '600', color: selectedSkin.price >= (selectedSkin.basePrice / 0.85) ? 'var(--color-green)' : '#fff' }}>
+                              €{(selectedSkin.basePrice / 0.85).toFixed(2)}
+                            </span>
+                          </div>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px' }}>
+                            <span style={{ color: '#94a3b8' }} title={lang === 'de' ? 'Drittanbieter 10% Gebühr' : '3rd Party 10% Fee'}>{lang === 'de' ? 'Cashout-Wert:' : 'Cashout Value:'}</span>
+                            <span style={{ fontWeight: '600', color: (selectedSkin.price * 0.9) >= selectedSkin.basePrice ? 'var(--color-green)' : 'var(--color-red)' }}>
+                              €{(selectedSkin.price * 0.9 * selectedSkin.qty).toFixed(2)}
+                            </span>
+                          </div>
                         </div>
                         {(() => {
                           const data = historicalDataMap[selectedSkinId] || [];
