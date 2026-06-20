@@ -10,7 +10,8 @@ import {
   Activity,
   Plus,
   Trash2,
-  AlertTriangle
+  AlertTriangle,
+  Search
 } from 'lucide-react'
 import './App.css'
 import defaultInventory from './defaultInventory.json'
@@ -79,13 +80,13 @@ const INITIAL_SKINS = [
   }
 ]
 
-// Generate simulated 30-day historical chart data
-function generateHistoricalData(basePrice) {
+// Generate simulated historical chart data based on timeframe
+function generateHistoricalData(basePrice, days = 30) {
   const data = []
   const now = new Date()
-  let currentPrice = basePrice * 0.95
+  let currentPrice = basePrice * (1 - (days / 600))
 
-  for (let i = 30; i >= 0; i--) {
+  for (let i = days; i >= 0; i--) {
     const date = new Date(now)
     date.setDate(now.getDate() - i)
     const timeStr = date.toISOString().split('T')[0]
@@ -245,6 +246,8 @@ function SkinChart({ data, currentPrice, isPositive }) {
 
 export default function App() {
   const [activeTab, setActiveTab] = useState('market') // 'market' | 'portfolio' | 'alerts'
+  const [searchQuery, setSearchQuery] = useState('')
+  const [chartTimeframe, setChartTimeframe] = useState('1M') // '1W', '1M', '3M', '1Y'
   const [skins, setSkins] = useState(() => {
     try {
       const stored = localStorage.getItem('skinstock_watchlist')
@@ -543,15 +546,39 @@ export default function App() {
 
   // Cache historical data for each skin
   const historicalDataMap = useMemo(() => {
+    let days = 30;
+    if (chartTimeframe === '1W') days = 7;
+    else if (chartTimeframe === '3M') days = 90;
+    else if (chartTimeframe === '1Y') days = 365;
+
     const map = {}
     INITIAL_SKINS.forEach((skin) => {
-      map[skin.id] = generateHistoricalData(skin.basePrice)
+      map[skin.id] = generateHistoricalData(skin.basePrice, days)
     })
     realInventoryItems.forEach((skin) => {
-      map[skin.id] = generateHistoricalData(skin.basePrice)
+      map[skin.id] = generateHistoricalData(skin.basePrice, days)
     })
     return map
-  }, [realInventoryItems])
+  }, [realInventoryItems, chartTimeframe])
+
+  const filteredSkins = useMemo(() => {
+    if (!searchQuery.trim()) return skins
+    return skins.filter(s => s.name.toLowerCase().includes(searchQuery.toLowerCase()))
+  }, [skins, searchQuery])
+
+  const filteredPortfolio = useMemo(() => {
+    if (!searchQuery.trim()) return realInventoryItems
+    return realInventoryItems.filter(s => s.name.toLowerCase().includes(searchQuery.toLowerCase()))
+  }, [realInventoryItems, searchQuery])
+
+  const topMovers = useMemo(() => {
+    const allItems = [...skins, ...realInventoryItems]
+    const uniqueItems = Array.from(new Map(allItems.map(item => [item.id, item])).values())
+    const sorted = [...uniqueItems].sort((a, b) => b.change - a.change)
+    const gainers = sorted.slice(0, 3).filter(s => s.change > 0)
+    const losers = sorted.slice().reverse().slice(0, 3).filter(s => s.change < 0)
+    return { gainers, losers }
+  }, [skins, realInventoryItems])
 
   const selectedSkin = useMemo(() => {
     let found = null
@@ -836,10 +863,35 @@ export default function App() {
               {/* Smooth Line Chart */}
               <div className="chart-card">
                 <div className="chart-header-tr">
-                  <h3 className="chart-title-tr">{selectedSkin.name}</h3>
-                  <div className="chart-price-tr">€{selectedSkin.price.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
-                  <div className={`chart-change-tr ${selectedSkin.change >= 0 ? 'price-up' : 'price-down'}`}>
-                    {selectedSkin.change >= 0 ? '+' : ''}{selectedSkin.change.toFixed(2)}% {lang === 'de' ? 'Heute' : 'Today'}
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                    <div>
+                      <h3 className="chart-title-tr">{selectedSkin.name}</h3>
+                      <div className="chart-price-tr">€{selectedSkin.price.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
+                      <div className={`chart-change-tr ${selectedSkin.change >= 0 ? 'price-up' : 'price-down'}`}>
+                        {selectedSkin.change >= 0 ? '+' : ''}{selectedSkin.change.toFixed(2)}% {lang === 'de' ? 'Heute' : 'Today'}
+                      </div>
+                    </div>
+                    <div className="timeframe-nav" style={{ display: 'flex', gap: '4px', background: 'rgba(255,255,255,0.05)', padding: '2px', borderRadius: '6px' }}>
+                      {['1W', '1M', '3M', '1Y'].map(tf => (
+                        <button 
+                          key={tf} 
+                          className={`timeframe-btn ${chartTimeframe === tf ? 'active' : ''}`}
+                          onClick={() => setChartTimeframe(tf)}
+                          style={{
+                            background: chartTimeframe === tf ? 'rgba(255,255,255,0.1)' : 'transparent',
+                            color: chartTimeframe === tf ? '#fff' : '#94a3b8',
+                            border: 'none',
+                            padding: '4px 8px',
+                            fontSize: '12px',
+                            borderRadius: '4px',
+                            cursor: 'pointer',
+                            fontWeight: chartTimeframe === tf ? '600' : '400'
+                          }}
+                        >
+                          {tf}
+                        </button>
+                      ))}
+                    </div>
                   </div>
                 </div>
                 <div className="chart-body-container">
@@ -885,6 +937,32 @@ export default function App() {
                           : (lang === 'de' ? '✗ Nein' : '✗ No')}
                       </span>
                     </div>
+                    {(() => {
+                      const data = historicalDataMap[selectedSkinId] || [];
+                      if (!data.length) return null;
+                      const high = Math.max(...data.map(d => d.high));
+                      const low = Math.min(...data.map(d => d.low));
+                      const vol = low > 0 ? ((high - low) / low * 100).toFixed(2) : 0;
+                      return (
+                        <div className="advanced-metrics" style={{ marginTop: '12px', paddingTop: '12px', borderTop: '1px solid rgba(255,255,255,0.05)' }}>
+                          <h5 style={{ fontSize: '11px', color: '#94a3b8', marginBottom: '8px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                            {lang === 'de' ? 'Marktdaten (' + chartTimeframe + ')' : 'Market Data (' + chartTimeframe + ')'}
+                          </h5>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '6px', fontSize: '13px' }}>
+                            <span style={{ color: '#94a3b8' }}>{lang === 'de' ? 'Hoch:' : 'High:'}</span>
+                            <span style={{ fontWeight: '600' }}>€{high.toFixed(2)}</span>
+                          </div>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '6px', fontSize: '13px' }}>
+                            <span style={{ color: '#94a3b8' }}>{lang === 'de' ? 'Tief:' : 'Low:'}</span>
+                            <span style={{ fontWeight: '600' }}>€{low.toFixed(2)}</span>
+                          </div>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px' }}>
+                            <span style={{ color: '#94a3b8' }}>{lang === 'de' ? 'Volatilität:' : 'Volatility:'}</span>
+                            <span style={{ fontWeight: '600' }}>{vol}%</span>
+                          </div>
+                        </div>
+                      )
+                    })()}
                     {!skins.some(s => s.id === selectedSkin.id) && (
                       <button 
                         onClick={() => handleAddToWatchlist(selectedSkin)}
@@ -945,15 +1023,48 @@ export default function App() {
                   {lang === 'de' ? 'Preise ticken live' : 'Prices tick live'}
                 </span>
               </div>
+              <div className="search-input-wrapper" style={{ margin: '0 16px 12px 16px', position: 'relative' }}>
+                <Search size={14} style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)', color: '#94a3b8' }} />
+                <input 
+                  type="text" 
+                  className="search-input" 
+                  placeholder={lang === 'de' ? 'Suchen...' : 'Search...'}
+                  value={searchQuery}
+                  onChange={e => setSearchQuery(e.target.value)}
+                  style={{ width: '100%', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '8px', padding: '8px 8px 8px 30px', color: '#fff', fontSize: '13px', outline: 'none' }}
+                />
+              </div>
+
+              {/* Top Movers Widget */}
+              {topMovers.gainers.length > 0 && !searchQuery && (
+                <div className="top-movers-widget" style={{ margin: '0 16px 16px 16px', background: 'rgba(255,255,255,0.02)', borderRadius: '12px', padding: '12px', border: '1px solid rgba(255,255,255,0.05)' }}>
+                  <h4 style={{ fontSize: '11px', color: '#94a3b8', marginBottom: '8px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Top Movers</h4>
+                  <div style={{ display: 'flex', gap: '8px', overflowX: 'auto', paddingBottom: '4px' }} className="scrollbar-hide">
+                    {topMovers.gainers.map(g => (
+                      <div key={'gainer-'+g.id} style={{ minWidth: '90px', background: 'rgba(0,209,130,0.1)', border: '1px solid rgba(0,209,130,0.2)', padding: '6px', borderRadius: '8px', cursor: 'pointer' }} onClick={() => setSelectedSkinId(g.id)}>
+                        <div style={{ fontSize: '11px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{g.name}</div>
+                        <div style={{ fontSize: '12px', fontWeight: 'bold', color: 'var(--color-green)', marginTop: '2px' }}>+{g.change.toFixed(2)}%</div>
+                      </div>
+                    ))}
+                    {topMovers.losers.map(l => (
+                      <div key={'loser-'+l.id} style={{ minWidth: '90px', background: 'rgba(255,59,48,0.1)', border: '1px solid rgba(255,59,48,0.2)', padding: '6px', borderRadius: '8px', cursor: 'pointer' }} onClick={() => setSelectedSkinId(l.id)}>
+                        <div style={{ fontSize: '11px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{l.name}</div>
+                        <div style={{ fontSize: '12px', fontWeight: 'bold', color: 'var(--color-red)', marginTop: '2px' }}>{l.change.toFixed(2)}%</div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
               <div className="watchlist">
-                {skins.length === 0 ? (
+                {filteredSkins.length === 0 ? (
                   <div className="empty-state">
                     {lang === 'de' 
-                      ? 'Deine Beobachtungsliste ist leer. Tippe im Depot auf ein Item und füge es hinzu.' 
-                      : 'Your watchlist is empty. Tap an item in the Depot to add it here.'}
+                      ? 'Keine Skins gefunden.' 
+                      : 'No skins found.'}
                   </div>
                 ) : (
-                  skins.map((skin) => (
+                  filteredSkins.map((skin) => (
                     <div 
                       key={skin.id} 
                       className={`skin-row ${selectedSkinId === skin.id ? 'skin-row--selected' : ''} ${flashStates[skin.id] === 'up' ? 'flash-up' : flashStates[skin.id] === 'down' ? 'flash-down' : ''}`}
@@ -1095,10 +1206,35 @@ export default function App() {
                   {selectedSkinId && (
                     <div className="chart-card desktop-portfolio-chart">
                       <div className="chart-header-tr">
-                        <h3 className="chart-title-tr">{selectedSkin.name} ({lang === 'de' ? 'Live Chart' : 'Live Chart'})</h3>
-                        <div className="chart-price-tr">€{selectedSkin.price.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
-                        <div className={`chart-change-tr ${selectedSkin.change >= 0 ? 'price-up' : 'price-down'}`}>
-                          {selectedSkin.change >= 0 ? '+' : ''}{selectedSkin.change.toFixed(2)}% {lang === 'de' ? 'Heute' : 'Today'}
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                          <div>
+                            <h3 className="chart-title-tr">{selectedSkin.name} ({lang === 'de' ? 'Live Chart' : 'Live Chart'})</h3>
+                            <div className="chart-price-tr">€{selectedSkin.price.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
+                            <div className={`chart-change-tr ${selectedSkin.change >= 0 ? 'price-up' : 'price-down'}`}>
+                              {selectedSkin.change >= 0 ? '+' : ''}{selectedSkin.change.toFixed(2)}% {lang === 'de' ? 'Heute' : 'Today'}
+                            </div>
+                          </div>
+                          <div className="timeframe-nav" style={{ display: 'flex', gap: '4px', background: 'rgba(255,255,255,0.05)', padding: '2px', borderRadius: '6px' }}>
+                            {['1W', '1M', '3M', '1Y'].map(tf => (
+                              <button 
+                                key={tf} 
+                                className={`timeframe-btn ${chartTimeframe === tf ? 'active' : ''}`}
+                                onClick={() => setChartTimeframe(tf)}
+                                style={{
+                                  background: chartTimeframe === tf ? 'rgba(255,255,255,0.1)' : 'transparent',
+                                  color: chartTimeframe === tf ? '#fff' : '#94a3b8',
+                                  border: 'none',
+                                  padding: '4px 8px',
+                                  fontSize: '12px',
+                                  borderRadius: '4px',
+                                  cursor: 'pointer',
+                                  fontWeight: chartTimeframe === tf ? '600' : '400'
+                                }}
+                              >
+                                {tf}
+                              </button>
+                            ))}
+                          </div>
                         </div>
                       </div>
                       <div className="chart-body-container">
@@ -1137,6 +1273,32 @@ export default function App() {
                             {((selectedSkin.price - selectedSkin.basePrice) * selectedSkin.qty).toFixed(2)}€ ({selectedSkin.basePrice > 0 ? (((selectedSkin.price - selectedSkin.basePrice) / selectedSkin.basePrice * 100).toFixed(2)) : 0}%)
                           </span>
                         </div>
+                        {(() => {
+                          const data = historicalDataMap[selectedSkinId] || [];
+                          if (!data.length) return null;
+                          const high = Math.max(...data.map(d => d.high));
+                          const low = Math.min(...data.map(d => d.low));
+                          const vol = low > 0 ? ((high - low) / low * 100).toFixed(2) : 0;
+                          return (
+                            <div className="advanced-metrics" style={{ marginTop: '12px', paddingTop: '12px', borderTop: '1px solid rgba(255,255,255,0.05)' }}>
+                              <h5 style={{ fontSize: '11px', color: '#94a3b8', marginBottom: '8px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                                {lang === 'de' ? 'Marktdaten (' + chartTimeframe + ')' : 'Market Data (' + chartTimeframe + ')'}
+                              </h5>
+                              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '6px', fontSize: '13px' }}>
+                                <span style={{ color: '#94a3b8' }}>{lang === 'de' ? 'Hoch:' : 'High:'}</span>
+                                <span style={{ fontWeight: '600' }}>€{high.toFixed(2)}</span>
+                              </div>
+                              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '6px', fontSize: '13px' }}>
+                                <span style={{ color: '#94a3b8' }}>{lang === 'de' ? 'Tief:' : 'Low:'}</span>
+                                <span style={{ fontWeight: '600' }}>€{low.toFixed(2)}</span>
+                              </div>
+                              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px' }}>
+                                <span style={{ color: '#94a3b8' }}>{lang === 'de' ? 'Volatilität:' : 'Volatility:'}</span>
+                                <span style={{ fontWeight: '600' }}>{vol}%</span>
+                              </div>
+                            </div>
+                          )
+                        })()}
                       </div>
                     </div>
                   )}
@@ -1168,8 +1330,23 @@ export default function App() {
                       {lang === 'de' ? 'Preise ticken live' : 'Prices tick live'}
                     </span>
                   </div>
+                  <div className="search-input-wrapper" style={{ margin: '0 16px 12px 16px', position: 'relative' }}>
+                    <Search size={14} style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)', color: '#94a3b8' }} />
+                    <input 
+                      type="text" 
+                      className="search-input" 
+                      placeholder={lang === 'de' ? 'Im Inventar suchen...' : 'Search inventory...'}
+                      value={searchQuery}
+                      onChange={e => setSearchQuery(e.target.value)}
+                      style={{ width: '100%', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '8px', padding: '8px 8px 8px 30px', color: '#fff', fontSize: '13px', outline: 'none' }}
+                    />
+                  </div>
                   <div className="portfolio-list">
-                    {realInventoryItems.map((item) => {
+                    {filteredPortfolio.length === 0 ? (
+                      <div className="empty-state">
+                        {lang === 'de' ? 'Keine passenden Items gefunden.' : 'No matching items found.'}
+                      </div>
+                    ) : filteredPortfolio.map((item) => {
                       const currentVal = item.price * item.qty
                       const investedVal = item.basePrice * item.qty
                       const itemPnl = parseFloat((currentVal - investedVal).toFixed(2))

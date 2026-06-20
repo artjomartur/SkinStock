@@ -1093,3 +1093,20 @@
   }
 }
 
+.search-input::placeholder {
+  color: #64748b;
+}
+
+.timeframe-btn:hover:not(.active) {
+  background: rgba(255,255,255,0.05) !important;
+  color: #fff !important;
+}
+
+.top-movers-widget {
+  animation: fadeIn 0.3s ease-in-out;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(-4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
