@@ -11,7 +11,8 @@ import {
   Plus,
   Trash2,
   AlertTriangle,
-  Search
+  Search,
+  BarChart2
 } from 'lucide-react'
 import './App.css'
 import defaultInventory from './defaultInventory.json'
@@ -823,12 +824,147 @@ export default function App() {
       nonMarketableCount,
       pnlVal,
       pnlPct,
+      totalInvested: parseFloat(totalInvested.toFixed(2)),
       distribution: {
         knives: distKnives,
         gloves: distGloves,
         cases: distCases,
         weapons: distWeapons
       }
+    }
+  }, [realInventoryItems])
+
+  // Technical Analysis & Simulated Order Book
+  const simulatedOrderBook = useMemo(() => {
+    if (!selectedSkin || selectedSkin.price <= 0) return { bids: [], asks: [] }
+    const bids = []
+    const asks = []
+    const price = selectedSkin.price
+    
+    for (let i = 1; i <= 5; i++) {
+      const askDiff = 0.001 * i * price
+      const askPrice = price + askDiff
+      const askQty = Math.floor(((price * i * 7) % 19) + 1)
+      asks.push({ price: parseFloat(askPrice.toFixed(2)), qty: askQty })
+      
+      const bidDiff = 0.001 * i * price
+      const bidPrice = price - bidDiff
+      const bidQty = Math.floor(((price * i * 13) % 23) + 1)
+      bids.push({ price: parseFloat(bidPrice.toFixed(2)), qty: bidQty })
+    }
+    
+    asks.reverse()
+    return { bids, asks }
+  }, [selectedSkin])
+
+  const selectedSkinSma = useMemo(() => {
+    const histData = historicalDataMap[selectedSkinId] || []
+    if (histData.length === 0) return 0
+    const windowSize = Math.min(7, histData.length)
+    let sum = 0
+    const prices = histData.map(d => d.close)
+    if (prices.length > 0) {
+      prices[prices.length - 1] = selectedSkin.price
+    }
+    const count = Math.min(windowSize, prices.length)
+    for (let i = 0; i < count; i++) {
+      sum += prices[prices.length - 1 - i]
+    }
+    return count > 0 ? parseFloat((sum / count).toFixed(2)) : 0
+  }, [historicalDataMap, selectedSkinId, selectedSkin.price])
+
+  const selectedSkinRsi = useMemo(() => {
+    const change = selectedSkin.change || 0
+    const baseRsi = 50 + change * 4
+    return Math.min(95, Math.max(5, Math.round(baseRsi)))
+  }, [selectedSkin.change])
+
+  const selectedSkinSignal = useMemo(() => {
+    if (!selectedSkinSma) return 'HOLD'
+    const ratio = selectedSkin.price / selectedSkinSma
+    if (ratio > 1.005) return 'BUY'
+    if (ratio < 0.995) return 'SELL'
+    return 'HOLD'
+  }, [selectedSkin.price, selectedSkinSma])
+
+  // Advanced Analytics for the Analytics Tab
+  const averageVolatility = useMemo(() => {
+    if (realInventoryItems.length === 0) return 0
+    let totalValue = 0
+    let weightedVolSum = 0
+    
+    realInventoryItems.forEach(item => {
+      const hist = historicalDataMap[item.id] || []
+      if (hist.length > 0) {
+        const highs = hist.map(h => h.high)
+        const lows = hist.map(l => l.low)
+        const maxHigh = Math.max(...highs)
+        const minLow = Math.min(...lows)
+        const vol = minLow > 0 ? ((maxHigh - minLow) / minLow * 100) : 0
+        const itemVal = item.price * item.qty
+        weightedVolSum += vol * itemVal
+        totalValue += itemVal
+      }
+    })
+    
+    return totalValue > 0 ? parseFloat((weightedVolSum / totalValue).toFixed(2)) : 0
+  }, [realInventoryItems, historicalDataMap])
+
+  const riskScore = useMemo(() => {
+    if (realInventoryItems.length === 0) return { score: 0, label: 'N/A' }
+    let totalValue = 0
+    let weightedRiskSum = 0
+    
+    realInventoryItems.forEach(item => {
+      const itemVal = item.price * item.qty
+      const n = item.name.toLowerCase()
+      let itemRisk = 5
+      if (n.includes('★') && !n.includes('glove') && !n.includes('handschuhe') && !n.includes('wrap')) {
+        itemRisk = 3
+      } else if ((n.includes('★') && (n.includes('glove') || n.includes('handschuhe') || n.includes('wrap'))) || n.includes('bloodhound') || n.includes('hand wraps')) {
+        itemRisk = 3
+      } else if (n.includes('case') || n.includes('kiste') || n.includes('container') || n.includes('capsule')) {
+        itemRisk = 8
+      }
+      
+      weightedRiskSum += itemRisk * itemVal
+      totalValue += itemVal
+    })
+    
+    if (totalValue === 0) return { score: 0, label: 'N/A' }
+    const score = parseFloat((weightedRiskSum / totalValue).toFixed(1))
+    let label = lang === 'de' ? 'Ausgewogen' : 'Balanced'
+    if (score < 4.5) label = lang === 'de' ? 'Konservativ' : 'Conservative'
+    else if (score > 6.5) label = lang === 'de' ? 'Spekulativ' : 'Speculative'
+    
+    return { score, label }
+  }, [realInventoryItems])
+
+  const profitDistribution = useMemo(() => {
+    let win = 0
+    let breakEven = 0
+    let loss = 0
+    
+    realInventoryItems.forEach(item => {
+      const netPrice = item.price * 0.85
+      if (item.price > item.basePrice && netPrice < item.basePrice) {
+        breakEven += item.qty
+      } else if (netPrice >= item.basePrice) {
+        win += item.qty
+      } else {
+        loss += item.qty
+      }
+    })
+    
+    return { win, breakEven, loss }
+  }, [realInventoryItems])
+
+  const performers = useMemo(() => {
+    if (realInventoryItems.length === 0) return { best: [], worst: [] }
+    const sorted = [...realInventoryItems].sort((a, b) => b.change - a.change)
+    return {
+      best: sorted.slice(0, 3).filter(item => item.change > 0),
+      worst: sorted.slice().reverse().slice(0, 3).filter(item => item.change < 0)
     }
   }, [realInventoryItems])
 
@@ -868,6 +1004,13 @@ export default function App() {
           >
             <Wallet size={20} />
             <span>{lang === 'de' ? 'Depot' : 'Portfolio'}</span>
+          </button>
+          <button 
+            className={`sidebar-nav-btn ${activeTab === 'analytics' ? 'active' : ''}`}
+            onClick={() => setActiveTab('analytics')}
+          >
+            <BarChart2 size={20} />
+            <span>{lang === 'de' ? 'Analyse' : 'Analytics'}</span>
           </button>
           <button 
             className={`sidebar-nav-btn ${activeTab === 'alerts' ? 'active' : ''}`}
@@ -961,6 +1104,72 @@ export default function App() {
                     currentPrice={selectedSkin.price} 
                     isPositive={selectedSkin.change >= 0}
                   />
+                </div>
+              </div>
+
+              {/* Technical Analysis & Order Book Row */}
+              <div className="analytics-ticker-row">
+                {/* Technical Indicators */}
+                <div className="trade-box" style={{ marginTop: 0 }}>
+                  <h4 className="section-title" style={{ fontSize: '14px', marginBottom: '12px' }}>
+                    {lang === 'de' ? 'Technische Indikatoren' : 'Technical Indicators'}
+                  </h4>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px' }}>
+                      <span style={{ color: '#94a3b8' }}>SMA (7 {lang === 'de' ? 'Tage' : 'Days'}):</span>
+                      <span style={{ fontWeight: '600', color: '#fff' }}>€{selectedSkinSma.toFixed(2)}</span>
+                    </div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px' }}>
+                      <span style={{ color: '#94a3b8' }}>RSI (14):</span>
+                      <span style={{ fontWeight: '600', color: selectedSkinRsi > 70 ? 'var(--color-red)' : selectedSkinRsi < 30 ? 'var(--color-green)' : '#fff' }}>
+                        {selectedSkinRsi} ({selectedSkinRsi > 70 ? (lang === 'de' ? 'Überkauft' : 'Overbought') : selectedSkinRsi < 30 ? (lang === 'de' ? 'Überverkauft' : 'Oversold') : 'Neutral'})
+                      </span>
+                    </div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px', paddingTop: '8px', borderTop: '1px solid rgba(255,255,255,0.05)' }}>
+                      <span style={{ color: '#94a3b8' }}>{lang === 'de' ? 'Trend-Empfehlung:' : 'Trend Signal:'}</span>
+                      <span style={{ 
+                        fontWeight: '700', 
+                        color: selectedSkinSignal === 'BUY' ? 'var(--color-green)' : selectedSkinSignal === 'SELL' ? 'var(--color-red)' : 'var(--color-amber)' 
+                      }}>
+                        {selectedSkinSignal === 'BUY' ? (lang === 'de' ? 'KAUFEN' : 'BUY') : selectedSkinSignal === 'SELL' ? (lang === 'de' ? 'VERKAUFEN' : 'SELL') : (lang === 'de' ? 'HALTEN' : 'HOLD')}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Simulated Order Book */}
+                <div className="trade-box" style={{ marginTop: 0 }}>
+                  <h4 className="section-title" style={{ fontSize: '14px', marginBottom: '10px' }}>
+                    {lang === 'de' ? 'Simuliertes Orderbuch' : 'Simulated Order Book'}
+                  </h4>
+                  <div className="order-book-table" style={{ fontSize: '11px', fontFamily: 'monospace' }}>
+                    <div className="order-book-header" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', color: '#94a3b8', borderBottom: '1px solid rgba(255,255,255,0.05)', paddingBottom: '4px', marginBottom: '4px' }}>
+                      <span>{lang === 'de' ? 'Preis (€)' : 'Price (€)'}</span>
+                      <span style={{ textAlign: 'right' }}>{lang === 'de' ? 'Menge (Qty)' : 'Size (Qty)'}</span>
+                    </div>
+                    {/* Asks (Sell offers) - Red */}
+                    <div className="asks-list">
+                      {simulatedOrderBook.asks.map((ask, idx) => (
+                        <div key={'ask-'+idx} style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', color: 'var(--color-red)', padding: '2px 0' }}>
+                          <span>{ask.price.toFixed(2)}</span>
+                          <span style={{ textAlign: 'right', color: '#f87171' }}>{ask.qty}</span>
+                        </div>
+                      ))}
+                    </div>
+                    {/* Current Spread divider */}
+                    <div className="spread-divider" style={{ textAlign: 'center', color: '#fff', fontSize: '10px', padding: '3px 0', borderY: '1px solid rgba(255,255,255,0.1)', background: 'rgba(255,255,255,0.02)', margin: '4px 0', borderRadius: '4px' }}>
+                      Spread: €{(simulatedOrderBook.asks[simulatedOrderBook.asks.length - 1]?.price - simulatedOrderBook.bids[0]?.price || 0).toFixed(2)}
+                    </div>
+                    {/* Bids (Buy offers) - Green */}
+                    <div className="bids-list">
+                      {simulatedOrderBook.bids.map((bid, idx) => (
+                        <div key={'bid-'+idx} style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', color: 'var(--color-green)', padding: '2px 0' }}>
+                          <span>{bid.price.toFixed(2)}</span>
+                          <span style={{ textAlign: 'right', color: '#34d399' }}>{bid.qty}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
                 </div>
               </div>
 
@@ -1165,6 +1374,211 @@ export default function App() {
                 )}
               </div>
             </aside>
+          </div>
+        )}
+
+        {activeTab === 'analytics' && (
+          <div className="analytics-view">
+            {realInventoryItems.length === 0 ? (
+              <div className="steam-import-card" style={{ maxWidth: '600px', margin: '40px auto' }}>
+                <BarChart2 size={36} style={{ color: 'var(--color-green)', marginBottom: '16px' }} />
+                <h4>{lang === 'de' ? 'Keine Analysedaten verfügbar' : 'No Analytics Data Available'}</h4>
+                <p>
+                  {lang === 'de' 
+                    ? 'Verbinde dein Steam-Inventar im Depot-Tab, um detaillierte Portfoliostatisiken, Risikoanalysen und Gewinn/Verlust-Auswertungen zu sehen.' 
+                    : 'Connect your Steam inventory in the Portfolio tab to view detailed portfolio statistics, risk analysis, and P&L breakdowns.'}
+                </p>
+                <button className="steam-import-btn" onClick={() => setActiveTab('portfolio')}>
+                  {lang === 'de' ? 'Zum Depot wechseln' : 'Go to Portfolio'}
+                </button>
+              </div>
+            ) : (
+              <div className="analytics-grid">
+                {/* Overview Card */}
+                <div className="analytics-card main-summary-card">
+                  <h3 className="card-subtitle">{lang === 'de' ? 'Investitionsübersicht' : 'Investment Overview'}</h3>
+                  <div className="overview-stats-grid">
+                    <div className="overview-stat">
+                      <span className="stat-label">{lang === 'de' ? 'Aktueller Wert' : 'Current Value'}</span>
+                      <span className="stat-val text-large">€{realInventorySummary.totalValue.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+                    </div>
+                    <div className="overview-stat">
+                      <span className="stat-label">{lang === 'de' ? 'Investiertes Kapital' : 'Invested Capital'}</span>
+                      <span className="stat-val text-large">€{realInventorySummary.totalInvested.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+                    </div>
+                    <div className="overview-stat">
+                      <span className="stat-label">{lang === 'de' ? 'Gesamtertrag (PnL)' : 'Total Return (PnL)'}</span>
+                      <span className={`stat-val text-large ${realInventorySummary.pnlVal >= 0 ? 'price-up' : 'price-down'}`}>
+                        {realInventorySummary.pnlVal >= 0 ? '+' : ''}€{realInventorySummary.pnlVal.toFixed(2)} ({realInventorySummary.pnlPct}%)
+                      </span>
+                    </div>
+                  </div>
+                  
+                  {/* Fee Breakdown */}
+                  <div className="fee-breakdown-section" style={{ marginTop: '16px', paddingTop: '16px', borderTop: '1px dashed rgba(255,255,255,0.1)' }}>
+                    <h4 className="section-title-small" style={{ fontSize: '12px', fontWeight: '600', color: '#94a3b8', marginBottom: '10px', textTransform: 'uppercase' }}>
+                      {lang === 'de' ? 'Netto-Auszahlungsschätzungen' : 'Net Cashout Estimates'}
+                    </h4>
+                    <div className="fee-row" style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px', fontSize: '13px' }}>
+                      <span className="fee-label" style={{ color: '#94a3b8' }} title={lang === 'de' ? 'Steam Marktplatzgebühr von 15%' : 'Steam Market Fee of 15%'}>
+                        {lang === 'de' ? 'Steam-Netto (15% Gebühr):' : 'Steam Net (15% fee):'}
+                      </span>
+                      <span className="fee-value" style={{ fontWeight: '600' }}>€{(realInventorySummary.totalValue * 0.85).toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+                    </div>
+                    <div className="fee-row" style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px' }}>
+                      <span className="fee-label" style={{ color: '#94a3b8' }} title={lang === 'de' ? 'Drittanbieter Verkauf & Auszahlung ca. 10% Gebühr' : '3rd party selling and withdrawal average 10% fee'}>
+                        {lang === 'de' ? 'Cashout-Netto (10% Gebühr):' : 'Cashout Net (10% fee):'}
+                      </span>
+                      <span className="fee-value text-green" style={{ fontWeight: '700', color: 'var(--color-green)' }}>€{(realInventorySummary.totalValue * 0.90).toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Risk and Volatility Card */}
+                <div className="analytics-card">
+                  <h3 className="card-subtitle">{lang === 'de' ? 'Risikoprofil & Volatilität' : 'Risk Profile & Volatility'}</h3>
+                  <div className="risk-metrics">
+                    <div className="metric-row" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <div>
+                        <div className="metric-title" style={{ fontSize: '13px', fontWeight: '600' }}>{lang === 'de' ? 'Risiko-Klasse' : 'Risk Class'}</div>
+                        <div className="metric-desc" style={{ fontSize: '11px', color: '#94a3b8', marginTop: '2px' }}>
+                          {lang === 'de' 
+                            ? 'Basierend auf dem Anteil von Kisten (hoch) vs. Messern (niedrig).'
+                            : 'Based on portion of cases (high) vs knives (low).'}
+                        </div>
+                      </div>
+                      <div className="metric-badge-container">
+                        <span className={`risk-badge risk-${riskScore.label.toLowerCase()}`} style={{
+                          padding: '4px 8px',
+                          borderRadius: '6px',
+                          fontSize: '11px',
+                          fontWeight: '700',
+                          background: riskScore.label === 'Spekulativ' || riskScore.label === 'Speculative' ? 'rgba(255,59,48,0.15)' : riskScore.label === 'Konservativ' || riskScore.label === 'Conservative' ? 'rgba(0,209,130,0.15)' : 'rgba(255,171,0,0.15)',
+                          color: riskScore.label === 'Spekulativ' || riskScore.label === 'Speculative' ? 'var(--color-red)' : riskScore.label === 'Konservativ' || riskScore.label === 'Conservative' ? 'var(--color-green)' : 'var(--color-amber)'
+                        }}>
+                          {riskScore.score} · {riskScore.label}
+                        </span>
+                      </div>
+                    </div>
+
+                    <div className="metric-row" style={{ marginTop: '16px', paddingTop: '16px', borderTop: '1px solid rgba(255,255,255,0.05)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <div>
+                        <div className="metric-title" style={{ fontSize: '13px', fontWeight: '600' }}>{lang === 'de' ? 'Durchschnittliche Volatilität' : 'Average Volatility'}</div>
+                        <div className="metric-desc" style={{ fontSize: '11px', color: '#94a3b8', marginTop: '2px' }}>
+                          {lang === 'de'
+                            ? 'Gewichtete Preisschwankung über den gewählten Zeitraum.'
+                            : 'Weighted price fluctuation over the selected timeframe.'}
+                        </div>
+                      </div>
+                      <span className="metric-value-large" style={{ fontSize: '20px', fontWeight: '700', color: '#fff' }}>{averageVolatility}%</span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Diversification & Distribution Card */}
+                <div className="analytics-card">
+                  <h3 className="card-subtitle">{lang === 'de' ? 'Diversifikation' : 'Diversification'}</h3>
+                  <div className="diversification-list" style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                    {[
+                      { name: lang === 'de' ? 'Messer' : 'Knives', val: realInventorySummary.distribution.knives, color: '#fbbf24' },
+                      { name: lang === 'de' ? 'Handschuhe' : 'Gloves', val: realInventorySummary.distribution.gloves, color: '#f87171' },
+                      { name: lang === 'de' ? 'Waffen-Skins' : 'Weapons', val: realInventorySummary.distribution.weapons, color: '#60a5fa' },
+                      { name: lang === 'de' ? 'Kisten & Kapseln' : 'Cases', val: realInventorySummary.distribution.cases, color: '#a78bfa' }
+                    ].map(cat => {
+                      const pct = realInventorySummary.totalValue > 0 ? (cat.val / realInventorySummary.totalValue * 100) : 0;
+                      return (
+                        <div key={cat.name} className="diversification-row">
+                          <div className="div-header" style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', marginBottom: '4px' }}>
+                            <span className="div-name" style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
+                              <span className="color-dot" style={{ display: 'inline-block', width: '8px', height: '8px', borderRadius: '50%', backgroundColor: cat.color }} /> 
+                              {cat.name}
+                            </span>
+                            <span className="div-values" style={{ fontWeight: '600' }}>€{cat.val.toLocaleString(undefined, { maximumFractionDigits: 2 })} ({pct.toFixed(1)}%)</span>
+                          </div>
+                          <div className="progress-bg" style={{ height: '6px', background: '#1c1c1e', borderRadius: '3px', overflow: 'hidden' }}>
+                            <div className="progress-bar" style={{ height: '100%', width: `${pct}%`, backgroundColor: cat.color }} />
+                          </div>
+                        </div>
+                      )
+                    })}
+                  </div>
+                </div>
+
+                {/* Break-Even / Profit distribution Card */}
+                <div className="analytics-card">
+                  <h3 className="card-subtitle">{lang === 'de' ? 'Profitabilitäts-Verteilung' : 'Profitability Distribution'}</h3>
+                  <div className="be-stats">
+                    <p className="section-desc" style={{ fontSize: '12px', color: '#94a3b8', marginBottom: '12px' }}>
+                      {lang === 'de' 
+                        ? 'Aufteilung deiner Items nach Gewinn/Verlust (inkl. 15% Steam-Gebühr):' 
+                        : 'Your item quantities split by profit/loss (incl. 15% Steam fee):'}
+                    </p>
+                    <div style={{ display: 'flex', gap: '8px', height: '12px', borderRadius: '6px', overflow: 'hidden', background: '#1c1c1e', marginBottom: '16px' }}>
+                      <div style={{ width: `${(profitDistribution.win / (realInventoryItems.length || 1)) * 100}%`, background: 'var(--color-green)' }} title="Profit" />
+                      <div style={{ width: `${(profitDistribution.breakEven / (realInventoryItems.length || 1)) * 100}%`, background: 'var(--color-amber)' }} title="Break-Even" />
+                      <div style={{ width: `${(profitDistribution.loss / (realInventoryItems.length || 1)) * 100}%`, background: 'var(--color-red)' }} title="Loss" />
+                    </div>
+                    <div className="be-legend" style={{ display: 'flex', flexDirection: 'column', gap: '6px', fontSize: '12px' }}>
+                      <div className="legend-item" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <span className="legend-dot" style={{ display: 'inline-block', width: '6px', height: '6px', borderRadius: '50%', backgroundColor: 'var(--color-green)' }} />
+                        <span className="legend-text">{lang === 'de' ? 'Im Gewinn' : 'In Profit'} ({profitDistribution.win}x)</span>
+                      </div>
+                      <div className="legend-item" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <span className="legend-dot" style={{ display: 'inline-block', width: '6px', height: '6px', borderRadius: '50%', backgroundColor: 'var(--color-amber)' }} />
+                        <span className="legend-text">{lang === 'de' ? 'Break-Even (vor Gebühr)' : 'Break-Even'} ({profitDistribution.breakEven}x)</span>
+                      </div>
+                      <div className="legend-item" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <span className="legend-dot" style={{ display: 'inline-block', width: '6px', height: '6px', borderRadius: '50%', backgroundColor: 'var(--color-red)' }} />
+                        <span className="legend-text">{lang === 'de' ? 'Im Verlust' : 'In Loss'} ({profitDistribution.loss}x)</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Performers Card */}
+                <div className="analytics-card double-width" style={{ gridColumn: 'span 2' }}>
+                  <h3 className="card-subtitle">{lang === 'de' ? 'Top- & Flop-Performers' : 'Top & Flop Performers'}</h3>
+                  <div className="performers-split" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px', marginTop: '12px' }}>
+                    <div className="perf-column">
+                      <h4 className="column-title text-green" style={{ fontSize: '13px', fontWeight: '700', color: 'var(--color-green)', marginBottom: '10px', borderBottom: '1px solid rgba(255,255,255,0.05)', paddingBottom: '4px' }}>
+                        ▲ Top {lang === 'de' ? 'Gewinner' : 'Gainers'}
+                      </h4>
+                      {performers.best.length === 0 ? (
+                        <div className="perf-empty" style={{ fontSize: '12px', color: '#94a3b8', fontStyle: 'italic', padding: '10px 0' }}>
+                          {lang === 'de' ? 'Keine Positionen im Plus.' : 'No positions in profit.'}
+                        </div>
+                      ) : (
+                        performers.best.map(item => (
+                          <div key={item.id} className="perf-row" style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', padding: '4px 0' }}>
+                            <span className="perf-name" style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '180px' }}>{item.name}</span>
+                            <span className="perf-pct price-up" style={{ fontWeight: '700', color: 'var(--color-green)' }}>+{item.change.toFixed(2)}%</span>
+                          </div>
+                        ))
+                      )}
+                    </div>
+                    
+                    <div className="perf-column">
+                      <h4 className="column-title text-red" style={{ fontSize: '13px', fontWeight: '700', color: 'var(--color-red)', marginBottom: '10px', borderBottom: '1px solid rgba(255,255,255,0.05)', paddingBottom: '4px' }}>
+                        ▼ {lang === 'de' ? 'Größte Verlierer' : 'Biggest Losers'}
+                      </h4>
+                      {performers.worst.length === 0 ? (
+                        <div className="perf-empty" style={{ fontSize: '12px', color: '#94a3b8', fontStyle: 'italic', padding: '10px 0' }}>
+                          {lang === 'de' ? 'Keine Positionen im Minus.' : 'No positions in loss.'}
+                        </div>
+                      ) : (
+                        performers.worst.map(item => (
+                          <div key={item.id} className="perf-row" style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', padding: '4px 0' }}>
+                            <span className="perf-name" style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '180px' }}>{item.name}</span>
+                            <span className="perf-pct price-down" style={{ fontWeight: '700', color: 'var(--color-red)' }}>{item.change.toFixed(2)}%</span>
+                          </div>
+                        ))
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+              </div>
+            )}
           </div>
         )}
 
@@ -1476,6 +1890,11 @@ export default function App() {
                                   <span className="not-marketable-tag">{lang === 'de' ? ' • Nicht verkaufbar' : ' • Not marketable'}</span>
                                 )}
                               </span>
+                              <span style={{ fontSize: '10px', color: '#94a3b8', marginTop: '2px' }}>
+                                {lang === 'de' 
+                                  ? `Ø Kauf: €${item.basePrice.toFixed(2)} | Break-Even: €${(item.basePrice / 0.85).toFixed(2)}` 
+                                  : `Avg Buy: €${item.basePrice.toFixed(2)} | Break-Even: €${(item.basePrice / 0.85).toFixed(2)}`}
+                              </span>
                             </div>
                           </div>
                           <div className="skin-info-right">
@@ -1599,6 +2018,13 @@ export default function App() {
         >
           <Wallet className="tab-icon" />
           <span>{lang === 'de' ? 'Depot' : 'Portfolio'}</span>
+        </button>
+        <button 
+          className={`tab-btn ${activeTab === 'analytics' ? 'tab-btn--active' : ''}`}
+          onClick={() => setActiveTab('analytics')}
+        >
+          <BarChart2 className="tab-icon" />
+          <span>{lang === 'de' ? 'Analyse' : 'Analytics'}</span>
         </button>
         <button 
           className={`tab-btn ${activeTab === 'alerts' ? 'tab-btn--active' : ''}`}

@@ -1110,3 +1110,102 @@
   from { opacity: 0; transform: translateY(-4px); }
   to { opacity: 1; transform: translateY(0); }
 }
+
+/* Technical Analysis & Order Book Layout */
+.analytics-ticker-row {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 16px;
+  margin-top: 16px;
+}
+
+@media (min-width: 576px) {
+  .analytics-ticker-row {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+/* Analytics Tab Dashboard */
+.analytics-view {
+  max-width: 1200px;
+  margin: 0 auto;
+  width: 100%;
+  animation: fadeIn 0.4s ease-out;
+}
+
+.analytics-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 20px;
+  margin-top: 16px;
+}
+
+@media (min-width: 768px) {
+  .analytics-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+.analytics-card {
+  background: #0c0c0c;
+  border: 1px solid #1c1c1e;
+  border-radius: 18px;
+  padding: 20px;
+}
+
+.main-summary-card {
+  grid-column: span 1;
+}
+
+@media (min-width: 768px) {
+  .main-summary-card {
+    grid-column: span 2;
+  }
+}
+
+.card-subtitle {
+  font-family: var(--heading);
+  font-size: 13px;
+  font-weight: 700;
+  margin-top: 0;
+  margin-bottom: 16px;
+  color: #94a3b8;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.overview-stats-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 16px;
+}
+
+@media (min-width: 576px) {
+  .overview-stats-grid {
+    grid-template-columns: 1fr 1fr 1fr;
+  }
+}
+
+.overview-stat {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.stat-label {
+  font-size: 11px;
+  color: #94a3b8;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.stat-val {
+  font-family: var(--heading);
+  font-weight: 700;
+  color: #ffffff;
+}
+
+.text-large {
+  font-size: 22px;
+  letter-spacing: -0.5px;
+}
