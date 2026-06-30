@@ -26,6 +26,7 @@
     "react-countup": "^6.5.3",
     "react-dom": "^19.2.6",
     "react-parallax-tilt": "^1.7.333",
+    "recharts": "^3.9.1",
     "tsparticles": "^4.3.0"
   },
   "devDependencies": {

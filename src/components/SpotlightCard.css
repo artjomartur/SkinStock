@@ -1,0 +1,18 @@
+.spotlight-card {
+  position: relative;
+  overflow: hidden;
+  /* Will inherit the background and border from .skin-row or via classes */
+}
+
+.spotlight-overlay {
+  pointer-events: none;
+  position: absolute;
+  inset: 0;
+  transition: opacity 0.3s ease;
+  z-index: 0;
+}
+
+.spotlight-card > * {
+  position: relative;
+  z-index: 1;
+}

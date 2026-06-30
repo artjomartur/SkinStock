@@ -25,6 +25,8 @@ import confetti from 'canvas-confetti'
 import Tilt from 'react-parallax-tilt'
 import CountUp from 'react-countup'
 import ParticleBackground from './components/ParticleBackground'
+import SpotlightCard from './components/SpotlightCard'
+import DiversificationChart from './components/DiversificationChart'
 
 // Helper for formatting prices
 const formatPrice = (price, curr = 'EUR', mode = 'STEAM') => {
@@ -1578,13 +1580,14 @@ export default function App() {
                   </div>
                 ) : (
                   filteredSkins.map((skin) => (
-                    <Tilt key={skin.id} tiltMaxAngleX={5} tiltMaxAngleY={5} scale={1.02} transitionSpeed={2000}>
-                      <div 
-                        className={`skin-row ${getRarityClass(skin.price)} ${selectedSkinId === skin.id ? 'skin-row--selected' : ''} ${flashStates[skin.id] === 'up' ? 'flash-up' : flashStates[skin.id] === 'down' ? 'flash-down' : ''}`}
-                        onClick={() => {
-                          setSelectedSkinId(selectedSkinId === skin.id ? null : skin.id)
-                        }}
-                      >
+                    <SpotlightCard 
+                      key={skin.id}
+                      className={`skin-row ${getRarityClass(skin.price)} ${selectedSkinId === skin.id ? 'skin-row--selected' : ''} ${flashStates[skin.id] === 'up' ? 'flash-up' : flashStates[skin.id] === 'down' ? 'flash-down' : ''}`}
+                      onClick={() => {
+                        setSelectedSkinId(selectedSkinId === skin.id ? null : skin.id)
+                      }}
+                    >
+                      <div className="skin-row-header">
                       <div className="skin-info-left">
                         <div className="skin-icon-container">
                           <img src={skin.img} alt={skin.name} className="skin-img" />
@@ -1613,7 +1616,13 @@ export default function App() {
                         </div>
                       </div>
                       </div>
-                    </Tilt>
+                      <div className="skin-row-expanded">
+                        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px', color: '#94a3b8' }}>
+                          <span>{lang === 'de' ? 'Float Wert:' : 'Float Value:'} {skin.wear}</span>
+                          <span>{lang === 'de' ? 'Kaufpreis:' : 'Buy Price:'} €{skin.basePrice.toFixed(2)}</span>
+                        </div>
+                      </div>
+                    </SpotlightCard>
                   ))
                 )}
               </div>
@@ -1744,29 +1753,13 @@ export default function App() {
                 {/* Diversification & Distribution Card */}
                 <div className="analytics-card">
                   <h3 className="card-subtitle">{lang === 'de' ? 'Diversifikation' : 'Diversification'}</h3>
-                  <div className="diversification-list" style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                    {[
-                      { name: lang === 'de' ? 'Messer' : 'Knives', val: realInventorySummary.distribution.knives, color: '#fbbf24' },
-                      { name: lang === 'de' ? 'Handschuhe' : 'Gloves', val: realInventorySummary.distribution.gloves, color: '#f87171' },
-                      { name: lang === 'de' ? 'Waffen-Skins' : 'Weapons', val: realInventorySummary.distribution.weapons, color: '#60a5fa' },
-                      { name: lang === 'de' ? 'Kisten & Kapseln' : 'Cases', val: realInventorySummary.distribution.cases, color: '#a78bfa' }
-                    ].map(cat => {
-                      const pct = realInventorySummary.totalValue > 0 ? (cat.val / realInventorySummary.totalValue * 100) : 0;
-                      return (
-                        <div key={cat.name} className="diversification-row">
-                          <div className="div-header" style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', marginBottom: '4px' }}>
-                            <span className="div-name" style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
-                              <span className="color-dot" style={{ display: 'inline-block', width: '8px', height: '8px', borderRadius: '50%', backgroundColor: cat.color }} /> 
-                              {cat.name}
-                            </span>
-                            <span className="div-values" style={{ fontWeight: '600' }}>€{cat.val.toLocaleString(undefined, { maximumFractionDigits: 2 })} ({pct.toFixed(1)}%)</span>
-                          </div>
-                          <div className="progress-bg" style={{ height: '6px', background: '#1c1c1e', borderRadius: '3px', overflow: 'hidden' }}>
-                            <div className="progress-bar" style={{ height: '100%', width: `${pct}%`, backgroundColor: cat.color }} />
-                          </div>
-                        </div>
-                      )
-                    })}
+                  <div style={{ marginTop: '16px' }}>
+                    <DiversificationChart data={[
+                      { name: lang === 'de' ? 'Messer' : 'Knives', val: realInventorySummary.distribution.knives, color: '#fbbf24', pct: realInventorySummary.totalValue > 0 ? (realInventorySummary.distribution.knives / realInventorySummary.totalValue * 100) : 0 },
+                      { name: lang === 'de' ? 'Handschuhe' : 'Gloves', val: realInventorySummary.distribution.gloves, color: '#f87171', pct: realInventorySummary.totalValue > 0 ? (realInventorySummary.distribution.gloves / realInventorySummary.totalValue * 100) : 0 },
+                      { name: lang === 'de' ? 'Waffen-Skins' : 'Weapons', val: realInventorySummary.distribution.weapons, color: '#60a5fa', pct: realInventorySummary.totalValue > 0 ? (realInventorySummary.distribution.weapons / realInventorySummary.totalValue * 100) : 0 },
+                      { name: lang === 'de' ? 'Kisten & Kapseln' : 'Cases', val: realInventorySummary.distribution.cases, color: '#a78bfa', pct: realInventorySummary.totalValue > 0 ? (realInventorySummary.distribution.cases / realInventorySummary.totalValue * 100) : 0 }
+                    ]} />
                   </div>
                 </div>
 
@@ -2174,17 +2167,17 @@ export default function App() {
                       const itemPnlPct = parseFloat((investedVal > 0 ? (itemPnl / investedVal * 100) : 0).toFixed(2))
 
                       return (
-                        <Tilt key={item.id} tiltMaxAngleX={5} tiltMaxAngleY={5} scale={1.02} transitionSpeed={2000}>
-                          <div 
-                            className={`portfolio-card skin-row ${getRarityClass(item.price)} ${selectedSkinId === item.id ? 'skin-row--selected' : ''} ${flashStates[item.id] === 'up' ? 'flash-up' : flashStates[item.id] === 'down' ? 'flash-down' : ''}`}
-                            style={{ cursor: 'pointer' }}
-                            onClick={() => {
-                              setSelectedSkinId(selectedSkinId === item.id ? null : item.id)
-                              if (window.matchMedia('(max-width: 767px)').matches && selectedSkinId !== item.id) {
-                                setActiveTab('market')
-                              }
-                            }}
-                          >
+                        <SpotlightCard 
+                          key={item.id}
+                          className={`portfolio-card skin-row ${getRarityClass(item.price)} ${selectedSkinId === item.id ? 'skin-row--selected' : ''} ${flashStates[item.id] === 'up' ? 'flash-up' : flashStates[item.id] === 'down' ? 'flash-down' : ''}`}
+                          onClick={() => {
+                            setSelectedSkinId(selectedSkinId === item.id ? null : item.id)
+                            if (window.matchMedia('(max-width: 767px)').matches && selectedSkinId !== item.id) {
+                              setActiveTab('market')
+                            }
+                          }}
+                        >
+                          <div className="skin-row-header">
                           <div className="skin-info-left">
                             <div className="skin-icon-container">
                               <img src={item.img} alt={item.name} className="skin-img" />
@@ -2214,7 +2207,19 @@ export default function App() {
                             </span>
                           </div>
                           </div>
-                        </Tilt>
+                          <div className="skin-row-expanded">
+                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', fontSize: '13px', color: '#94a3b8' }}>
+                              <div style={{ display: 'flex', flexDirection: 'column' }}>
+                                <span>{lang === 'de' ? 'Aktueller Preis:' : 'Current Price:'} <span style={{ color: '#fff' }}>€{item.price.toFixed(2)}</span></span>
+                                <span>{lang === 'de' ? 'Gesamtwert:' : 'Total Value:'} <span style={{ color: '#fff' }}>€{currentVal.toFixed(2)}</span></span>
+                              </div>
+                              <div style={{ display: 'flex', flexDirection: 'column' }}>
+                                <span>{lang === 'de' ? 'Investiert:' : 'Invested:'} <span style={{ color: '#fff' }}>€{investedVal.toFixed(2)}</span></span>
+                                <span>{lang === 'de' ? 'Gewinn/Verlust:' : 'Profit/Loss:'} <span className={itemPnl >= 0 ? 'color-green' : 'color-red'}>{itemPnl >= 0 ? '+' : ''}€{itemPnl.toFixed(2)}</span></span>
+                              </div>
+                            </div>
+                          </div>
+                        </SpotlightCard>
                       )
                     })}
                   </div>
