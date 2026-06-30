@@ -21,6 +21,27 @@ import Onboarding from './components/Onboarding'
 import { auth, db } from './firebase'
 import { onAuthStateChanged, signOut } from 'firebase/auth'
 import { doc, getDoc, setDoc } from 'firebase/firestore'
+import confetti from 'canvas-confetti'
+import Tilt from 'react-parallax-tilt'
+import CountUp from 'react-countup'
+import ParticleBackground from './components/ParticleBackground'
+
+// Helper for formatting prices
+const formatPrice = (price, curr = 'EUR', mode = 'STEAM') => {
+  let p = price;
+  if (mode === 'CASHOUT') p = p * 0.75;
+  if (curr === 'USD') p = p * 1.08;
+  const sym = curr === 'USD' ? '$' : '€';
+  return `${sym}${p.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+}
+
+const getRarityClass = (price) => {
+  if (price > 200) return 'rarity-covert'
+  if (price > 50) return 'rarity-classified'
+  if (price > 10) return 'rarity-restricted'
+  if (price > 2) return 'rarity-milspec'
+  return 'rarity-industrial'
+}
 
 // Initial skins list
 const INITIAL_SKINS = [
@@ -191,11 +212,16 @@ function SkinChart({ data, currentPrice, isPositive }) {
           color: 'rgba(255, 255, 255, 0.15)',
           width: 1,
           style: 3, // dashed
-          labelVisible: false
+          labelVisible: true,
+          labelBackgroundColor: '#222'
         },
         horzLine: {
-          visible: false,
-          labelVisible: false
+          color: 'rgba(255, 255, 255, 0.15)',
+          width: 1,
+          style: 3,
+          visible: true,
+          labelVisible: true,
+          labelBackgroundColor: '#222'
         }
       },
       width: chartContainerRef.current.clientWidth,
@@ -383,6 +409,10 @@ export default function App() {
   const [pricesDb, setPricesDb] = useState(null)
   const [, setLoadingPrices] = useState(false)
   
+  // Display Modes
+  const [currency, setCurrency] = useState('EUR') // 'EUR' | 'USD'
+  const [valuationMode, setValuationMode] = useState('STEAM') // 'STEAM' | 'CASHOUT'
+  
   // Alert states
   const [alerts, setAlerts] = useState([])
   const [alertTargetPrice, setAlertTargetPrice] = useState('')
@@ -499,6 +529,7 @@ export default function App() {
     if (e) e.preventDefault()
     setInventoryError('')
     setIsFetchingInventory(true)
+    playTradeSound('buy')
 
     const resolvedId = resolveSteamId(steamIdInput)
     if (!resolvedId) {
@@ -945,6 +976,19 @@ export default function App() {
     }
   }, [realInventoryItems])
 
+  const [hasFiredConfetti, setHasFiredConfetti] = useState(false)
+  useEffect(() => {
+    if (!hasFiredConfetti && realInventorySummary.pnlVal > 0) {
+      confetti({
+        particleCount: 100,
+        spread: 70,
+        origin: { y: 0.6 },
+        colors: ['#00d182', '#ffffff']
+      })
+      setHasFiredConfetti(true)
+    }
+  }, [realInventorySummary.pnlVal, hasFiredConfetti])
+
   const portfolioPnL = useMemo(() => {
     const data = historicalDataMap['total_portfolio'] || []
     const pnl = {
@@ -1145,6 +1189,7 @@ export default function App() {
 
   return (
     <div className="app-layout">
+      <ParticleBackground />
       {/* Toast Alert Notifications */}
       <div className="toast-container">
         {toasts.map((toast) => (
@@ -1158,8 +1203,7 @@ export default function App() {
         ))}
       </div>
 
-      {/* Sidebar for Desktop */}
-      <aside className="app-sidebar">
+      <aside className="app-sidebar glass-panel">
         <div className="sidebar-logo">
           <Activity className="logo-icon" size={24} />
           <span className="logo-text">SkinStock</span>
@@ -1210,7 +1254,7 @@ export default function App() {
           {realInventoryItems.length > 0 ? (
             <div className="sidebar-balance">
               <span className="balance-label">{lang === 'de' ? 'Inventarwert' : 'Inventory Value'}</span>
-              <span className="balance-amount">€{realInventorySummary.totalValue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+              <span className="balance-amount">{formatPrice(realInventorySummary.totalValue, currency, valuationMode)}</span>
             </div>
           ) : (
             <div className="sidebar-status-tag">
@@ -1231,7 +1275,7 @@ export default function App() {
           {realInventoryItems.length > 0 ? (
             <>
               <span className="balance-label">{lang === 'de' ? 'Inventarwert' : 'Inventory Value'}</span>
-              <span className="balance-amount">€{realInventorySummary.totalValue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+              <span className="balance-amount">{formatPrice(realInventorySummary.totalValue, currency, valuationMode)}</span>
             </>
           ) : (
             <>
@@ -1243,6 +1287,46 @@ export default function App() {
           )}
         </div>
       </header>
+      
+      {/* Marquee Ticker */}
+      <div className="marquee-container">
+        <div className="marquee-content">
+          {globalMarketTrends.gainers.concat(globalMarketTrends.losers).map((item, idx) => (
+            <div key={idx} className="marquee-item">
+              <span>{item.name}</span>
+              <span className="price">{formatPrice(item.price, currency, valuationMode)}</span>
+              <span className={`change ${item.change > 0 ? 'up' : 'down'}`}>
+                {item.change > 0 ? '+' : ''}{item.change.toFixed(2)}%
+              </span>
+            </div>
+          ))}
+          {/* Duplicate for infinite effect */}
+          {globalMarketTrends.gainers.concat(globalMarketTrends.losers).map((item, idx) => (
+            <div key={`dup-${idx}`} className="marquee-item">
+              <span>{item.name}</span>
+              <span className="price">{formatPrice(item.price, currency, valuationMode)}</span>
+              <span className={`change ${item.change > 0 ? 'up' : 'down'}`}>
+                {item.change > 0 ? '+' : ''}{item.change.toFixed(2)}%
+              </span>
+            </div>
+          ))}
+        </div>
+        
+        <div className="header-actions" style={{ position: 'absolute', right: '16px', background: 'rgba(0,0,0,0.8)', paddingLeft: '12px' }}>
+          <button 
+            className="mode-toggle-btn"
+            onClick={() => setCurrency(c => c === 'EUR' ? 'USD' : 'EUR')}
+          >
+            {currency}
+          </button>
+          <button 
+            className={`mode-toggle-btn ${valuationMode === 'CASHOUT' ? 'active-cashout' : ''}`}
+            onClick={() => setValuationMode(m => m === 'STEAM' ? 'CASHOUT' : 'STEAM')}
+          >
+            {valuationMode === 'STEAM' ? 'Steam' : 'Cashout'}
+          </button>
+        </div>
+      </div>
 
       {/* App Content */}
       <main className="app-content scrollbar-hide">
@@ -1520,13 +1604,13 @@ export default function App() {
                   </div>
                 ) : (
                   filteredSkins.map((skin) => (
-                    <div 
-                      key={skin.id} 
-                      className={`skin-row ${selectedSkinId === skin.id ? 'skin-row--selected' : ''} ${flashStates[skin.id] === 'up' ? 'flash-up' : flashStates[skin.id] === 'down' ? 'flash-down' : ''}`}
-                      onClick={() => {
-                        setSelectedSkinId(selectedSkinId === skin.id ? null : skin.id)
-                      }}
-                    >
+                    <Tilt key={skin.id} tiltMaxAngleX={5} tiltMaxAngleY={5} scale={1.02} transitionSpeed={2000}>
+                      <div 
+                        className={`skin-row ${getRarityClass(skin.price)} ${selectedSkinId === skin.id ? 'skin-row--selected' : ''} ${flashStates[skin.id] === 'up' ? 'flash-up' : flashStates[skin.id] === 'down' ? 'flash-down' : ''}`}
+                        onClick={() => {
+                          setSelectedSkinId(selectedSkinId === skin.id ? null : skin.id)
+                        }}
+                      >
                       <div className="skin-info-left">
                         <div className="skin-icon-container">
                           <img src={skin.img} alt={skin.name} className="skin-img" />
@@ -1554,7 +1638,8 @@ export default function App() {
                           </button>
                         </div>
                       </div>
-                    </div>
+                      </div>
+                    </Tilt>
                   ))
                 )}
               </div>
@@ -1585,16 +1670,22 @@ export default function App() {
                   <div className="overview-stats-grid">
                     <div className="overview-stat">
                       <span className="stat-label">{lang === 'de' ? 'Aktueller Wert' : 'Current Value'}</span>
-                      <span className="stat-val text-large">€{realInventorySummary.totalValue.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+                      <span className="stat-val text-large">
+                        <CountUp end={realInventorySummary.totalValue} decimals={2} duration={1.5} prefix={currency === 'USD' ? '$' : '€'} />
+                      </span>
                     </div>
                     <div className="overview-stat">
                       <span className="stat-label">{lang === 'de' ? 'Investiertes Kapital' : 'Invested Capital'}</span>
-                      <span className="stat-val text-large">€{realInventorySummary.totalInvested.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+                      <span className="stat-val text-large">
+                        <CountUp end={realInventorySummary.totalInvested} decimals={2} duration={1.5} prefix={currency === 'USD' ? '$' : '€'} />
+                      </span>
                     </div>
                     <div className="overview-stat">
                       <span className="stat-label">{lang === 'de' ? 'Gesamtertrag (PnL)' : 'Total Return (PnL)'}</span>
                       <span className={`stat-val text-large ${realInventorySummary.pnlVal >= 0 ? 'price-up' : 'price-down'}`}>
-                        {realInventorySummary.pnlVal >= 0 ? '+' : ''}€{realInventorySummary.pnlVal.toFixed(2)} ({realInventorySummary.pnlPct}%)
+                        {realInventorySummary.pnlVal >= 0 ? '+' : ''}
+                        <CountUp end={realInventorySummary.pnlVal} decimals={2} duration={1.5} prefix={currency === 'USD' ? '$' : '€'} />
+                        {' '}({realInventorySummary.pnlPct}%)
                       </span>
                     </div>
                   </div>
@@ -2094,7 +2185,11 @@ export default function App() {
                     />
                   </div>
                   <div className="portfolio-list">
-                    {filteredPortfolio.length === 0 ? (
+                    {isFetchingInventory ? (
+                      Array.from({ length: 6 }).map((_, i) => (
+                        <div key={`skel-${i}`} className="portfolio-card skin-row skeleton-card skeleton" style={{ marginBottom: '8px' }}></div>
+                      ))
+                    ) : filteredPortfolio.length === 0 ? (
                       <div className="empty-state">
                         {lang === 'de' ? 'Keine passenden Items gefunden.' : 'No matching items found.'}
                       </div>
@@ -2105,17 +2200,17 @@ export default function App() {
                       const itemPnlPct = parseFloat((investedVal > 0 ? (itemPnl / investedVal * 100) : 0).toFixed(2))
 
                       return (
-                        <div 
-                          key={item.id} 
-                          className={`portfolio-card skin-row ${selectedSkinId === item.id ? 'skin-row--selected' : ''} ${flashStates[item.id] === 'up' ? 'flash-up' : flashStates[item.id] === 'down' ? 'flash-down' : ''}`}
-                          style={{ cursor: 'pointer' }}
-                          onClick={() => {
-                            setSelectedSkinId(selectedSkinId === item.id ? null : item.id)
-                            if (window.matchMedia('(max-width: 767px)').matches && selectedSkinId !== item.id) {
-                              setActiveTab('market')
-                            }
-                          }}
-                        >
+                        <Tilt key={item.id} tiltMaxAngleX={5} tiltMaxAngleY={5} scale={1.02} transitionSpeed={2000}>
+                          <div 
+                            className={`portfolio-card skin-row ${getRarityClass(item.price)} ${selectedSkinId === item.id ? 'skin-row--selected' : ''} ${flashStates[item.id] === 'up' ? 'flash-up' : flashStates[item.id] === 'down' ? 'flash-down' : ''}`}
+                            style={{ cursor: 'pointer' }}
+                            onClick={() => {
+                              setSelectedSkinId(selectedSkinId === item.id ? null : item.id)
+                              if (window.matchMedia('(max-width: 767px)').matches && selectedSkinId !== item.id) {
+                                setActiveTab('market')
+                              }
+                            }}
+                          >
                           <div className="skin-info-left">
                             <div className="skin-icon-container">
                               <img src={item.img} alt={item.name} className="skin-img" />
@@ -2144,7 +2239,8 @@ export default function App() {
                               {itemPnl >= 0 ? '+' : ''}€{itemPnl.toFixed(2)} ({itemPnlPct}%)
                             </span>
                           </div>
-                        </div>
+                          </div>
+                        </Tilt>
                       )
                     })}
                   </div>
