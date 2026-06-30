@@ -12,10 +12,15 @@ import {
   Trash2,
   AlertTriangle,
   Search,
-  BarChart2
+  BarChart2,
+  LogOut
 } from 'lucide-react'
 import './App.css'
 import defaultInventory from './defaultInventory.json'
+import Onboarding from './components/Onboarding'
+import { auth, db } from './firebase'
+import { onAuthStateChanged, signOut } from 'firebase/auth'
+import { doc, getDoc, setDoc } from 'firebase/firestore'
 
 // Initial skins list
 const INITIAL_SKINS = [
@@ -303,9 +308,43 @@ export default function App() {
     }
   })
 
+  const [user, setUser] = useState(null)
+  const [authLoading, setAuthLoading] = useState(true)
+
+  useEffect(() => {
+    if (!auth) {
+      setAuthLoading(false)
+      return
+    }
+    const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
+      setUser(currentUser)
+      if (currentUser && db) {
+        try {
+          const docRef = doc(db, 'users', currentUser.uid)
+          const docSnap = await getDoc(docRef)
+          if (docSnap.exists()) {
+            const data = docSnap.data()
+            if (data.watchlist) setSkins(data.watchlist)
+            if (data.inventory) setRealInventoryItems(data.inventory)
+          } else {
+            await setDoc(docRef, { watchlist: skins, inventory: realInventoryItems }, { merge: true })
+          }
+        } catch (e) {
+          console.error("Firestore error:", e)
+        }
+      }
+      setAuthLoading(false)
+    })
+    return () => unsubscribe()
+  }, [])
+
   useEffect(() => {
     localStorage.setItem('skinstock_watchlist', JSON.stringify(skins))
-  }, [skins])
+    if (user && db) {
+      setDoc(doc(db, 'users', user.uid), { watchlist: skins }, { merge: true }).catch(console.error)
+    }
+  }, [skins, user])
+
   const [realInventoryItems, setRealInventoryItems] = useState(() => {
     try {
       const stored = localStorage.getItem('skinstock_real_inventory')
@@ -320,21 +359,15 @@ export default function App() {
       return defaultInventory
     }
   })
-  const [selectedSkinId, setSelectedSkinId] = useState(() => {
-    try {
-      const stored = localStorage.getItem('skinstock_real_inventory')
-      let items = defaultInventory
-      if (stored) {
-        const parsed = JSON.parse(stored)
-        if (Array.isArray(parsed) && parsed.length > 0) {
-          items = parsed
-        }
-      }
-      return items && items.length > 0 ? items[0].id : 'ak47-redline'
-    } catch {
-      return 'ak47-redline'
+
+  useEffect(() => {
+    localStorage.setItem('skinstock_real_inventory', JSON.stringify(realInventoryItems))
+    if (user && db) {
+      setDoc(doc(db, 'users', user.uid), { inventory: realInventoryItems }, { merge: true }).catch(console.error)
     }
-  })
+  }, [realInventoryItems, user])
+
+  const [selectedSkinId, setSelectedSkinId] = useState(null)
   const [flashStates, setFlashStates] = useState({}) // skinId -> 'up' | 'down'
   
   // Real Steam Inventory state
@@ -596,10 +629,47 @@ export default function App() {
       map[skin.id] = generateHistoricalData(skin.basePrice, days)
     })
     realInventoryItems.forEach((skin) => {
-      map[skin.id] = generateHistoricalData(skin.basePrice, days)
+      if (!map[skin.id]) map[skin.id] = generateHistoricalData(skin.basePrice, days)
     })
+    skins.forEach((skin) => {
+      if (!map[skin.id]) map[skin.id] = generateHistoricalData(skin.basePrice, days)
+    })
+
+    const totalPortfolioData = []
+    if (realInventoryItems.length > 0) {
+      for (let i = 0; i <= days; i++) {
+        let close = 0, open = 0, high = 0, low = 0
+        realInventoryItems.forEach(skin => {
+          const hd = map[skin.id]
+          if (hd && hd[i]) {
+            close += hd[i].close; open += hd[i].open; high += hd[i].high; low += hd[i].low;
+          }
+        })
+        const time = map[realInventoryItems[0].id]?.[i]?.time || ''
+        if (time) totalPortfolioData.push({ time, close, open, high, low })
+      }
+    }
+
+    const totalMarketData = []
+    if (skins.length > 0) {
+      for (let i = 0; i <= days; i++) {
+        let close = 0, open = 0, high = 0, low = 0
+        skins.forEach(skin => {
+          const hd = map[skin.id]
+          if (hd && hd[i]) {
+            close += hd[i].close; open += hd[i].open; high += hd[i].high; low += hd[i].low;
+          }
+        })
+        const time = map[skins[0].id]?.[i]?.time || ''
+        if (time) totalMarketData.push({ time, close, open, high, low })
+      }
+    }
+
+    map['total_portfolio'] = totalPortfolioData
+    map['total_market'] = totalMarketData
+
     return map
-  }, [realInventoryItems, chartTimeframe])
+  }, [realInventoryItems, skins, chartTimeframe])
 
   const filteredSkins = useMemo(() => {
     if (!searchQuery.trim()) return skins
@@ -621,6 +691,43 @@ export default function App() {
   }, [skins, realInventoryItems])
 
   const selectedSkin = useMemo(() => {
+    if (!selectedSkinId) {
+      const items = activeTab === 'portfolio' ? realInventoryItems : skins
+      if (!items || items.length === 0) {
+        return {
+          id: 'total',
+          name: activeTab === 'portfolio' ? 'Gesamtportfolio' : 'Watchlist Gesamt',
+          price: 0,
+          basePrice: 0,
+          prevPrice: 0,
+          change: 0,
+          wear: '',
+          qty: 0,
+          img: ''
+        }
+      }
+      
+      let totalPrice = 0
+      let totalPrevPrice = 0
+      items.forEach(s => {
+        totalPrice += (s.price || 0) * (s.qty || 1)
+        totalPrevPrice += (s.prevPrice || 0) * (s.qty || 1)
+      })
+      const change = totalPrevPrice === 0 ? 0 : ((totalPrice - totalPrevPrice) / totalPrevPrice) * 100
+
+      return {
+        id: 'total',
+        name: activeTab === 'portfolio' ? 'Gesamtportfolio' : 'Watchlist Gesamt',
+        price: totalPrice,
+        basePrice: totalPrevPrice, // fallback
+        prevPrice: totalPrevPrice,
+        change: change,
+        wear: '',
+        qty: items.reduce((acc, item) => acc + (item.qty || 1), 0),
+        img: ''
+      }
+    }
+
     let found = null
     if (selectedSkinId.startsWith('real-')) {
       found = realInventoryItems.find((s) => s.id === selectedSkinId)
@@ -638,7 +745,7 @@ export default function App() {
       qty: 0,
       img: ''
     }
-  }, [skins, selectedSkinId, realInventoryItems])
+  }, [skins, selectedSkinId, realInventoryItems, activeTab])
 
   const playAlertSoundNotification = useCallback((skinName, type, target, currentPrice) => {
     playTradeSound('alert')
@@ -834,6 +941,51 @@ export default function App() {
     }
   }, [realInventoryItems])
 
+  const portfolioPnL = useMemo(() => {
+    const data = historicalDataMap['total_portfolio'] || []
+    const pnl = {
+      pnl24hVal: 0, pnl24hPct: 0,
+      pnl7dVal: 0, pnl7dPct: 0
+    }
+    if (data.length > 0) {
+      const current = realInventorySummary.totalValue
+      if (data.length >= 2) {
+        const past24h = data[data.length - 2].close
+        pnl.pnl24hVal = current - past24h
+        pnl.pnl24hPct = past24h > 0 ? (pnl.pnl24hVal / past24h) * 100 : 0
+      }
+      if (data.length >= 8) {
+        const past7d = data[data.length - 8].close
+        pnl.pnl7dVal = current - past7d
+        pnl.pnl7dPct = past7d > 0 ? (pnl.pnl7dVal / past7d) * 100 : 0
+      } else if (data.length > 2) {
+        const past7d = data[0].close
+        pnl.pnl7dVal = current - past7d
+        pnl.pnl7dPct = past7d > 0 ? (pnl.pnl7dVal / past7d) * 100 : 0
+      }
+    }
+    return pnl
+  }, [historicalDataMap, realInventorySummary.totalValue])
+
+  const globalMarketTrends = useMemo(() => {
+    if (!pricesDb) return { gainers: [], losers: [] }
+    const items = []
+    Object.keys(pricesDb).forEach(name => {
+      const p = pricesDb[name]
+      if (p && p.last_24h > 5 && p.last_7d > 5) {
+        const changePct = ((p.last_24h - p.last_7d) / p.last_7d) * 100
+        if (Math.abs(changePct) < 200 && Math.abs(changePct) > 0) {
+          items.push({ name, price: p.last_24h, change: changePct })
+        }
+      }
+    })
+    items.sort((a, b) => b.change - a.change)
+    return {
+      gainers: items.slice(0, 5),
+      losers: items.slice(-5).reverse()
+    }
+  }, [pricesDb])
+
   // Technical Analysis & Simulated Order Book
   const simulatedOrderBook = useMemo(() => {
     if (!selectedSkin || selectedSkin.price <= 0) return { bids: [], asks: [] }
@@ -858,7 +1010,8 @@ export default function App() {
   }, [selectedSkin])
 
   const selectedSkinSma = useMemo(() => {
-    const histData = historicalDataMap[selectedSkinId] || []
+    const dataKey = selectedSkinId || (activeTab === 'portfolio' ? 'total_portfolio' : 'total_market')
+    const histData = historicalDataMap[dataKey] || []
     if (histData.length === 0) return 0
     const windowSize = Math.min(7, histData.length)
     let sum = 0
@@ -871,7 +1024,7 @@ export default function App() {
       sum += prices[prices.length - 1 - i]
     }
     return count > 0 ? parseFloat((sum / count).toFixed(2)) : 0
-  }, [historicalDataMap, selectedSkinId, selectedSkin.price])
+  }, [historicalDataMap, selectedSkinId, selectedSkin.price, activeTab])
 
   const selectedSkinRsi = useMemo(() => {
     const change = selectedSkin.change || 0
@@ -968,6 +1121,24 @@ export default function App() {
     }
   }, [realInventoryItems])
 
+  const handleLogout = async () => {
+    if (auth) {
+      try {
+        await signOut(auth);
+      } catch (error) {
+        console.error("Logout failed", error);
+      }
+    }
+  };
+
+  if (authLoading) {
+    return <div style={{ display: 'flex', height: '100vh', width: '100vw', alignItems: 'center', justifyContent: 'center', background: '#000', color: '#fff' }}>Loading...</div>;
+  }
+
+  if (!user && auth) {
+    return <Onboarding />;
+  }
+
   return (
     <div className="app-layout">
       {/* Toast Alert Notifications */}
@@ -1022,6 +1193,16 @@ export default function App() {
         </nav>
 
         <div className="sidebar-footer">
+          {user && (
+            <button 
+              onClick={handleLogout}
+              className="sidebar-nav-btn"
+              style={{ width: '100%', marginBottom: '16px', color: 'var(--color-red)' }}
+            >
+              <LogOut size={20} />
+              <span>{lang === 'de' ? 'Abmelden' : 'Log Out'}</span>
+            </button>
+          )}
           {realInventoryItems.length > 0 ? (
             <div className="sidebar-balance">
               <span className="balance-label">{lang === 'de' ? 'Inventarwert' : 'Inventory Value'}</span>
@@ -1100,7 +1281,7 @@ export default function App() {
                 </div>
                 <div className="chart-body-container">
                   <SkinChart 
-                    data={historicalDataMap[selectedSkinId]} 
+                    data={historicalDataMap[selectedSkinId || (activeTab === 'portfolio' ? 'total_portfolio' : 'total_market')] || []} 
                     currentPrice={selectedSkin.price} 
                     isPositive={selectedSkin.change >= 0}
                   />
@@ -1174,7 +1355,7 @@ export default function App() {
               </div>
 
               {/* Trade Execution Panel or Real Steam Position details */}
-              {selectedSkinId.startsWith('real-') ? (
+              {selectedSkinId ? (selectedSkinId.startsWith('real-') ? (
                 <div className="trade-box">
                   <h4 className="section-title" style={{ fontSize: '15px', marginBottom: '12px' }}>
                     {lang === 'de' ? 'Echte Steam-Position' : 'Real Steam Position'}
@@ -1282,7 +1463,7 @@ export default function App() {
                     </button>
                   </form>
                 </div>
-              )}
+              )) : null}
             </div>
 
             <aside className="layout-side">
@@ -1311,13 +1492,13 @@ export default function App() {
                   <h4 style={{ fontSize: '11px', color: '#94a3b8', marginBottom: '8px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Top Movers</h4>
                   <div style={{ display: 'flex', gap: '8px', overflowX: 'auto', paddingBottom: '4px' }} className="scrollbar-hide">
                     {topMovers.gainers.map(g => (
-                      <div key={'gainer-'+g.id} style={{ minWidth: '90px', background: 'rgba(0,209,130,0.1)', border: '1px solid rgba(0,209,130,0.2)', padding: '6px', borderRadius: '8px', cursor: 'pointer' }} onClick={() => setSelectedSkinId(g.id)}>
+                      <div key={'gainer-'+g.id} style={{ minWidth: '90px', background: 'rgba(0,209,130,0.1)', border: '1px solid rgba(0,209,130,0.2)', padding: '6px', borderRadius: '8px', cursor: 'pointer' }} onClick={() => setSelectedSkinId(selectedSkinId === g.id ? null : g.id)}>
                         <div style={{ fontSize: '11px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{g.name}</div>
                         <div style={{ fontSize: '12px', fontWeight: 'bold', color: 'var(--color-green)', marginTop: '2px' }}>+{g.change.toFixed(2)}%</div>
                       </div>
                     ))}
                     {topMovers.losers.map(l => (
-                      <div key={'loser-'+l.id} style={{ minWidth: '90px', background: 'rgba(255,59,48,0.1)', border: '1px solid rgba(255,59,48,0.2)', padding: '6px', borderRadius: '8px', cursor: 'pointer' }} onClick={() => setSelectedSkinId(l.id)}>
+                      <div key={'loser-'+l.id} style={{ minWidth: '90px', background: 'rgba(255,59,48,0.1)', border: '1px solid rgba(255,59,48,0.2)', padding: '6px', borderRadius: '8px', cursor: 'pointer' }} onClick={() => setSelectedSkinId(selectedSkinId === l.id ? null : l.id)}>
                         <div style={{ fontSize: '11px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{l.name}</div>
                         <div style={{ fontSize: '12px', fontWeight: 'bold', color: 'var(--color-red)', marginTop: '2px' }}>{l.change.toFixed(2)}%</div>
                       </div>
@@ -1339,7 +1520,7 @@ export default function App() {
                       key={skin.id} 
                       className={`skin-row ${selectedSkinId === skin.id ? 'skin-row--selected' : ''} ${flashStates[skin.id] === 'up' ? 'flash-up' : flashStates[skin.id] === 'down' ? 'flash-down' : ''}`}
                       onClick={() => {
-                        setSelectedSkinId(skin.id)
+                        setSelectedSkinId(selectedSkinId === skin.id ? null : skin.id)
                       }}
                     >
                       <div className="skin-info-left">
@@ -1410,6 +1591,22 @@ export default function App() {
                       <span className="stat-label">{lang === 'de' ? 'Gesamtertrag (PnL)' : 'Total Return (PnL)'}</span>
                       <span className={`stat-val text-large ${realInventorySummary.pnlVal >= 0 ? 'price-up' : 'price-down'}`}>
                         {realInventorySummary.pnlVal >= 0 ? '+' : ''}€{realInventorySummary.pnlVal.toFixed(2)} ({realInventorySummary.pnlPct}%)
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Short-Term Performance */}
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginTop: '16px' }}>
+                    <div className="overview-stat" style={{ background: 'rgba(255,255,255,0.02)', padding: '12px', borderRadius: '12px' }}>
+                      <span className="stat-label" style={{ fontSize: '11px', textTransform: 'uppercase' }}>{lang === 'de' ? '24h Performance' : '24h Performance'}</span>
+                      <span className={`stat-val ${portfolioPnL.pnl24hVal >= 0 ? 'price-up' : 'price-down'}`} style={{ fontSize: '15px' }}>
+                        {portfolioPnL.pnl24hVal >= 0 ? '+' : ''}€{portfolioPnL.pnl24hVal.toFixed(2)} ({portfolioPnL.pnl24hPct.toFixed(2)}%)
+                      </span>
+                    </div>
+                    <div className="overview-stat" style={{ background: 'rgba(255,255,255,0.02)', padding: '12px', borderRadius: '12px' }}>
+                      <span className="stat-label" style={{ fontSize: '11px', textTransform: 'uppercase' }}>{lang === 'de' ? '7-Tage Performance' : '7-Day Performance'}</span>
+                      <span className={`stat-val ${portfolioPnL.pnl7dVal >= 0 ? 'price-up' : 'price-down'}`} style={{ fontSize: '15px' }}>
+                        {portfolioPnL.pnl7dVal >= 0 ? '+' : ''}€{portfolioPnL.pnl7dVal.toFixed(2)} ({portfolioPnL.pnl7dPct.toFixed(2)}%)
                       </span>
                     </div>
                   </div>
@@ -1508,7 +1705,7 @@ export default function App() {
                 <div className="analytics-card">
                   <h3 className="card-subtitle">{lang === 'de' ? 'Profitabilitäts-Verteilung' : 'Profitability Distribution'}</h3>
                   <div className="be-stats">
-                    <p className="section-desc" style={{ fontSize: '12px', color: '#94a3b8', marginBottom: '12px' }}>
+                    <p className="section-desc" style={{ fontSize: '12px', color: '#94a3b8', margin: '0 0 12px 0' }}>
                       {lang === 'de' 
                         ? 'Aufteilung deiner Items nach Gewinn/Verlust (inkl. 15% Steam-Gebühr):' 
                         : 'Your item quantities split by profit/loss (incl. 15% Steam fee):'}
@@ -1532,6 +1729,48 @@ export default function App() {
                         <span className="legend-text">{lang === 'de' ? 'Im Verlust' : 'In Loss'} ({profitDistribution.loss}x)</span>
                       </div>
                     </div>
+                  </div>
+                </div>
+
+                {/* Global Market Trends Card */}
+                <div className="analytics-card" style={{ gridColumn: '1 / -1' }}>
+                  <h3 className="card-subtitle">{lang === 'de' ? 'Globale Markttrends (letzte 24h vs 7d)' : 'Global Market Trends (last 24h vs 7d)'}</h3>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', marginTop: '12px' }}>
+                    
+                    <div style={{ background: 'rgba(0, 209, 130, 0.03)', padding: '16px', borderRadius: '16px', border: '1px solid rgba(0, 209, 130, 0.1)' }}>
+                      <h4 style={{ fontSize: '13px', color: 'var(--color-green)', marginBottom: '12px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                        <TrendingUp size={16} />
+                        {lang === 'de' ? 'Top Gewinner' : 'Top Gainers'}
+                      </h4>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                        {globalMarketTrends.gainers.length === 0 ? (
+                          <div style={{ fontSize: '12px', color: '#94a3b8' }}>Lade Daten...</div>
+                        ) : globalMarketTrends.gainers.map((item, idx) => (
+                          <div key={idx} style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px', background: 'rgba(0,0,0,0.2)', padding: '8px 12px', borderRadius: '8px' }}>
+                            <span style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '200px' }}>{item.name}</span>
+                            <span style={{ fontWeight: '600', color: 'var(--color-green)' }}>+{item.change.toFixed(2)}%</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+
+                    <div style={{ background: 'rgba(255, 59, 48, 0.03)', padding: '16px', borderRadius: '16px', border: '1px solid rgba(255, 59, 48, 0.1)' }}>
+                      <h4 style={{ fontSize: '13px', color: 'var(--color-red)', marginBottom: '12px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                        <TrendingDown size={16} />
+                        {lang === 'de' ? 'Top Verlierer' : 'Top Losers'}
+                      </h4>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                        {globalMarketTrends.losers.length === 0 ? (
+                          <div style={{ fontSize: '12px', color: '#94a3b8' }}>Lade Daten...</div>
+                        ) : globalMarketTrends.losers.map((item, idx) => (
+                          <div key={idx} style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px', background: 'rgba(0,0,0,0.2)', padding: '8px 12px', borderRadius: '8px' }}>
+                            <span style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '200px' }}>{item.name}</span>
+                            <span style={{ fontWeight: '600', color: 'var(--color-red)' }}>{item.change.toFixed(2)}%</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+
                   </div>
                 </div>
 
@@ -1697,49 +1936,47 @@ export default function App() {
                   </div>
 
                   {/* Selected Skin Chart (Desktop Only) */}
-                  {selectedSkinId && (
-                    <div className="chart-card desktop-portfolio-chart">
-                      <div className="chart-header-tr">
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                          <div>
-                            <h3 className="chart-title-tr">{selectedSkin.name} ({lang === 'de' ? 'Live Chart' : 'Live Chart'})</h3>
-                            <div className="chart-price-tr">€{selectedSkin.price.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
-                            <div className={`chart-change-tr ${selectedSkin.change >= 0 ? 'price-up' : 'price-down'}`}>
-                              {selectedSkin.change >= 0 ? '+' : ''}{selectedSkin.change.toFixed(2)}% {lang === 'de' ? 'Heute' : 'Today'}
-                            </div>
-                          </div>
-                          <div className="timeframe-nav" style={{ display: 'flex', gap: '4px', background: 'rgba(255,255,255,0.05)', padding: '2px', borderRadius: '6px' }}>
-                            {['1W', '1M', '3M', '1Y'].map(tf => (
-                              <button 
-                                key={tf} 
-                                className={`timeframe-btn ${chartTimeframe === tf ? 'active' : ''}`}
-                                onClick={() => setChartTimeframe(tf)}
-                                style={{
-                                  background: chartTimeframe === tf ? 'rgba(255,255,255,0.1)' : 'transparent',
-                                  color: chartTimeframe === tf ? '#fff' : '#94a3b8',
-                                  border: 'none',
-                                  padding: '4px 8px',
-                                  fontSize: '12px',
-                                  borderRadius: '4px',
-                                  cursor: 'pointer',
-                                  fontWeight: chartTimeframe === tf ? '600' : '400'
-                                }}
-                              >
-                                {tf}
-                              </button>
-                            ))}
+                  <div className="chart-card desktop-portfolio-chart">
+                    <div className="chart-header-tr">
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                        <div>
+                          <h3 className="chart-title-tr">{selectedSkin.name} ({lang === 'de' ? 'Live Chart' : 'Live Chart'})</h3>
+                          <div className="chart-price-tr">€{selectedSkin.price.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
+                          <div className={`chart-change-tr ${selectedSkin.change >= 0 ? 'price-up' : 'price-down'}`}>
+                            {selectedSkin.change >= 0 ? '+' : ''}{selectedSkin.change.toFixed(2)}% {lang === 'de' ? 'Heute' : 'Today'}
                           </div>
                         </div>
-                      </div>
-                      <div className="chart-body-container">
-                        <SkinChart 
-                          data={historicalDataMap[selectedSkinId] || []} 
-                          currentPrice={selectedSkin.price} 
-                          isPositive={selectedSkin.change >= 0}
-                        />
+                        <div className="timeframe-nav" style={{ display: 'flex', gap: '4px', background: 'rgba(255,255,255,0.05)', padding: '2px', borderRadius: '6px' }}>
+                          {['1W', '1M', '3M', '1Y'].map(tf => (
+                            <button 
+                              key={tf} 
+                              className={`timeframe-btn ${chartTimeframe === tf ? 'active' : ''}`}
+                              onClick={() => setChartTimeframe(tf)}
+                              style={{
+                                background: chartTimeframe === tf ? 'rgba(255,255,255,0.1)' : 'transparent',
+                                color: chartTimeframe === tf ? '#fff' : '#94a3b8',
+                                border: 'none',
+                                padding: '4px 8px',
+                                fontSize: '12px',
+                                borderRadius: '4px',
+                                cursor: 'pointer',
+                                fontWeight: chartTimeframe === tf ? '600' : '400'
+                              }}
+                            >
+                              {tf}
+                            </button>
+                          ))}
+                        </div>
                       </div>
                     </div>
-                  )}
+                    <div className="chart-body-container">
+                      <SkinChart 
+                        data={historicalDataMap[selectedSkinId || (activeTab === 'portfolio' ? 'total_portfolio' : 'total_market')] || []} 
+                        currentPrice={selectedSkin.price} 
+                        isPositive={selectedSkin.change >= 0}
+                      />
+                    </div>
+                  </div>
 
                   {/* Selected Position details (Desktop Only) */}
                   {selectedSkinId && selectedSkinId.startsWith('real-') && (
@@ -1869,8 +2106,8 @@ export default function App() {
                           className={`portfolio-card skin-row ${selectedSkinId === item.id ? 'skin-row--selected' : ''} ${flashStates[item.id] === 'up' ? 'flash-up' : flashStates[item.id] === 'down' ? 'flash-down' : ''}`}
                           style={{ cursor: 'pointer' }}
                           onClick={() => {
-                            setSelectedSkinId(item.id)
-                            if (window.matchMedia('(max-width: 767px)').matches) {
+                            setSelectedSkinId(selectedSkinId === item.id ? null : item.id)
+                            if (window.matchMedia('(max-width: 767px)').matches && selectedSkinId !== item.id) {
                               setActiveTab('market')
                             }
                           }}
