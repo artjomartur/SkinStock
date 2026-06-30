@@ -102,7 +102,7 @@ export default function Onboarding() {
       return (
         <div className="onboarding-step-content fade-in">
           <div className="step-icon-wrapper">
-            <TrendingUp size={48} color="var(--color-purple)" />
+            <TrendingUp size={48} color="#a855f7" />
           </div>
           <h2>{lang === 'de' ? 'Analysen & Trends' : 'Analytics & Trends'}</h2>
           <p>
