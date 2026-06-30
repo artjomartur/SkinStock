@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Mail, Lock, AlertTriangle, ArrowRight, User } from 'lucide-react';
+import { Mail, Lock, AlertTriangle, ArrowRight, ArrowLeft, TrendingUp, Briefcase } from 'lucide-react';
 import { auth } from '../firebase';
 import { 
   createUserWithEmailAndPassword, 
@@ -10,6 +10,7 @@ import {
 } from 'firebase/auth';
 
 export default function Onboarding() {
+  const [step, setStep] = useState(0);
   const [isLogin, setIsLogin] = useState(false);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -77,26 +78,64 @@ export default function Onboarding() {
     }
   };
 
-  return (
-    <div className="onboarding-overlay">
-      <div className="onboarding-container">
-        <div className="onboarding-header">
-          <div className="onboarding-logo">
-            <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="url(#gradient)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <defs>
-                <linearGradient id="gradient" x1="0%" y1="0%" x2="100%" y2="100%">
-                  <stop offset="0%" stopColor="#00d182" />
-                  <stop offset="100%" stopColor="#009688" />
-                </linearGradient>
-              </defs>
-              <polyline points="22 12 18 12 15 21 9 3 6 12 2 12" />
-            </svg>
+  const renderStepContent = () => {
+    if (step === 0) {
+      return (
+        <div className="onboarding-step-content fade-in">
+          <div className="step-icon-wrapper">
+            <Briefcase size={48} color="var(--color-green)" />
           </div>
-          <h1 className="onboarding-title">SkinStock</h1>
-          <p className="onboarding-subtitle">
-            {lang === 'de' ? 'Dein ultimativer CS2 Portfolio Tracker.' : 'Your ultimate CS2 Portfolio Tracker.'}
+          <h2>{lang === 'de' ? 'Dein CS2 Portfolio' : 'Your CS2 Portfolio'}</h2>
+          <p>
+            {lang === 'de' 
+              ? 'Behalte den Überblick über all deine Skins. Verfolge den Gesamtwert deines Inventars in Echtzeit und sieh sofort, wie viel du im Plus bist.'
+              : 'Keep track of all your skins. Monitor the total value of your inventory in real-time and instantly see your profits.'}
           </p>
+          <button onClick={() => setStep(1)} className="onboarding-btn primary-btn" style={{ marginTop: '24px' }}>
+            {lang === 'de' ? 'Weiter' : 'Next'} <ArrowRight size={18} />
+          </button>
         </div>
+      );
+    }
+
+    if (step === 1) {
+      return (
+        <div className="onboarding-step-content fade-in">
+          <div className="step-icon-wrapper">
+            <TrendingUp size={48} color="var(--color-purple)" />
+          </div>
+          <h2>{lang === 'de' ? 'Analysen & Trends' : 'Analytics & Trends'}</h2>
+          <p>
+            {lang === 'de'
+              ? 'Nutze technische Indikatoren (RSI, SMA) und Marktdaten, um den perfekten Kauf- oder Verkaufszeitpunkt für deine Skins zu finden.'
+              : 'Use technical indicators (RSI, SMA) and market data to find the perfect time to buy or sell your skins.'}
+          </p>
+          <div className="step-nav-buttons" style={{ display: 'flex', gap: '12px', marginTop: '24px' }}>
+            <button onClick={() => setStep(0)} className="onboarding-btn secondary-btn" style={{ flex: 1 }}>
+              <ArrowLeft size={18} /> {lang === 'de' ? 'Zurück' : 'Back'}
+            </button>
+            <button onClick={() => setStep(2)} className="onboarding-btn primary-btn" style={{ flex: 1 }}>
+              {lang === 'de' ? 'Loslegen' : 'Get Started'} <ArrowRight size={18} />
+            </button>
+          </div>
+        </div>
+      );
+    }
+
+    return (
+      <div className="onboarding-step-content fade-in">
+        <div className="step-icon-wrapper" style={{ marginBottom: '16px' }}>
+          <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="url(#gradient)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <defs>
+              <linearGradient id="gradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                <stop offset="0%" stopColor="#00d182" />
+                <stop offset="100%" stopColor="#009688" />
+              </linearGradient>
+            </defs>
+            <polyline points="22 12 18 12 15 21 9 3 6 12 2 12" />
+          </svg>
+        </div>
+        <h2 style={{ marginBottom: '24px', fontSize: '1.5rem' }}>{lang === 'de' ? 'Account erstellen' : 'Create Account'}</h2>
 
         {error && (
           <div className="onboarding-error">
@@ -163,12 +202,45 @@ export default function Onboarding() {
           </button>
         </div>
 
-        <div className="onboarding-toggle">
+        <div className="onboarding-toggle" style={{ marginTop: '16px' }}>
           <button type="button" onClick={() => setIsLogin(!isLogin)} className="toggle-btn">
             {isLogin 
               ? (lang === 'de' ? 'Noch keinen Account? Hier registrieren' : "Don't have an account? Sign up here")
               : (lang === 'de' ? 'Bereits einen Account? Hier einloggen' : 'Already have an account? Log in here')}
           </button>
+        </div>
+      </div>
+    );
+  };
+
+  return (
+    <div className="onboarding-overlay">
+      <div className="onboarding-container" style={{ position: 'relative' }}>
+        
+        {step < 2 && (
+          <button 
+            className="skip-btn" 
+            onClick={() => setStep(2)}
+            style={{ position: 'absolute', top: '24px', right: '24px', background: 'transparent', border: 'none', color: '#8e8e93', fontSize: '0.9rem', cursor: 'pointer' }}
+          >
+            {lang === 'de' ? 'Überspringen' : 'Skip'}
+          </button>
+        )}
+
+        <div className="onboarding-header" style={{ marginBottom: step === 2 ? '0' : '24px' }}>
+          <h1 className="onboarding-title">SkinStock</h1>
+        </div>
+
+        {renderStepContent()}
+
+        <div className="step-indicators">
+          {[0, 1, 2].map((i) => (
+            <div 
+              key={i} 
+              className={`step-dot ${step === i ? 'active' : ''}`}
+              onClick={() => setStep(i)}
+            />
+          ))}
         </div>
       </div>
     </div>
