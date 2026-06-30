@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
-import { Mail, Lock, AlertTriangle, ArrowRight, ArrowLeft, TrendingUp, Briefcase } from 'lucide-react';
-import { auth } from '../firebase';
+import React, { useState, useEffect } from 'react';
+import { Mail, Lock, AlertTriangle, ArrowRight, ArrowLeft, TrendingUp, Briefcase, Link as LinkIcon } from 'lucide-react';
+import { auth, db } from '../firebase';
 import { 
   createUserWithEmailAndPassword, 
   signInWithEmailAndPassword, 
@@ -8,16 +8,25 @@ import {
   OAuthProvider, 
   signInWithPopup 
 } from 'firebase/auth';
+import { doc, setDoc } from 'firebase/firestore';
 
-export default function Onboarding() {
+export default function Onboarding({ user, setSteamIdInput }) {
   const [step, setStep] = useState(0);
   const [isLogin, setIsLogin] = useState(false);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  
+  const [steamIdLocal, setSteamIdLocal] = useState('');
 
   const lang = typeof navigator !== 'undefined' && navigator.language && navigator.language.startsWith('de') ? 'de' : 'en';
+
+  useEffect(() => {
+    if (user) {
+      setStep(3);
+    }
+  }, [user]);
 
   const handleEmailAuth = async (e) => {
     e.preventDefault();
@@ -78,10 +87,43 @@ export default function Onboarding() {
     }
   };
 
+  const handleSaveSteamId = async (e) => {
+    e.preventDefault();
+    if (!steamIdLocal.trim()) {
+      setError(lang === 'de' ? 'Bitte gib eine Steam ID ein.' : 'Please enter a Steam ID.');
+      return;
+    }
+    
+    // Extract ID if it's a URL
+    let finalId = steamIdLocal.trim();
+    if (finalId.includes('steamcommunity.com/profiles/')) {
+      finalId = finalId.split('steamcommunity.com/profiles/')[1].split('/')[0];
+    } else if (finalId.includes('steamcommunity.com/id/')) {
+      finalId = finalId.split('steamcommunity.com/id/')[1].split('/')[0];
+    }
+    
+    setLoading(true);
+    setError('');
+    try {
+      if (user && db) {
+        await setDoc(doc(db, 'users', user.uid), { steamId: finalId }, { merge: true });
+        localStorage.setItem('skinstock_steam_id', finalId);
+        if (setSteamIdInput) {
+          setSteamIdInput(finalId);
+        }
+      }
+    } catch (err) {
+      console.error(err);
+      setError(lang === 'de' ? 'Fehler beim Speichern der Steam ID.' : 'Error saving Steam ID.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const renderStepContent = () => {
     if (step === 0) {
       return (
-        <div className="onboarding-step-content fade-in">
+        <div className="onboarding-step-content slide-in-right">
           <div className="step-icon-wrapper">
             <Briefcase size={48} color="var(--color-green)" />
           </div>
@@ -100,7 +142,7 @@ export default function Onboarding() {
 
     if (step === 1) {
       return (
-        <div className="onboarding-step-content fade-in">
+        <div className="onboarding-step-content slide-in-right">
           <div className="step-icon-wrapper">
             <TrendingUp size={48} color="#a855f7" />
           </div>
@@ -122,8 +164,55 @@ export default function Onboarding() {
       );
     }
 
+    if (step === 3) {
+      return (
+        <div className="onboarding-step-content fade-in">
+          <div className="step-icon-wrapper" style={{ marginBottom: '16px' }}>
+            <LinkIcon size={40} color="var(--color-amber)" />
+          </div>
+          <h2 style={{ marginBottom: '8px', fontSize: '1.5rem' }}>{lang === 'de' ? 'Steam verbinden' : 'Connect Steam'}</h2>
+          <p style={{ marginBottom: '24px', fontSize: '0.95rem' }}>
+            {lang === 'de' 
+              ? 'Fast geschafft! Gib deine Steam ID oder Profil-URL ein, um dein Inventar zu laden.'
+              : 'Almost done! Enter your Steam ID or Profile URL to load your inventory.'}
+          </p>
+
+          {error && (
+            <div className="onboarding-error">
+              <AlertTriangle size={18} />
+              <span>{error}</span>
+            </div>
+          )}
+
+          <form onSubmit={handleSaveSteamId} className="onboarding-form" style={{ width: '100%' }}>
+            <div className="input-group">
+              <input 
+                type="text" 
+                placeholder={lang === 'de' ? 'Steam ID / URL (z.B. 76561198...)' : 'Steam ID / URL (e.g. 76561198...)'} 
+                value={steamIdLocal}
+                onChange={(e) => setSteamIdLocal(e.target.value)}
+                required
+                style={{ paddingLeft: '16px' }}
+              />
+            </div>
+            
+            <button type="submit" className="onboarding-btn primary-btn" disabled={loading} style={{ marginTop: '16px' }}>
+              {loading ? (
+                <span className="spinner"></span>
+              ) : (
+                <>
+                  {lang === 'de' ? 'Inventar laden' : 'Load Inventory'}
+                  <ArrowRight size={18} />
+                </>
+              )}
+            </button>
+          </form>
+        </div>
+      );
+    }
+
     return (
-      <div className="onboarding-step-content fade-in">
+      <div className="onboarding-step-content slide-in-right">
         <div className="step-icon-wrapper" style={{ marginBottom: '16px' }}>
           <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="url(#gradient)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
             <defs>
@@ -144,7 +233,7 @@ export default function Onboarding() {
           </div>
         )}
 
-        <form onSubmit={handleEmailAuth} className="onboarding-form">
+        <form onSubmit={handleEmailAuth} className="onboarding-form" style={{ width: '100%' }}>
           <div className="input-group">
             <div className="input-icon"><Mail size={18} /></div>
             <input 
@@ -183,7 +272,7 @@ export default function Onboarding() {
           <span>{lang === 'de' ? 'ODER' : 'OR'}</span>
         </div>
 
-        <div className="social-auth-container">
+        <div className="social-auth-container" style={{ width: '100%' }}>
           <button onClick={handleGoogleAuth} className="onboarding-btn social-btn" disabled={loading}>
             <svg width="20" height="20" viewBox="0 0 24 24">
               <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" />
@@ -227,21 +316,23 @@ export default function Onboarding() {
           </button>
         )}
 
-        <div className="onboarding-header" style={{ marginBottom: step === 2 ? '0' : '24px' }}>
+        <div className="onboarding-header" style={{ marginBottom: step === 2 ? '0' : '24px', display: step === 3 ? 'none' : 'block' }}>
           <h1 className="onboarding-title">SkinStock</h1>
         </div>
 
         {renderStepContent()}
 
-        <div className="step-indicators">
-          {[0, 1, 2].map((i) => (
-            <div 
-              key={i} 
-              className={`step-dot ${step === i ? 'active' : ''}`}
-              onClick={() => setStep(i)}
-            />
-          ))}
-        </div>
+        {step < 3 && (
+          <div className="step-indicators">
+            {[0, 1, 2].map((i) => (
+              <div 
+                key={i} 
+                className={`step-dot ${step === i ? 'active' : ''}`}
+                onClick={() => setStep(i)}
+              />
+            ))}
+          </div>
+        )}
       </div>
     </div>
   );

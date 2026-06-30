@@ -326,6 +326,10 @@ export default function App() {
             const data = docSnap.data()
             if (data.watchlist) setSkins(data.watchlist)
             if (data.inventory) setRealInventoryItems(data.inventory)
+            if (data.steamId) {
+              setSteamIdInput(data.steamId)
+              localStorage.setItem('skinstock_steam_id', data.steamId)
+            }
           } else {
             await setDoc(docRef, { watchlist: skins, inventory: realInventoryItems }, { merge: true })
           }
@@ -371,7 +375,7 @@ export default function App() {
   const [flashStates, setFlashStates] = useState({}) // skinId -> 'up' | 'down'
   
   // Real Steam Inventory state
-  const [steamIdInput, setSteamIdInput] = useState(() => localStorage.getItem('skinstock_steam_id') || '76561198308463275')
+  const [steamIdInput, setSteamIdInput] = useState(() => localStorage.getItem('skinstock_steam_id') || '')
   const [isFetchingInventory, setIsFetchingInventory] = useState(false)
   const [inventoryError, setInventoryError] = useState('')
   const [showManualImport, setShowManualImport] = useState(false)
@@ -1135,8 +1139,8 @@ export default function App() {
     return <div style={{ display: 'flex', height: '100vh', width: '100vw', alignItems: 'center', justifyContent: 'center', background: '#000', color: '#fff' }}>Loading...</div>;
   }
 
-  if (!user) {
-    return <Onboarding />;
+  if (!user || !steamIdInput) {
+    return <Onboarding user={user} setSteamIdInput={setSteamIdInput} />;
   }
 
   return (
@@ -2284,7 +2288,7 @@ export default function App() {
                 : 'Due to Steam security limits, automatic load might fail. Copy the JSON from this link and paste it below:'}
             </p>
             <a 
-              href={`https://steamcommunity.com/inventory/${resolveSteamId(steamIdInput) || '76561198000000000'}/730/2?l=german`} 
+              href={`https://steamcommunity.com/inventory/${resolveSteamId(steamIdInput)}/730/2?l=german`} 
               target="_blank" 
               rel="noopener noreferrer"
               className="alert-box-link"
