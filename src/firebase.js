@@ -4,23 +4,17 @@ import { getFirestore } from 'firebase/firestore';
 
 // ⚠️ ERSETZE DIESE WERTE mit denen aus deiner Firebase-Konsole
 const firebaseConfig = {
-  apiKey: "DEINE_API_KEY",
-  authDomain: "DEIN_PROJECT.firebaseapp.com",
-  projectId: "DEIN_PROJECT",
-  storageBucket: "DEIN_PROJECT.firebasestorage.app",
-  messagingSenderId: "DEINE_MESSAGING_ID",
-  appId: "DEINE_APP_ID"
+  apiKey: "AIzaSyApqQ4NeMZliyqUU2jnCnCZgsy3h7drMt0",
+  authDomain: "skinstock-e6d08.firebaseapp.com",
+  projectId: "skinstock-e6d08",
+  storageBucket: "skinstock-e6d08.firebasestorage.app",
+  messagingSenderId: "318819777231",
+  appId: "1:318819777231:web:a4734d4b5c721074a915ba",
+  measurementId: "G-JDHDNXYX31"
 };
 
-let app, auth, db;
-
-// Um die App nicht abstürzen zu lassen, prüfen wir, ob ein echter API Key da ist
-if (firebaseConfig.apiKey !== "DEINE_API_KEY") {
-  app = initializeApp(firebaseConfig);
-  auth = getAuth(app);
-  db = getFirestore(app);
-} else {
-  console.warn("⚠️ Firebase ist noch nicht konfiguriert! Bitte füge deine echten Keys in src/firebase.js ein.");
-}
+const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+const db = getFirestore(app);
 
 export { auth, db };
