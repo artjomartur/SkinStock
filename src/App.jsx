@@ -1286,33 +1286,7 @@ export default function App() {
             </>
           )}
         </div>
-      </header>
-      
-      {/* Marquee Ticker */}
-      <div className="marquee-container">
-        <div className="marquee-content">
-          {globalMarketTrends.gainers.concat(globalMarketTrends.losers).map((item, idx) => (
-            <div key={idx} className="marquee-item">
-              <span>{item.name}</span>
-              <span className="price">{formatPrice(item.price, currency, valuationMode)}</span>
-              <span className={`change ${item.change > 0 ? 'up' : 'down'}`}>
-                {item.change > 0 ? '+' : ''}{item.change.toFixed(2)}%
-              </span>
-            </div>
-          ))}
-          {/* Duplicate for infinite effect */}
-          {globalMarketTrends.gainers.concat(globalMarketTrends.losers).map((item, idx) => (
-            <div key={`dup-${idx}`} className="marquee-item">
-              <span>{item.name}</span>
-              <span className="price">{formatPrice(item.price, currency, valuationMode)}</span>
-              <span className={`change ${item.change > 0 ? 'up' : 'down'}`}>
-                {item.change > 0 ? '+' : ''}{item.change.toFixed(2)}%
-              </span>
-            </div>
-          ))}
-        </div>
-        
-        <div className="header-actions" style={{ position: 'absolute', right: '16px', background: 'rgba(0,0,0,0.8)', paddingLeft: '12px' }}>
+        <div className="header-actions" style={{ display: 'flex', gap: '8px', marginLeft: 'auto' }}>
           <button 
             className="mode-toggle-btn"
             onClick={() => setCurrency(c => c === 'EUR' ? 'USD' : 'EUR')}
@@ -1326,7 +1300,7 @@ export default function App() {
             {valuationMode === 'STEAM' ? 'Steam' : 'Cashout'}
           </button>
         </div>
-      </div>
+      </header>
 
       {/* App Content */}
       <main className="app-content scrollbar-hide">
