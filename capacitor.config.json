@@ -1,5 +1,11 @@
 {
   "appId": "com.artjombecker.skinstock",
   "appName": "SkinStock",
-  "webDir": "dist"
+  "webDir": "dist",
+  "plugins": {
+    "FirebaseAuthentication": {
+      "skipNativeAuth": false,
+      "providers": ["google.com", "apple.com"]
+    }
+  }
 }

@@ -4,8 +4,42 @@
   height: 100%;
   width: 100%;
   position: relative;
-  background: #000000;
+  background: #030305;
   overflow: hidden;
+}
+
+.app-layout::before,
+.app-layout::after {
+  content: '';
+  position: absolute;
+  width: 80vw;
+  height: 80vw;
+  border-radius: 50%;
+  filter: blur(100px);
+  z-index: 0;
+  opacity: 0.3;
+  pointer-events: none;
+  animation: floatBlobs 25s infinite alternate ease-in-out;
+}
+
+.app-layout::before {
+  background: rgba(0, 212, 126, 0.8);
+  top: -10%;
+  left: -20%;
+}
+
+.app-layout::after {
+  background: rgba(10, 132, 255, 0.6);
+  bottom: -10%;
+  right: -20%;
+  animation-delay: -12.5s;
+}
+
+@keyframes floatBlobs {
+  0% { transform: translate(0, 0) scale(1); }
+  33% { transform: translate(30%, 20%) scale(1.1); }
+  66% { transform: translate(-10%, 40%) scale(0.95); }
+  100% { transform: translate(10%, -20%) scale(1.05); }
 }
 
 /* Header */
@@ -14,10 +48,13 @@
   justify-content: space-between;
   align-items: center;
   padding: 10px 16px;
-  background: #000000;
-  border-bottom: 1px solid var(--border);
+  background: rgba(15, 15, 20, 0.65);
+  backdrop-filter: blur(30px) saturate(200%);
+  -webkit-backdrop-filter: blur(30px) saturate(200%);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
   z-index: 10;
   flex-shrink: 0;
+  padding-top: max(10px, env(safe-area-inset-top));
 }
 
 .logo-group {
@@ -69,6 +106,8 @@
   padding: 12px 16px;
   padding-bottom: 72px; /* space for tab bar */
   -webkit-overflow-scrolling: touch;
+  position: relative;
+  z-index: 1;
 }
 
 /* Bottom Tab Bar */
@@ -78,10 +117,11 @@
   left: 0;
   width: 100%;
   height: 56px;
-  background: rgba(0, 0, 0, 0.95);
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
-  border-top: 1px solid rgba(255, 255, 255, 0.06);
+  background: rgba(15, 15, 20, 0.45);
+  backdrop-filter: blur(40px) saturate(200%);
+  -webkit-backdrop-filter: blur(40px) saturate(200%);
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: 0 -4px 24px rgba(0, 0, 0, 0.2);
   display: flex;
   justify-content: space-around;
   align-items: center;
@@ -102,7 +142,7 @@
   font-size: 10px;
   font-weight: 500;
   cursor: pointer;
-  transition: color 0.2s, transform 0.15s;
+  transition: color 0.2s, transform 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275);
   flex-grow: 1;
   height: 100%;
   position: relative;
@@ -128,7 +168,7 @@
 .tab-icon {
   width: 20px;
   height: 20px;
-  transition: transform 0.15s;
+  transition: transform 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275);
 }
 
 .tab-btn:active .tab-icon {
@@ -136,7 +176,7 @@
 }
 
 .tab-btn:active {
-  transform: scale(0.95);
+  transform: scale(0.92);
 }
 
 /* Watchlist & Skins */
@@ -163,31 +203,37 @@
 }
 
 .skin-row {
-  background: rgba(20, 20, 20, 0.45);
-  border: 1px solid rgba(255, 255, 255, 0.05);
-  border-radius: 12px;
+  background: rgba(25, 25, 30, 0.5);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 16px;
   padding: 12px 16px;
   display: flex;
   flex-direction: column;
   justify-content: flex-start;
   align-items: stretch;
   cursor: pointer;
-  transition: all 0.25s ease;
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
+  transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  backdrop-filter: blur(24px) saturate(180%);
+  -webkit-backdrop-filter: blur(24px) saturate(180%);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  -webkit-tap-highlight-color: transparent;
 }
 
 .skin-row:hover {
-  background: rgba(40, 40, 40, 0.65);
+  background: rgba(35, 35, 45, 0.6);
   transform: translateY(-2px);
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
-  border-color: rgba(255, 255, 255, 0.1);
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.4);
+  border-color: rgba(255, 255, 255, 0.15);
+}
+
+.skin-row:active {
+  transform: scale(0.96) translateY(0);
 }
 
 .skin-row--selected {
-  background: rgba(60, 60, 60, 0.75) !important;
-  border-color: rgba(255, 255, 255, 0.2) !important;
-  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.15) !important;
+  background: rgba(45, 45, 60, 0.7) !important;
+  border-color: rgba(255, 255, 255, 0.25) !important;
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.15), 0 16px 40px rgba(0, 0, 0, 0.5) !important;
 }
 
 .skin-row-header {
@@ -284,15 +330,15 @@
 
 /* Chart View */
 .chart-card {
-  background: rgba(20, 20, 20, 0.45);
-  border: 1px solid rgba(255, 255, 255, 0.05);
-  border-radius: 16px;
+  background: rgba(25, 25, 30, 0.45);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 20px;
   padding: 20px;
   margin-bottom: 20px;
   display: flex;
   flex-direction: column;
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
+  backdrop-filter: blur(24px) saturate(180%);
+  -webkit-backdrop-filter: blur(24px) saturate(180%);
   box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.2);
 }
 
@@ -450,11 +496,14 @@
 
 /* Trade Controls */
 .trade-box {
-  background: #0c0c0c;
-  border: 1px solid #1c1c1e;
-  border-radius: 16px;
+  background: rgba(25, 25, 30, 0.45);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 20px;
   padding: 16px;
   margin-top: 16px;
+  backdrop-filter: blur(24px) saturate(180%);
+  -webkit-backdrop-filter: blur(24px) saturate(180%);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
 }
 
 .trade-inputs {

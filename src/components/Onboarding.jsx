@@ -6,9 +6,12 @@ import {
   signInWithEmailAndPassword, 
   GoogleAuthProvider, 
   OAuthProvider, 
-  signInWithPopup 
+  signInWithPopup,
+  signInWithCredential
 } from 'firebase/auth';
 import { doc, setDoc } from 'firebase/firestore';
+import { Capacitor } from '@capacitor/core';
+import { FirebaseAuthentication } from '@capacitor-firebase/authentication';
 
 export default function Onboarding({ user, setSteamIdInput }) {
   const [step, setStep] = useState(0);
@@ -52,35 +55,40 @@ export default function Onboarding({ user, setSteamIdInput }) {
   };
 
   const handleGoogleAuth = async () => {
-    if (!auth) {
-      setError(lang === 'de' ? 'Firebase ist nicht konfiguriert.' : 'Firebase is not configured.');
-      return;
-    }
     setError('');
     setLoading(true);
-    const provider = new GoogleAuthProvider();
     try {
-      await signInWithPopup(auth, provider);
+      if (Capacitor.isNativePlatform()) {
+        const result = await FirebaseAuthentication.signInWithGoogle();
+        const credential = GoogleAuthProvider.credential(result.credential?.idToken);
+        await signInWithCredential(auth, credential);
+      } else {
+        const provider = new GoogleAuthProvider();
+        await signInWithPopup(auth, provider);
+      }
     } catch (err) {
-      console.error(err);
-      setError(err.message);
+      setError('Fehler: ' + err.message);
     } finally {
       setLoading(false);
     }
   };
 
   const handleAppleAuth = async () => {
-    if (!auth) {
-      setError(lang === 'de' ? 'Firebase ist nicht konfiguriert.' : 'Firebase is not configured.');
-      return;
-    }
     setError('');
     setLoading(true);
-    const provider = new OAuthProvider('apple.com');
     try {
-      await signInWithPopup(auth, provider);
+      if (Capacitor.isNativePlatform()) {
+        const result = await FirebaseAuthentication.signInWithApple();
+        const credential = new OAuthProvider('apple.com').credential({
+          idToken: result.credential?.idToken,
+          rawNonce: result.credential?.nonce,
+        });
+        await signInWithCredential(auth, credential);
+      } else {
+        const provider = new OAuthProvider('apple.com');
+        await signInWithPopup(auth, provider);
+      }
     } catch (err) {
-      console.error(err);
       setError(err.message);
     } finally {
       setLoading(false);

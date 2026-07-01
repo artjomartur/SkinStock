@@ -318,7 +318,7 @@ function SkinChart({ data, currentPrice, isPositive }) {
 }
 
 export default function App() {
-  const [activeTab, setActiveTab] = useState('market') // 'market' | 'portfolio' | 'alerts'
+  const [activeTab, setActiveTab] = useState('portfolio') // 'market' | 'portfolio' | 'alerts'
   const [searchQuery, setSearchQuery] = useState('')
   const [chartTimeframe, setChartTimeframe] = useState('1M') // '1W', '1M', '3M', '1Y'
   const [skins, setSkins] = useState(() => {
@@ -938,9 +938,9 @@ export default function App() {
     let distWeapons = 0;
 
     realInventoryItems.forEach((item) => {
-      const itemVal = item.price * item.qty
+      const itemVal = (item.price || 0) * item.qty
       holdingsValue += itemVal
-      totalInvested += item.basePrice * item.qty
+      totalInvested += (item.basePrice || 0) * item.qty
       if (item.marketable !== false) {
         marketableValue += itemVal
       } else {
@@ -1104,7 +1104,7 @@ export default function App() {
         const maxHigh = Math.max(...highs)
         const minLow = Math.min(...lows)
         const vol = minLow > 0 ? ((maxHigh - minLow) / minLow * 100) : 0
-        const itemVal = item.price * item.qty
+        const itemVal = (item.price || 0) * item.qty
         weightedVolSum += vol * itemVal
         totalValue += itemVal
       }
@@ -1119,7 +1119,7 @@ export default function App() {
     let weightedRiskSum = 0
     
     realInventoryItems.forEach(item => {
-      const itemVal = item.price * item.qty
+      const itemVal = (item.price || 0) * item.qty
       const n = item.name.toLowerCase()
       let itemRisk = 5
       if (n.includes('★') && !n.includes('glove') && !n.includes('handschuhe') && !n.includes('wrap')) {
@@ -1149,7 +1149,7 @@ export default function App() {
     let loss = 0
     
     realInventoryItems.forEach(item => {
-      const netPrice = item.price * 0.85
+      const netPrice = (item.price || 0) * 0.85
       if (item.price > item.basePrice && netPrice < item.basePrice) {
         breakEven += item.qty
       } else if (netPrice >= item.basePrice) {
@@ -1212,13 +1212,6 @@ export default function App() {
         </div>
         
         <nav className="sidebar-nav">
-          <button 
-            className={`sidebar-nav-btn ${activeTab === 'market' ? 'active' : ''}`}
-            onClick={() => setActiveTab('market')}
-          >
-            <Activity size={20} />
-            <span>Ticker</span>
-          </button>
           <button 
             className={`sidebar-nav-btn ${activeTab === 'portfolio' ? 'active' : ''}`}
             onClick={() => setActiveTab('portfolio')}
@@ -1654,7 +1647,7 @@ export default function App() {
                     <div className="overview-stat">
                       <span className="stat-label">{lang === 'de' ? 'Aktueller Wert' : 'Current Value'}</span>
                       <span className="stat-val text-large">
-                        <CountUp end={realInventorySummary.totalValue} decimals={2} duration={1.5} prefix={currency === 'USD' ? '$' : '€'} />
+                        <CountUp end={isNaN(realInventorySummary.totalValue) ? 0 : realInventorySummary.totalValue} decimals={2} duration={1.5} prefix={currency === 'USD' ? '$' : '€'} />
                       </span>
                     </div>
                     <div className="overview-stat">
@@ -2161,8 +2154,8 @@ export default function App() {
                         {lang === 'de' ? 'Keine passenden Items gefunden.' : 'No matching items found.'}
                       </div>
                     ) : filteredPortfolio.map((item) => {
-                      const currentVal = item.price * item.qty
-                      const investedVal = item.basePrice * item.qty
+                      const currentVal = (item.price || 0) * item.qty
+                      const investedVal = (item.basePrice || 0) * item.qty
                       const itemPnl = parseFloat((currentVal - investedVal).toFixed(2))
                       const itemPnlPct = parseFloat((investedVal > 0 ? (itemPnl / investedVal * 100) : 0).toFixed(2))
 
@@ -2195,8 +2188,8 @@ export default function App() {
                               </span>
                               <span style={{ fontSize: '10px', color: '#94a3b8', marginTop: '2px' }}>
                                 {lang === 'de' 
-                                  ? `Ø Kauf: €${item.basePrice.toFixed(2)} | Break-Even: €${(item.basePrice / 0.85).toFixed(2)}` 
-                                  : `Avg Buy: €${item.basePrice.toFixed(2)} | Break-Even: €${(item.basePrice / 0.85).toFixed(2)}`}
+                                  ? `Ø Kauf: €${(item.basePrice || 0).toFixed(2)} | Break-Even: €${(item.basePrice / 0.85).toFixed(2)}` 
+                                  : `Avg Buy: €${(item.basePrice || 0).toFixed(2)} | Break-Even: €${(item.basePrice / 0.85).toFixed(2)}`}
                               </span>
                             </div>
                           </div>
@@ -2210,7 +2203,7 @@ export default function App() {
                           <div className="skin-row-expanded">
                             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', fontSize: '13px', color: '#94a3b8' }}>
                               <div style={{ display: 'flex', flexDirection: 'column' }}>
-                                <span>{lang === 'de' ? 'Aktueller Preis:' : 'Current Price:'} <span style={{ color: '#fff' }}>€{item.price.toFixed(2)}</span></span>
+                                <span>{lang === 'de' ? 'Aktueller Preis:' : 'Current Price:'} <span style={{ color: '#fff' }}>€{(item.price || 0).toFixed(2)}</span></span>
                                 <span>{lang === 'de' ? 'Gesamtwert:' : 'Total Value:'} <span style={{ color: '#fff' }}>€{currentVal.toFixed(2)}</span></span>
                               </div>
                               <div style={{ display: 'flex', flexDirection: 'column' }}>
@@ -2321,13 +2314,6 @@ export default function App() {
 
       {/* Tab Navigation Bar */}
       <nav className="tab-bar">
-        <button 
-          className={`tab-btn ${activeTab === 'market' ? 'tab-btn--active' : ''}`}
-          onClick={() => setActiveTab('market')}
-        >
-          <Activity className="tab-icon" />
-          <span>Ticker</span>
-        </button>
         <button 
           className={`tab-btn ${activeTab === 'portfolio' ? 'tab-btn--active' : ''}`}
           onClick={() => setActiveTab('portfolio')}
