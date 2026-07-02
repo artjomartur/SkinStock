@@ -66,7 +66,7 @@ struct InventoryView: View {
                     }
                 }
             }
-            .background(Color(red: 0.05, green: 0.05, blue: 0.1).edgesIgnoringSafeArea(.all))
+            .background(Color.black.edgesIgnoringSafeArea(.all))
             .onReceive(inventoryService.$inventory) { newInventory in
                 viewModel.updateData(inventory: newInventory, priceService: priceService)
             }
@@ -81,6 +81,8 @@ struct InventoryView: View {
 struct InventoryGridItemView: View {
     let item: CS2Item
     @EnvironmentObject var userSettings: UserSettings
+    @EnvironmentObject var priceService: PriceService
+    @EnvironmentObject var priceHistoryStore: PriceHistoryStore
     
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
@@ -127,7 +129,7 @@ struct InventoryGridItemView: View {
                     .foregroundColor(.white)
                 
                 HStack {
-                    Text(userSettings.formattedPrice(item.lastPrice))
+                    Text(userSettings.formattedPrice(priceService.getPrice(for: item)))
                         .font(.caption)
                         .fontWeight(.semibold)
                         .foregroundColor(.green)
@@ -145,10 +147,13 @@ struct InventoryGridItemView: View {
                     }
                 }
                 
-                // Mini Trendline (Week)
-                TrendlineView(data: PriceService().getPriceHistory(for: item.hashName, timeframe: .week), showAxes: false, lineWidth: 1.5, showIndicator: false)
-                    .frame(height: 20)
-                    .padding(.top, 2)
+                // Mini Trendline (echte Daten)
+                let history = priceHistoryStore.getHistory(for: item.hashName, timeframe: .week)
+                if history.count >= 2 {
+                    TrendlineView(data: history, showAxes: false, lineWidth: 1.5, showIndicator: false)
+                        .frame(height: 20)
+                        .padding(.top, 2)
+                }
             }
         }
         .padding(8)

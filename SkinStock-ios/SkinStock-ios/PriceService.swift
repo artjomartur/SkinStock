@@ -1,9 +1,35 @@
 import Foundation
 import Combine
 
+/// Marktplatz-Gebührenstruktur für den Netto-Liquidationswert
+enum Marketplace: String, CaseIterable, Identifiable, Codable {
+    case steam = "Steam Market"
+    case skinport = "Skinport"
+    case skinbaron = "Skinbaron"
+    case buff = "Buff163"
+    
+    var id: String { self.rawValue }
+    
+    /// Prozentuale Gebühr (z.B. 0.15 = 15%)
+    var feeRate: Double {
+        switch self {
+        case .steam: return 0.15       // 13% Valve + 2% CS2
+        case .skinport: return 0.06    // 6%
+        case .skinbaron: return 0.08   // 8%
+        case .buff: return 0.025       // 2.5%
+        }
+    }
+    
+    var displayFee: String {
+        return "\(Int(feeRate * 100))%"
+    }
+}
+
 @MainActor
 class PriceService: ObservableObject {
     @Published var priceMap: [String: Double] = [:]
+    /// Steam Market Median-Preise (für Arbitrage-Vergleich)
+    @Published var steamMedianPrices: [String: Double] = [:]
     
     private let cacheKey = "cached_skinport_prices"
     
@@ -28,13 +54,11 @@ class PriceService: ObservableObject {
     
     /// Ruft die aktuellen Marktpreise von der öffentlichen Skinport API ab
     func fetchPrices(currency: String = "EUR") async throws {
-        // Fallback-API, falls CSGO Trader down ist, nehmen wir Skinport!
         guard let url = URL(string: "https://api.skinport.com/v1/items?app_id=730&currency=\(currency)") else {
             throw URLError(.badURL)
         }
         
         var request = URLRequest(url: url)
-        // Setze einen Standard-User-Agent, da manche APIs ohne User-Agent blocken
         request.setValue("SkinStock/1.0", forHTTPHeaderField: "User-Agent")
         
         let (data, response) = try await URLSession.shared.data(for: request)
@@ -43,12 +67,10 @@ class PriceService: ObservableObject {
             throw URLError(.badServerResponse)
         }
         
-        // Skinport JSON: [{"market_hash_name": "...", "suggested_price": 12.34}, ...]
         let items = try JSONDecoder().decode([SkinportItem].self, from: data)
         
         var newPriceMap: [String: Double] = [:]
         for item in items {
-            // Wir verwenden den suggested_price, ansonsten min_price als Fallback
             if let price = item.suggested_price ?? item.min_price {
                 newPriceMap[item.market_hash_name] = price
             }
@@ -58,15 +80,50 @@ class PriceService: ObservableObject {
         self.savePricesToCache()
     }
     
+    /// Ruft Steam-Markt Median-Preise ab (für Arbitrage)
+    func fetchSteamMedianPrice(for hashName: String) async {
+        let encoded = hashName.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? hashName
+        guard let url = URL(string: "https://steamcommunity.com/market/priceoverview/?appid=730&currency=3&market_hash_name=\(encoded)") else { return }
+        
+        do {
+            let (data, _) = try await URLSession.shared.data(from: url)
+            if let json = try JSONSerialization.jsonObject(with: data) as? [String: Any],
+               let medianStr = json["median_price"] as? String {
+                // Parse "12,34€" oder "$12.34" format
+                let cleaned = medianStr
+                    .replacingOccurrences(of: "€", with: "")
+                    .replacingOccurrences(of: "$", with: "")
+                    .replacingOccurrences(of: ",", with: ".")
+                    .replacingOccurrences(of: "--", with: "0")
+                    .trimmingCharacters(in: .whitespaces)
+                if let price = Double(cleaned) {
+                    steamMedianPrices[hashName] = price
+                }
+            }
+        } catch {
+            // Silently fail – Steam rate limits aggressively
+        }
+    }
+    
     // MARK: - Portfolio Berechnungen
     
     func calculateTotalValue(inventory: [CS2Item]) -> Double {
         return inventory.reduce(0) { $0 + getPrice(for: $1) }
     }
     
+    /// Berechnet den Netto-Liquidationswert nach Abzug der Plattform-Gebühren
+    func calculateNetValue(inventory: [CS2Item], marketplace: Marketplace) -> Double {
+        let gross = calculateTotalValue(inventory: inventory)
+        return gross * (1.0 - marketplace.feeRate)
+    }
+    
     func getPrice(for item: CS2Item) -> Double {
-        // Falls wir den genauen Namen im PriceMap haben, nimm ihn, ansonsten Fallback auf item.lastPrice
         return priceMap[item.hashName] ?? item.lastPrice
+    }
+    
+    /// Netto-Preis eines einzelnen Items nach Gebühren
+    func getNetPrice(for item: CS2Item, marketplace: Marketplace) -> Double {
+        return getPrice(for: item) * (1.0 - marketplace.feeRate)
     }
     
     func calculatePortfolioDistribution(inventory: [CS2Item]) -> [String: Double] {
@@ -81,7 +138,6 @@ class PriceService: ObservableObject {
             distribution[category, default: 0.0] += itemValue
         }
         
-        // In Prozent umrechnen
         for (category, value) in distribution {
             distribution[category] = (value / totalValue) * 100
         }
@@ -89,85 +145,15 @@ class PriceService: ObservableObject {
         return distribution
     }
     
-    // MARK: - Historische Preisdaten (Mock)
+    // MARK: - Arbitrage
     
-    // Cache für Mock-Daten, damit der Graph nicht bei jedem Redraw neu generiert wird
-    private var historyCache: [String: [PriceHistoryPoint]] = [:]
-    
-    func getPriceHistory(for hashName: String, timeframe: Timeframe) -> [PriceHistoryPoint] {
-        let cacheKey = "\(hashName)_\(timeframe.rawValue)"
-        if let cached = historyCache[cacheKey] {
-            return cached
-        }
-        
-        let currentPrice = priceMap[hashName] ?? 10.0
-        
-        let pointCount: Int
-        let interval: TimeInterval // in seconds backwards
-        
-        switch timeframe {
-        case .day:
-            pointCount = 24
-            interval = -3600 // hourly
-        case .week:
-            pointCount = 7
-            interval = -86400 // daily
-        case .month:
-            pointCount = 30
-            interval = -86400
-        case .year:
-            pointCount = 12
-            interval = -2592000 // approx 30 days
-        case .max:
-            pointCount = 50
-            interval = -2592000 // monthly over ~4 years
-        }
-        
-        var history: [PriceHistoryPoint] = []
-        var runningPrice = currentPrice
-        
-        // Seed based on hashName so the line is somewhat consistent
-        let hashValue = Double(abs(hashName.hash))
-        let volatility = 0.02 + (hashValue.truncatingRemainder(dividingBy: 0.05)) // 2% to 7% volatility
-        
-        let now = Date()
-        
-        // Latest point (now)
-        history.append(PriceHistoryPoint(date: now, price: currentPrice))
-        
-        for i in 1..<pointCount {
-            let date = now.addingTimeInterval(Double(i) * interval)
-            
-            // Random walk backwards
-            let changePercent = Double.random(in: -volatility...volatility)
-            runningPrice = runningPrice / (1.0 + changePercent)
-            
-            if runningPrice < 0.03 { runningPrice = 0.03 }
-            
-            history.append(PriceHistoryPoint(date: date, price: runningPrice))
-        }
-        
-        // Reverse so it goes from oldest to newest
-        let finalHistory = history.reversed().map { $0 }
-        historyCache[cacheKey] = finalHistory
-        return finalHistory
-    }
-    
-    func getPortfolioHistory(inventory: [CS2Item], timeframe: Timeframe) -> [PriceHistoryPoint] {
-        guard !inventory.isEmpty else { return [] }
-        
-        let histories = inventory.map { getPriceHistory(for: $0.hashName, timeframe: timeframe) }
-        guard let firstHistory = histories.first else { return [] }
-        
-        var portfolioHistory: [PriceHistoryPoint] = []
-        
-        for i in 0..<firstHistory.count {
-            let date = firstHistory[i].date
-            let totalValue = histories.reduce(0) { $0 + $1[i].price }
-            portfolioHistory.append(PriceHistoryPoint(date: date, price: totalValue))
-        }
-        
-        return portfolioHistory
+    /// Berechnet den Spread zwischen Skinport und Steam
+    func arbitrageSpread(for hashName: String) -> Double? {
+        guard let skinportPrice = priceMap[hashName],
+              let steamPrice = steamMedianPrices[hashName],
+              steamPrice > 0 else { return nil }
+        // Positiver Spread = günstiger auf Skinport
+        return ((steamPrice - skinportPrice) / steamPrice) * 100
     }
 }
 

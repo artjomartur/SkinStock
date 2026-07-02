@@ -20,6 +20,8 @@ import Combine
 class UserSettings: ObservableObject {
     @Published var selectedCurrency: CurrencyType = .eur
     @Published var showAbsoluteValues: Bool = false
+    @Published var showNetValue: Bool = false
+    @Published var preferredMarketplace: Marketplace = .skinport
     private var cancellables = Set<AnyCancellable>()
     
     init() {
@@ -28,6 +30,11 @@ class UserSettings: ObservableObject {
             self.selectedCurrency = type
         }
         self.showAbsoluteValues = UserDefaults.standard.bool(forKey: "showAbsoluteValues")
+        self.showNetValue = UserDefaults.standard.bool(forKey: "showNetValue")
+        if let mpString = UserDefaults.standard.string(forKey: "preferredMarketplace"),
+           let mp = Marketplace(rawValue: mpString) {
+            self.preferredMarketplace = mp
+        }
         
         $selectedCurrency
             .dropFirst()
@@ -40,6 +47,20 @@ class UserSettings: ObservableObject {
             .dropFirst()
             .sink { newValue in
                 UserDefaults.standard.set(newValue, forKey: "showAbsoluteValues")
+            }
+            .store(in: &cancellables)
+        
+        $showNetValue
+            .dropFirst()
+            .sink { newValue in
+                UserDefaults.standard.set(newValue, forKey: "showNetValue")
+            }
+            .store(in: &cancellables)
+        
+        $preferredMarketplace
+            .dropFirst()
+            .sink { newValue in
+                UserDefaults.standard.set(newValue.rawValue, forKey: "preferredMarketplace")
             }
             .store(in: &cancellables)
     }

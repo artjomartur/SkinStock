@@ -26,6 +26,7 @@ struct SkinStock_iosApp: App {
     
     // Core Logic Services
     @StateObject private var priceService = PriceService()
+    @StateObject private var priceHistoryStore = PriceHistoryStore()
     @StateObject private var inventoryService = InventoryService()
     @StateObject private var inventoryViewModel = InventoryViewModel()
     
@@ -50,6 +51,7 @@ struct SkinStock_iosApp: App {
                     .environmentObject(steamService)
                     .environmentObject(userSettings)
                     .environmentObject(priceService)
+                    .environmentObject(priceHistoryStore)
                     .environmentObject(inventoryService)
                     .environmentObject(inventoryViewModel)
             }

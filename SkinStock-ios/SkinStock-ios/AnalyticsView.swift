@@ -4,6 +4,7 @@ import Charts
 struct AnalyticsView: View {
     @EnvironmentObject var inventoryService: InventoryService
     @EnvironmentObject var priceService: PriceService
+    @EnvironmentObject var priceHistoryStore: PriceHistoryStore
     @EnvironmentObject var userSettings: UserSettings
     
     // Berechnet den Gesamtwert pro Seltenheitsstufe
@@ -34,14 +35,55 @@ struct AnalyticsView: View {
     var performanceList: [ItemPerformance] {
         var list: [ItemPerformance] = []
         for item in inventoryService.inventory {
-            let history = priceService.getPriceHistory(for: item.hashName, timeframe: selectedTimeframe)
-            if let first = history.first, let last = history.last, first.price > 0 {
-                let diff = last.price - first.price
-                let pct = (diff / first.price) * 100
-                list.append(ItemPerformance(item: item, percentChange: pct, absoluteChange: diff, currentValue: last.price))
+            let history = priceHistoryStore.getHistory(for: item.hashName, timeframe: selectedTimeframe)
+            let currentPrice = priceService.getPrice(for: item)
+            
+            if history.count >= 2, let first = history.first {
+                let diff = currentPrice - first.price
+                let pct = first.price > 0 ? (diff / first.price) * 100 : 0
+                list.append(ItemPerformance(item: item, percentChange: pct, absoluteChange: diff, currentValue: currentPrice))
+            } else {
+                // Noch keine Historie – zeige 0% Änderung
+                list.append(ItemPerformance(item: item, percentChange: 0, absoluteChange: 0, currentValue: currentPrice))
             }
         }
         return list
+    }
+    
+    // MARK: - Liquiditäts-Score
+    
+    struct LiquidityBreakdown {
+        let liquidPercent: Double   // Sofort verkaufsbereit
+        let illiquidPercent: Double // Sammlerstücke (schwer verkaufbar)
+        let liquidValue: Double
+        let illiquidValue: Double
+    }
+    
+    var liquidityBreakdown: LiquidityBreakdown {
+        let total = totalValue
+        guard total > 0 else {
+            return LiquidityBreakdown(liquidPercent: 0, illiquidPercent: 0, liquidValue: 0, illiquidValue: 0)
+        }
+        
+        var liquidValue = 0.0
+        var illiquidValue = 0.0
+        
+        for item in inventoryService.inventory {
+            let price = priceService.getPrice(for: item)
+            // Items > 500€ oder nicht marktfähig gelten als illiquid
+            if price > 500 || !item.marketable {
+                illiquidValue += price
+            } else {
+                liquidValue += price
+            }
+        }
+        
+        return LiquidityBreakdown(
+            liquidPercent: (liquidValue / total) * 100,
+            illiquidPercent: (illiquidValue / total) * 100,
+            liquidValue: liquidValue,
+            illiquidValue: illiquidValue
+        )
     }
     
     var body: some View {
@@ -55,6 +97,9 @@ struct AnalyticsView: View {
                             .padding(.top, 50)
                             .frame(maxWidth: .infinity, alignment: .center)
                     } else {
+                        // Liquiditäts-Score
+                        liquiditySection
+                        
                         // Chart Section
                         VStack(alignment: .leading, spacing: 8) {
                             Text("Portfolio Aufteilung")
@@ -126,8 +171,9 @@ struct AnalyticsView: View {
                                 .tint(.white)
                             }
                             
-                            let topMovers = performanceList.sorted { $0.percentChange > $1.percentChange }.prefix(3)
-                            let topLosers = performanceList.sorted { $0.percentChange < $1.percentChange }.prefix(3)
+                            let sorted = performanceList.sorted { $0.percentChange > $1.percentChange }
+                            let topMovers = sorted.prefix(3)
+                            let topLosers = sorted.suffix(3).reversed()
                             
                             if !topMovers.isEmpty {
                                 Text("Top Movers 🚀")
@@ -135,8 +181,8 @@ struct AnalyticsView: View {
                                     .foregroundColor(.green)
                                     .padding(.top, 8)
                                 
-                                ForEach(topMovers) { perf in
-                                    performanceRow(perf: perf, isUp: true)
+                                ForEach(Array(topMovers)) { perf in
+                                    performanceRow(perf: perf, isUp: perf.percentChange >= 0)
                                         .transition(.move(edge: .leading).combined(with: .opacity))
                                 }
                             }
@@ -147,8 +193,8 @@ struct AnalyticsView: View {
                                     .foregroundColor(.red)
                                     .padding(.top, 8)
                                 
-                                ForEach(topLosers) { perf in
-                                    performanceRow(perf: perf, isUp: false)
+                                ForEach(Array(topLosers)) { perf in
+                                    performanceRow(perf: perf, isUp: perf.percentChange >= 0)
                                         .transition(.move(edge: .trailing).combined(with: .opacity))
                                 }
                             }
@@ -166,9 +212,75 @@ struct AnalyticsView: View {
                 .animation(.spring(response: 0.5, dampingFraction: 0.7), value: selectedTimeframe)
             }
             .navigationTitle("Analyse")
-            .background(Color(red: 0.05, green: 0.05, blue: 0.1).edgesIgnoringSafeArea(.all))
+            .background(Color.black.edgesIgnoringSafeArea(.all))
         }
         .preferredColorScheme(.dark)
+    }
+    
+    // MARK: - Liquiditäts-Barometer
+    
+    private var liquiditySection: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text("Liquiditäts-Score")
+                .font(.headline)
+                .foregroundColor(.white)
+            Text("Wie schnell ist dein Portfolio verkaufbar?")
+                .font(.subheadline)
+                .foregroundColor(.secondary)
+            
+            let breakdown = liquidityBreakdown
+            
+            // Barometer
+            GeometryReader { geo in
+                HStack(spacing: 2) {
+                    // Liquid
+                    if breakdown.liquidPercent > 0 {
+                        RoundedRectangle(cornerRadius: 4)
+                            .fill(Color(hex: "00FF77"))
+                            .frame(width: geo.size.width * CGFloat(breakdown.liquidPercent / 100))
+                    }
+                    // Illiquid
+                    if breakdown.illiquidPercent > 0 {
+                        RoundedRectangle(cornerRadius: 4)
+                            .fill(Color(hex: "FF6B35"))
+                            .frame(width: geo.size.width * CGFloat(breakdown.illiquidPercent / 100))
+                    }
+                }
+            }
+            .frame(height: 12)
+            .clipShape(RoundedRectangle(cornerRadius: 6))
+            .background(RoundedRectangle(cornerRadius: 6).fill(Color.white.opacity(0.05)))
+            
+            // Legende
+            HStack(spacing: 20) {
+                HStack(spacing: 6) {
+                    Circle().fill(Color(hex: "00FF77")).frame(width: 8, height: 8)
+                    VStack(alignment: .leading) {
+                        Text("Liquid (\(String(format: "%.0f", breakdown.liquidPercent))%)")
+                            .font(.caption2.bold())
+                            .foregroundColor(.white)
+                        Text(userSettings.formattedPrice(breakdown.liquidValue))
+                            .font(.caption2)
+                            .foregroundColor(.secondary)
+                    }
+                }
+                
+                HStack(spacing: 6) {
+                    Circle().fill(Color(hex: "FF6B35")).frame(width: 8, height: 8)
+                    VStack(alignment: .leading) {
+                        Text("Illiquid (\(String(format: "%.0f", breakdown.illiquidPercent))%)")
+                            .font(.caption2.bold())
+                            .foregroundColor(.white)
+                        Text(userSettings.formattedPrice(breakdown.illiquidValue))
+                            .font(.caption2)
+                            .foregroundColor(.secondary)
+                    }
+                }
+            }
+        }
+        .padding()
+        .background(RoundedRectangle(cornerRadius: 16).fill(Color.white.opacity(0.05)))
+        .overlay(RoundedRectangle(cornerRadius: 16).stroke(Color.white.opacity(0.1), lineWidth: 1))
     }
     
     @ViewBuilder
@@ -216,5 +328,6 @@ struct AnalyticsView: View {
     AnalyticsView()
         .environmentObject(InventoryService())
         .environmentObject(PriceService())
+        .environmentObject(PriceHistoryStore())
         .environmentObject(UserSettings())
 }

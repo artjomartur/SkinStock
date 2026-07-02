@@ -39,7 +39,6 @@ struct AccountView: View {
                                     .foregroundColor(.secondary)
                             }
                         } else {
-                            // Placeholder falls noch geladen wird oder Fehler auftritt
                             Circle()
                                 .fill(Color.gray.opacity(0.3))
                                 .frame(width: 60, height: 60)
@@ -64,8 +63,29 @@ struct AccountView: View {
                         }
                     }
                     .pickerStyle(.menu)
+                    
+                    Toggle("Netto-Wert anzeigen", isOn: $userSettings.showNetValue)
+                    
+                    if userSettings.showNetValue {
+                        Picker("Marktplatz", selection: $userSettings.preferredMarketplace) {
+                            ForEach(Marketplace.allCases) { mp in
+                                HStack {
+                                    Text(mp.rawValue)
+                                    Spacer()
+                                    Text(mp.displayFee)
+                                        .foregroundColor(.secondary)
+                                }
+                                .tag(mp)
+                            }
+                        }
+                        .pickerStyle(.menu)
+                    }
                 } header: {
                     Text("Einstellungen")
+                } footer: {
+                    if userSettings.showNetValue {
+                        Text("Der Netto-Wert zeigt dir, wie viel echtes Geld du nach Verkaufsgebühren auf dein Bankkonto überwiesen bekommst.")
+                    }
                 }
                 .listRowBackground(Color.white.opacity(0.05))
                 
@@ -86,7 +106,7 @@ struct AccountView: View {
             }
             .navigationTitle("Account")
             .scrollContentBackground(.hidden)
-            .background(Color(red: 0.05, green: 0.05, blue: 0.1).edgesIgnoringSafeArea(.all))
+            .background(Color.black.edgesIgnoringSafeArea(.all))
         }
         .preferredColorScheme(.dark)
     }

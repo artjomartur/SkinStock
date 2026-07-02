@@ -64,26 +64,8 @@ struct MainTabView: View {
             AnalyticsView()
                 .tag(CS2Tab.analytics)
             
-            ZStack {
-                VStack(spacing: 20) {
-                    Text("Account & Einstellungen").foregroundStyle(.white).font(.title)
-                    
-                    if let profile = steamService.profile {
-                        Text("Angemeldet als: \(profile.name)")
-                            .foregroundColor(.secondary)
-                    }
-                    
-                    Button("Onboarding neu starten (Debug)") {
-                        UserDefaults.standard.set(false, forKey: "has_completed_onboarding")
-                    }
-                    .font(.headline)
-                    .foregroundStyle(.black)
-                    .padding()
-                    .background(Color(hex: "00F0FF"))
-                    .clipShape(RoundedRectangle(cornerRadius: 12))
-                }
-            }
-            .tag(CS2Tab.account)
+            AccountView()
+                .tag(CS2Tab.account)
         }
     }
     
