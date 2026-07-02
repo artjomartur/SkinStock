@@ -2,18 +2,21 @@
 
 :root {
   --bg-primary: #000000;
-  --bg-secondary: #000000;
-  --bg-card: #000000;
-  --text-primary: #ffffff;
-  --text-secondary: #8e8e93;
-  --color-green: #00d182;
-  --color-red: #ff3b30;
-  --color-amber: #ff9500;
-  --border: #111111;
-  --border-active: #ffffff;
-  --sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-  --heading: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-  --shadow: none;
+  --bg-secondary: #121214;
+  --bg-card: #1C1C1E;
+  --text-primary: #FFFFFF;
+  --text-secondary: #8E8E93;
+  --color-green: #34D399; /* Softer, opal-like mint green */
+  --color-red: #FF453A;
+  --color-amber: #FF9F0A;
+  --color-accent: #E2C9FF; /* Opal pastel purple */
+  --border: rgba(255, 255, 255, 0.08);
+  --border-active: rgba(255, 255, 255, 0.2);
+  --sans: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  --heading: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  --shadow-sm: 0 4px 12px rgba(0, 0, 0, 0.2);
+  --shadow-md: 0 8px 24px rgba(0, 0, 0, 0.3);
+  --shadow-lg: 0 16px 48px rgba(0, 0, 0, 0.5);
   
   color-scheme: dark;
   background-color: var(--bg-primary);
@@ -41,11 +44,6 @@ body {
   flex-direction: column;
   overflow: hidden;
   box-sizing: border-box;
-  /* Support for iOS safe area (notches) */
-  padding-top: env(safe-area-inset-top, 0px);
-  padding-bottom: env(safe-area-inset-bottom, 0px);
-  padding-left: env(safe-area-inset-left, 0px);
-  padding-right: env(safe-area-inset-right, 0px);
 }
 
 * {

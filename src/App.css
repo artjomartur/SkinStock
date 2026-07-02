@@ -4,42 +4,8 @@
   height: 100%;
   width: 100%;
   position: relative;
-  background: #030305;
+  background: var(--bg-primary); /* Opal pure black */
   overflow: hidden;
-}
-
-.app-layout::before,
-.app-layout::after {
-  content: '';
-  position: absolute;
-  width: 80vw;
-  height: 80vw;
-  border-radius: 50%;
-  filter: blur(100px);
-  z-index: 0;
-  opacity: 0.3;
-  pointer-events: none;
-  animation: floatBlobs 25s infinite alternate ease-in-out;
-}
-
-.app-layout::before {
-  background: rgba(0, 212, 126, 0.8);
-  top: -10%;
-  left: -20%;
-}
-
-.app-layout::after {
-  background: rgba(10, 132, 255, 0.6);
-  bottom: -10%;
-  right: -20%;
-  animation-delay: -12.5s;
-}
-
-@keyframes floatBlobs {
-  0% { transform: translate(0, 0) scale(1); }
-  33% { transform: translate(30%, 20%) scale(1.1); }
-  66% { transform: translate(-10%, 40%) scale(0.95); }
-  100% { transform: translate(10%, -20%) scale(1.05); }
 }
 
 /* Header */
@@ -48,13 +14,10 @@
   justify-content: space-between;
   align-items: center;
   padding: 10px 16px;
-  background: rgba(15, 15, 20, 0.65);
-  backdrop-filter: blur(30px) saturate(200%);
-  -webkit-backdrop-filter: blur(30px) saturate(200%);
-  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  background: transparent;
   z-index: 10;
   flex-shrink: 0;
-  padding-top: max(10px, env(safe-area-inset-top));
+  padding-top: max(16px, env(safe-area-inset-top));
 }
 
 .logo-group {
@@ -104,30 +67,58 @@
   overflow-y: auto;
   overflow-x: hidden;
   padding: 12px 16px;
-  padding-bottom: 72px; /* space for tab bar */
+  padding-bottom: calc(100px + env(safe-area-inset-bottom, 0px)); /* space for tab bar */
   -webkit-overflow-scrolling: touch;
   position: relative;
   z-index: 1;
 }
 
-/* Bottom Tab Bar */
+/* Bottom Tab Bar (Liquid Glass Pill) */
 .tab-bar {
   position: absolute;
-  bottom: 0;
-  left: 0;
-  width: 100%;
-  height: 56px;
-  background: rgba(15, 15, 20, 0.45);
-  backdrop-filter: blur(40px) saturate(200%);
-  -webkit-backdrop-filter: blur(40px) saturate(200%);
-  border-top: 1px solid rgba(255, 255, 255, 0.1);
-  box-shadow: 0 -4px 24px rgba(0, 0, 0, 0.2);
+  bottom: calc(16px + env(safe-area-inset-bottom, 0px));
+  left: 24px;
+  right: 24px;
+  width: auto;
+  height: 72px;
+  background: rgba(15, 15, 20, 0.25);
+  backdrop-filter: blur(40px) saturate(250%) contrast(110%);
+  -webkit-backdrop-filter: blur(40px) saturate(250%) contrast(110%);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  box-shadow: 
+    0 30px 60px rgba(0, 0, 0, 0.6), 
+    inset 0 1px 1px rgba(255, 255, 255, 0.4), 
+    inset 0 0 0 1px rgba(255, 255, 255, 0.05);
+  border-radius: 36px;
   display: flex;
   justify-content: space-around;
   align-items: center;
   z-index: 50;
-  padding: 0 24px;
-  padding-bottom: env(safe-area-inset-bottom, 0px);
+  padding: 0 8px;
+  overflow: hidden;
+}
+
+/* Opal Tab Bar */
+.tab-bar {
+  position: absolute;
+  bottom: calc(16px + env(safe-area-inset-bottom, 0px));
+  left: 32px;
+  right: 32px;
+  width: auto;
+  height: 68px;
+  background: rgba(40, 40, 44, 0.7);
+  backdrop-filter: blur(20px) saturate(150%);
+  -webkit-backdrop-filter: blur(20px) saturate(150%);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow: 
+    0 24px 48px rgba(0, 0, 0, 0.4),
+    inset 0 1px 1px rgba(255, 255, 255, 0.1);
+  border-radius: 34px;
+  display: flex;
+  justify-content: space-around;
+  align-items: center;
+  z-index: 50;
+  padding: 0 12px;
 }
 
 .tab-btn {
@@ -138,40 +129,52 @@
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 3px;
-  font-size: 10px;
+  gap: 4px;
+  font-size: 11px;
   font-weight: 500;
   cursor: pointer;
-  transition: color 0.2s, transform 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-  flex-grow: 1;
-  height: 100%;
+  transition: all 0.2s cubic-bezier(0.25, 1, 0.5, 1);
+  flex: 1;
+  height: 56px;
+  border-radius: 28px;
   position: relative;
   -webkit-tap-highlight-color: transparent;
 }
 
-.tab-btn--active {
-  color: #ffffff;
+.tab-btn:hover {
+  color: var(--text-primary);
 }
 
+.tab-btn--active {
+  color: var(--text-primary);
+  font-weight: 600;
+}
+
+/* Opal Active Indicator (Subtle background highlight) */
 .tab-btn--active::before {
   content: '';
   position: absolute;
   top: 0;
   left: 50%;
   transform: translateX(-50%);
-  width: 24px;
-  height: 2px;
-  background: var(--color-green);
-  border-radius: 0 0 2px 2px;
+  width: 44px;
+  height: 44px;
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: 22px;
+  z-index: -1;
+  pointer-events: none;
 }
 
-.tab-icon {
-  width: 20px;
-  height: 20px;
-  transition: transform 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+.tab-btn--active svg {
+  color: var(--text-primary);
+  filter: drop-shadow(0 0 6px rgba(255, 255, 255, 0.4));
 }
 
-.tab-btn:active .tab-icon {
+.tab-btn svg {
+  transition: transform 0.2s cubic-bezier(0.25, 1, 0.5, 1), color 0.2s;
+}
+
+.tab-btn:active svg {
   transform: scale(0.85);
 }
 
@@ -203,37 +206,36 @@
 }
 
 .skin-row {
-  background: rgba(25, 25, 30, 0.5);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: 16px;
-  padding: 12px 16px;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 24px;
+  padding: 16px 20px;
   display: flex;
   flex-direction: column;
   justify-content: flex-start;
   align-items: stretch;
   cursor: pointer;
-  transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-  backdrop-filter: blur(24px) saturate(180%);
-  -webkit-backdrop-filter: blur(24px) saturate(180%);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  transition: transform 0.25s cubic-bezier(0.25, 1, 0.5, 1), background 0.2s, box-shadow 0.2s;
+  box-shadow: var(--shadow-sm);
   -webkit-tap-highlight-color: transparent;
 }
 
 .skin-row:hover {
-  background: rgba(35, 35, 45, 0.6);
+  background: rgba(45, 45, 48, 0.6);
   transform: translateY(-2px);
-  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.4);
-  border-color: rgba(255, 255, 255, 0.15);
+  box-shadow: var(--shadow-md);
+  border-color: var(--border-active);
 }
 
 .skin-row:active {
-  transform: scale(0.96) translateY(0);
+  transform: scale(0.95);
+  box-shadow: none;
 }
 
 .skin-row--selected {
-  background: rgba(45, 45, 60, 0.7) !important;
-  border-color: rgba(255, 255, 255, 0.25) !important;
-  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.15), 0 16px 40px rgba(0, 0, 0, 0.5) !important;
+  background: var(--bg-secondary) !important;
+  border-color: var(--border-active) !important;
+  box-shadow: inset 0 0 0 1px var(--border-active), var(--shadow-lg) !important;
 }
 
 .skin-row-header {
@@ -330,16 +332,14 @@
 
 /* Chart View */
 .chart-card {
-  background: rgba(25, 25, 30, 0.45);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: 20px;
-  padding: 20px;
-  margin-bottom: 20px;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 32px;
+  padding: 24px;
+  margin-bottom: 24px;
   display: flex;
   flex-direction: column;
-  backdrop-filter: blur(24px) saturate(180%);
-  -webkit-backdrop-filter: blur(24px) saturate(180%);
-  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.2);
+  box-shadow: var(--shadow-md);
 }
 
 .chart-header-tr {
@@ -382,18 +382,17 @@
 
 /* Portfolio View */
 .portfolio-summary {
-  background: rgba(20, 20, 20, 0.45);
-  border: 1px solid rgba(255, 255, 255, 0.05);
-  border-radius: 16px;
-  padding: 24px;
-  margin-bottom: 16px;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 32px;
+  padding: 24px 32px;
+  margin-bottom: 24px;
   display: flex;
   flex-direction: column;
-  align-items: flex-start;
-  gap: 8px;
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.2);
+  align-items: center;
+  text-align: center;
+  gap: 12px;
+  box-shadow: var(--shadow-lg), inset 0 1px 0 rgba(255, 255, 255, 0.05);
 }
 
 .stat-label-tr {
@@ -1443,4 +1442,132 @@
   height: 80px;
   width: 100%;
   border-radius: 12px;
+}
+
+/* New Redesign Styles */
+.inventory-view {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  padding: 16px;
+  overflow-y: auto;
+}
+
+.inventory-header {
+  margin-bottom: 24px;
+}
+
+.search-bar {
+  display: flex;
+  align-items: center;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 12px;
+  padding: 12px 16px;
+  gap: 12px;
+}
+
+.search-bar input {
+  background: transparent;
+  border: none;
+  color: #fff;
+  font-size: 16px;
+  width: 100%;
+  outline: none;
+}
+
+.inventory-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 16px;
+  padding-bottom: 100px; /* Space for bottom nav */
+}
+
+@media (min-width: 768px) {
+  .inventory-grid {
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    padding-bottom: 32px;
+  }
+}
+
+.skin-card {
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  border-radius: 16px;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  transition: transform 0.2s, background 0.2s;
+  cursor: pointer;
+  position: relative;
+  overflow: hidden;
+}
+
+.skin-card:hover {
+  background: rgba(255, 255, 255, 0.08);
+  transform: translateY(-2px);
+}
+
+.skin-card-image {
+  width: 100%;
+  aspect-ratio: 4/3;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+}
+
+.skin-card-image img {
+  max-width: 90%;
+  max-height: 90%;
+  object-fit: contain;
+  filter: drop-shadow(0 10px 15px rgba(0,0,0,0.5));
+}
+
+.skin-card-qty {
+  position: absolute;
+  top: 0;
+  right: 0;
+  background: rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(4px);
+  padding: 2px 6px;
+  border-radius: 6px;
+  font-size: 11px;
+  font-weight: 700;
+  color: #fff;
+}
+
+.skin-card-details {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.skin-card-name {
+  font-size: 13px;
+  color: #94a3b8;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.skin-card-price {
+  font-size: 16px;
+  font-weight: 700;
+  color: #fff;
+  font-family: var(--heading);
+}
+
+.dashboard-view {
+  padding: 16px;
+  height: 100%;
+  overflow-y: auto;
+  padding-bottom: 100px;
+}
+
+@media (min-width: 768px) {
+  .dashboard-view {
+    padding-bottom: 32px;
+  }
 }
