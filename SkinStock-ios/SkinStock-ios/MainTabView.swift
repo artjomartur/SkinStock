@@ -112,7 +112,10 @@ struct MainTabView: View {
         }
         .padding(.horizontal, 8)
         .frame(height: 60)
-        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 24))
+        .background(
+            RoundedRectangle(cornerRadius: 24)
+                .fill(.ultraThinMaterial)
+        )
         .overlay(
             RoundedRectangle(cornerRadius: 24)
                 .stroke(.white.opacity(0.2), lineWidth: 0.5)
@@ -127,7 +130,9 @@ struct MainTabView: View {
             ZStack {
                 Circle()
                     .frame(width: 58, height: 58)
-                    .background(.ultraThinMaterial, in: Circle())
+                    .background(
+                        Circle().fill(.ultraThinMaterial)
+                    )
                     .overlay(Circle().stroke(.white.opacity(0.2), lineWidth: 0.5))
                     .shadow(color: .black.opacity(0.2), radius: 15, x: 0, y: 8)
                 
