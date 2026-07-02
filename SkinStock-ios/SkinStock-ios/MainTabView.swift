@@ -100,7 +100,7 @@ struct MainTabView: View {
     private func tabBackground(for tab: CS2Tab) -> some View {
         if selectedTab == tab {
             Capsule()
-                .fill(Color.black.opacity(0.05))
+                .fill(Color.white.opacity(0.1))
                 .matchedGeometryEffect(id: "activeTabFallback", in: glassNamespace)
         } else {
             Color.clear
@@ -133,8 +133,9 @@ struct MainTabView: View {
             }
             .frame(maxWidth: .infinity)
             .padding(.vertical, 8)
-            .foregroundColor(selectedTab == tab ? Color.black : Color.secondary)
+            .foregroundStyle(selectedTab == tab ? Color.white : Color.white.opacity(0.4))
         }
+        .buttonStyle(.plain)
         .background(tabBackground(for: tab))
     }
     

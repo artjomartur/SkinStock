@@ -19,6 +19,7 @@ import Combine
 
 class UserSettings: ObservableObject {
     @Published var selectedCurrency: CurrencyType = .eur
+    @Published var showAbsoluteValues: Bool = false
     private var cancellables = Set<AnyCancellable>()
     
     init() {
@@ -26,11 +27,19 @@ class UserSettings: ObservableObject {
            let type = CurrencyType(rawValue: savedString) {
             self.selectedCurrency = type
         }
+        self.showAbsoluteValues = UserDefaults.standard.bool(forKey: "showAbsoluteValues")
         
         $selectedCurrency
             .dropFirst()
             .sink { newValue in
                 UserDefaults.standard.set(newValue.rawValue, forKey: "selectedCurrency")
+            }
+            .store(in: &cancellables)
+            
+        $showAbsoluteValues
+            .dropFirst()
+            .sink { newValue in
+                UserDefaults.standard.set(newValue, forKey: "showAbsoluteValues")
             }
             .store(in: &cancellables)
     }

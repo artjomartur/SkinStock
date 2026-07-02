@@ -26,6 +26,7 @@ struct AnalyticsView: View {
     struct ItemPerformance: Identifiable {
         let item: CS2Item
         let percentChange: Double
+        let absoluteChange: Double
         let currentValue: Double
         var id: UUID { item.id }
     }
@@ -37,7 +38,7 @@ struct AnalyticsView: View {
             if let first = history.first, let last = history.last, first.price > 0 {
                 let diff = last.price - first.price
                 let pct = (diff / first.price) * 100
-                list.append(ItemPerformance(item: item, percentChange: pct, currentValue: last.price))
+                list.append(ItemPerformance(item: item, percentChange: pct, absoluteChange: diff, currentValue: last.price))
             }
         }
         return list
@@ -189,12 +190,25 @@ struct AnalyticsView: View {
                 Text(userSettings.formattedPrice(perf.currentValue))
                     .font(.subheadline.bold())
                     .foregroundColor(.white)
-                Text("\(isUp ? "+" : "")\(String(format: "%.1f", perf.percentChange))%")
-                    .font(.caption.bold())
-                    .foregroundColor(isUp ? .green : .red)
+                
+                if userSettings.showAbsoluteValues {
+                    Text("\(isUp ? "+" : "")\(userSettings.formattedPrice(abs(perf.absoluteChange)))")
+                        .font(.caption.bold())
+                        .foregroundColor(isUp ? .green : .red)
+                } else {
+                    Text("\(isUp ? "+" : "")\(String(format: "%.1f", perf.percentChange))%")
+                        .font(.caption.bold())
+                        .foregroundColor(isUp ? .green : .red)
+                }
             }
         }
         .padding(.vertical, 4)
+        .contentShape(Rectangle())
+        .onTapGesture {
+            withAnimation(.spring) {
+                userSettings.showAbsoluteValues.toggle()
+            }
+        }
     }
 }
 

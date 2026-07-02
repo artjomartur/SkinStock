@@ -57,10 +57,20 @@ struct ContentView: View {
                                 let isUp = diff >= 0
                                 HStack {
                                     Image(systemName: isUp ? "arrow.trend.up" : "arrow.trend.down")
-                                    Text("\(isUp ? "+" : "")\(String(format: "%.1f", percent))% (\(selectedTimeframe.rawValue))")
+                                    if userSettings.showAbsoluteValues {
+                                        Text("\(isUp ? "+" : "")\(userSettings.formattedPrice(abs(diff))) (\(selectedTimeframe.rawValue))")
+                                    } else {
+                                        Text("\(isUp ? "+" : "")\(String(format: "%.1f", percent))% (\(selectedTimeframe.rawValue))")
+                                    }
                                 }
                                 .font(.caption2)
                                 .foregroundColor(isUp ? .green : .red)
+                                .contentShape(Rectangle())
+                                .onTapGesture {
+                                    withAnimation(.spring) {
+                                        userSettings.showAbsoluteValues.toggle()
+                                    }
+                                }
                             }
                         }
                         
