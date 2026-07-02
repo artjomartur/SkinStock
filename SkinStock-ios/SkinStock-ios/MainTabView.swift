@@ -30,7 +30,14 @@ struct MainTabView: View {
     
     var body: some View {
         ZStack(alignment: .bottom) {
+            
+            // 1. Dynamic Animated Liquid Glass Backdrop
+            LiquidGlassBackdrop()
+            
+            // 2. Main content views
             mainTabViewContent
+            
+            // 3. Liquid Glass Tab Bar
             customTabBar
         }
     }
@@ -42,19 +49,16 @@ struct MainTabView: View {
                 .tag(CS2Tab.today)
             
             ZStack {
-                Color.black.ignoresSafeArea()
                 Text("News+ View").foregroundStyle(.white)
             }
             .tag(CS2Tab.news)
             
             ZStack {
-                Color.black.ignoresSafeArea()
                 Text("Sports View").foregroundStyle(.white)
             }
             .tag(CS2Tab.sports)
             
             ZStack {
-                Color.black.ignoresSafeArea()
                 VStack(spacing: 20) {
                     Text("Audio View").foregroundStyle(.white)
                     
@@ -81,46 +85,46 @@ struct MainTabView: View {
         .padding(.bottom, 10)
     }
     
+    @ViewBuilder
+    private func tabBackground(for tab: CS2Tab) -> some View {
+        if selectedTab == tab {
+            Capsule()
+                .fill(Color.black.opacity(0.05))
+                .matchedGeometryEffect(id: "activeTabFallback", in: glassNamespace)
+        } else {
+            Color.clear
+        }
+    }
+    
     private var tabsRow: some View {
         HStack(spacing: 0) {
             ForEach(CS2Tab.allCases) { tab in
-                Button(action: {
-                    withAnimation(.spring(response: 0.4, dampingFraction: 0.82)) {
-                        selectedTab = tab
-                    }
-                }) {
-                    VStack(spacing: 4) {
-                        Image(systemName: tab.systemImage)
-                            .font(.system(size: 17))
-                        Text(tab.rawValue)
-                            .font(.system(size: 10, weight: .extrabold))
-                    }
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 8)
-                    .foregroundColor(selectedTab == tab ? .black : .primary.opacity(0.6))
-                }
-                .background(
-                    ZStack {
-                        if selectedTab == tab {
-                            Capsule()
-                                .fill(Color.black.opacity(0.05))
-                                .matchedGeometryEffect(id: "activeTabFallback", in: glassNamespace)
-                        }
-                    }
-                )
+                tabButton(for: tab)
             }
         }
         .padding(.horizontal, 8)
         .frame(height: 60)
-        .background(
-            RoundedRectangle(cornerRadius: 24)
-                .fill(.ultraThinMaterial)
-        )
-        .overlay(
-            RoundedRectangle(cornerRadius: 24)
-                .stroke(.white.opacity(0.2), lineWidth: 0.5)
-        )
-        .shadow(color: .black.opacity(0.2), radius: 15, x: 0, y: 8)
+        // Verwende unseren neuen Liquid Glass Modifier!
+        .glassEffect(cornerRadius: 24)
+    }
+    
+    private func tabButton(for tab: CS2Tab) -> some View {
+        Button(action: {
+            withAnimation(.spring(response: 0.4, dampingFraction: 0.82)) {
+                selectedTab = tab
+            }
+        }) {
+            VStack(spacing: 4) {
+                Image(systemName: tab.systemImage)
+                    .font(.system(size: 18))
+                Text(tab.rawValue)
+                    .font(.system(size: 10, weight: .bold))
+            }
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, 8)
+            .foregroundColor(selectedTab == tab ? Color.black : Color.secondary)
+        }
+        .background(tabBackground(for: tab))
     }
     
     private var fabButton: some View {
@@ -133,12 +137,29 @@ struct MainTabView: View {
                     .background(
                         Circle().fill(.ultraThinMaterial)
                     )
-                    .overlay(Circle().stroke(.white.opacity(0.2), lineWidth: 0.5))
-                    .shadow(color: .black.opacity(0.2), radius: 15, x: 0, y: 8)
+                    .overlay(
+                        Circle()
+                            .stroke(
+                                LinearGradient(
+                                    colors: [Color.white.opacity(0.35), Color.white.opacity(0.05)],
+                                    startPoint: .top,
+                                    endPoint: .bottom
+                                ),
+                                lineWidth: 1.0
+                            )
+                    )
+                    .shadow(color: Color.black.opacity(0.25), radius: 15, x: 0, y: 10)
                 
                 Circle()
-                    .fill(Color.red)
+                    .fill(
+                        LinearGradient(
+                            colors: [Color(red: 1.0, green: 0.16, blue: 0.37), Color(red: 1.0, green: 0.0, blue: 0.23)],
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        )
+                    )
                     .frame(width: 36, height: 36)
+                    .shadow(color: Color(red: 1.0, green: 0.0, blue: 0.23).opacity(0.4), radius: 6)
                     .overlay(
                         Image(systemName: "magnifyingglass")
                             .font(.system(size: 15, weight: .bold))

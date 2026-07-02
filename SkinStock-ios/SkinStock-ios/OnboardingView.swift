@@ -1,11 +1,9 @@
 import SwiftUI
 
 struct OnboardingView: View {
+    @EnvironmentObject var appState: AppStateManager
     @ObservedObject var authManager: AuthManager
     @ObservedObject var steamService: SteamService
-    
-    // Bindet an den Root-State der App, ob Onboarding fertig ist
-    @Binding var isOnboardingComplete: Bool
     
     @State private var step = 0
     
@@ -40,12 +38,7 @@ struct OnboardingView: View {
                     .transition(.asymmetric(insertion: .move(edge: .trailing).combined(with: .opacity), removal: .move(edge: .leading).combined(with: .opacity)))
                 } else if step == 2 {
                     AuthStepView(authManager: authManager, onAuthenticated: {
-                        withAnimation { step = 3 }
-                    })
-                    .transition(.asymmetric(insertion: .move(edge: .trailing).combined(with: .opacity), removal: .move(edge: .leading).combined(with: .opacity)))
-                } else if step == 3 {
-                    SteamConnectStepView(steamService: steamService, onConnected: {
-                        withAnimation { isOnboardingComplete = true }
+                        withAnimation { appState.changeStatus(to: .steamLogin) }
                     })
                     .transition(.asymmetric(insertion: .move(edge: .trailing).combined(with: .opacity), removal: .move(edge: .leading).combined(with: .opacity)))
                 }
@@ -53,18 +46,16 @@ struct OnboardingView: View {
                 Spacer()
                 
                 // Step Indicators
-                if step < 3 {
-                    HStack(spacing: 8) {
-                        ForEach(0..<3) { i in
-                            Circle()
-                                .fill(i == step ? Color.white : Color.white.opacity(0.2))
-                                .frame(width: 8, height: 8)
-                                .scaleEffect(i == step ? 1.2 : 1.0)
-                                .animation(.spring(), value: step)
-                        }
+                HStack(spacing: 8) {
+                    ForEach(0..<3) { i in
+                        Circle()
+                            .fill(i == step ? Color.white : Color.white.opacity(0.2))
+                            .frame(width: 8, height: 8)
+                            .scaleEffect(i == step ? 1.2 : 1.0)
+                            .animation(.spring(), value: step)
                     }
-                    .padding(.bottom, 40)
                 }
+                .padding(.bottom, 40)
             }
         }
     }
@@ -229,83 +220,3 @@ struct AuthStepView: View {
     }
 }
 
-// MARK: - Steam Connect Step
-struct SteamConnectStepView: View {
-    @ObservedObject var steamService: SteamService
-    var onConnected: () -> Void
-    
-    @State private var steamInput = ""
-    
-    var body: some View {
-        VStack(spacing: 24) {
-            Image(systemName: "link.badge.plus")
-                .font(.system(size: 50))
-                .foregroundStyle(Color(hex: "FF2E93"))
-                .padding(.bottom, 10)
-            
-            Text("Steam verbinden")
-                .font(.system(size: 28, weight: .bold))
-                .foregroundStyle(.white)
-            
-            Text("Fast geschafft! Gib deine Steam ID oder Profil-URL ein, um dein Inventar direkt über die Steam API zu laden.")
-                .font(.body)
-                .foregroundStyle(.secondary)
-                .multilineTextAlignment(.center)
-                .padding(.horizontal, 40)
-            
-            if let error = steamService.error {
-                Text(error)
-                    .font(.footnote)
-                    .foregroundStyle(Color.red)
-                    .padding(.horizontal, 40)
-                    .multilineTextAlignment(.center)
-            }
-            
-            TextField("Steam ID / URL (z.B. 7656...)", text: $steamInput)
-                .padding()
-                .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 12))
-                .overlay(RoundedRectangle(cornerRadius: 12).stroke(.white.opacity(0.1), lineWidth: 1))
-                .foregroundStyle(.white)
-                .padding(.horizontal, 40)
-            
-            Button {
-                Task {
-                    // Start fetching
-                    await steamService.fetchInventory(for: steamInput)
-                    if steamService.error == nil {
-                        // Success
-                        onConnected()
-                    }
-                }
-            } label: {
-                ZStack {
-                    if steamService.isFetching {
-                        ProgressView().tint(.black)
-                    } else {
-                        Text("Inventar laden")
-                            .font(.headline)
-                            .foregroundStyle(.black)
-                    }
-                }
-                .frame(maxWidth: .infinity)
-                .frame(height: 56)
-                .background(Color(hex: "D1FF4D"))
-                .clipShape(RoundedRectangle(cornerRadius: 16))
-                .shadow(color: Color(hex: "D1FF4D").opacity(0.3), radius: 15, x: 0, y: 5)
-            }
-            .padding(.horizontal, 40)
-            .padding(.top, 20)
-            .disabled(steamService.isFetching)
-            
-            Button {
-                // Man kann Steam vorerst überspringen
-                onConnected()
-            } label: {
-                Text("Ohne Steam fortfahren")
-                    .font(.footnote)
-                    .foregroundStyle(.secondary)
-            }
-            .padding(.top, 10)
-        }
-    }
-}

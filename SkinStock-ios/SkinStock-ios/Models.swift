@@ -34,4 +34,5 @@ struct CS2Item: Identifiable, Hashable {
     let currency: String
     let skinCategory: String
     let rarity: SkinRarity
+    let imageUrl: URL?
 }
