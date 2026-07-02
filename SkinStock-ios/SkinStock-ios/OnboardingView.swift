@@ -124,98 +124,49 @@ struct IntroStepView: View {
     }
 }
 
+import AuthenticationServices
+
 // MARK: - Auth Step View
 struct AuthStepView: View {
     @ObservedObject var authManager: AuthManager
     var onAuthenticated: () -> Void
     
-    @State private var isLogin = false
-    @State private var email = ""
-    @State private var password = ""
-    @State private var errorMsg = ""
-    @State private var isLoading = false
-    
     var body: some View {
         VStack(spacing: 24) {
-            Image(systemName: "lock.shield.fill")
-                .font(.system(size: 50))
-                .foregroundStyle(Color(hex: "00F0FF"))
-                .padding(.bottom, 10)
+            Image(systemName: "gamecontroller.fill")
+                .font(.system(size: 60))
+                .foregroundStyle(Color(hex: "4B69FF"))
+                .shadow(color: Color(hex: "4B69FF").opacity(0.5), radius: 20, x: 0, y: 10)
+                .padding(.bottom, 20)
             
-            Text(isLogin ? "Willkommen zurück" : "Account erstellen")
-                .font(.system(size: 28, weight: .bold))
+            Text("Mit Steam verbinden")
+                .font(.system(size: 32, weight: .bold))
                 .foregroundStyle(.white)
             
-            if !errorMsg.isEmpty {
-                Text(errorMsg)
-                    .font(.footnote)
-                    .foregroundStyle(Color.red)
-                    .padding(.horizontal, 40)
-                    .multilineTextAlignment(.center)
-            }
-            
-            VStack(spacing: 16) {
-                // Glass Inputs
-                TextField("E-Mail Adresse", text: $email)
-                    .keyboardType(.emailAddress)
-                    .autocapitalization(.none)
-                    .padding()
-                    .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 12))
-                    .overlay(RoundedRectangle(cornerRadius: 12).stroke(.white.opacity(0.1), lineWidth: 1))
-                    .foregroundStyle(.white)
-                
-                SecureField("Passwort", text: $password)
-                    .padding()
-                    .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 12))
-                    .overlay(RoundedRectangle(cornerRadius: 12).stroke(.white.opacity(0.1), lineWidth: 1))
-                    .foregroundStyle(.white)
-            }
-            .padding(.horizontal, 40)
+            Text("Um dein Inventar abzurufen, musst du dich mit deinem Steam-Account anmelden. Wir speichern keine privaten Daten.")
+                .font(.body)
+                .foregroundStyle(.secondary)
+                .multilineTextAlignment(.center)
+                .padding(.horizontal, 40)
             
             Button {
-                Task {
-                    isLoading = true
-                    errorMsg = ""
-                    do {
-                        if isLogin {
-                            try await authManager.signIn(email: email, password: password)
-                        } else {
-                            try await authManager.signUp(email: email, password: password)
-                        }
-                        onAuthenticated()
-                    } catch {
-                        errorMsg = error.localizedDescription
-                    }
-                    isLoading = false
-                }
+                onAuthenticated()
             } label: {
-                ZStack {
-                    if isLoading {
-                        ProgressView().tint(.black)
-                    } else {
-                        Text(isLogin ? "Anmelden" : "Registrieren")
-                            .font(.headline)
-                            .foregroundStyle(.black)
-                    }
+                HStack {
+                    Image(systemName: "link")
+                        .font(.title3)
+                    Text("Jetzt mit Steam anmelden")
+                        .font(.headline)
                 }
+                .foregroundStyle(.white)
                 .frame(maxWidth: .infinity)
                 .frame(height: 56)
-                .background(Color(hex: "00F0FF"))
+                .background(Color(hex: "4B69FF"))
                 .clipShape(RoundedRectangle(cornerRadius: 16))
-                .shadow(color: Color(hex: "00F0FF").opacity(0.3), radius: 15, x: 0, y: 5)
+                .shadow(color: Color(hex: "4B69FF").opacity(0.3), radius: 15, x: 0, y: 5)
             }
             .padding(.horizontal, 40)
-            .padding(.top, 10)
-            .disabled(isLoading)
-            
-            Button {
-                withAnimation { isLogin.toggle() }
-            } label: {
-                Text(isLogin ? "Noch keinen Account? Hier registrieren" : "Bereits einen Account? Hier einloggen")
-                    .font(.footnote)
-                    .foregroundStyle(.secondary)
-            }
-            .padding(.top, 10)
+            .padding(.top, 30)
         }
     }
 }

@@ -6,12 +6,28 @@
 //
 
 import SwiftUI
+import FirebaseCore
+
+class AppDelegate: NSObject, UIApplicationDelegate {
+  func application(_ application: UIApplication,
+                   didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey : Any]? = nil) -> Bool {
+    FirebaseApp.configure()
+    return true
+  }
+}
 
 @main
 struct SkinStock_iosApp: App {
+    @UIApplicationDelegateAdaptor(AppDelegate.self) var delegate
     @StateObject private var appState = AppStateManager()
     @StateObject private var authManager = AuthManager()
     @StateObject private var steamService = SteamService()
+    @StateObject private var userSettings = UserSettings()
+    
+    // Core Logic Services
+    @StateObject private var priceService = PriceService()
+    @StateObject private var inventoryService = InventoryService()
+    @StateObject private var inventoryViewModel = InventoryViewModel()
     
     var body: some Scene {
         WindowGroup {
@@ -32,6 +48,10 @@ struct SkinStock_iosApp: App {
                     .environmentObject(appState)
                     .environmentObject(authManager)
                     .environmentObject(steamService)
+                    .environmentObject(userSettings)
+                    .environmentObject(priceService)
+                    .environmentObject(inventoryService)
+                    .environmentObject(inventoryViewModel)
             }
         }
     }

@@ -1,7 +1,7 @@
 import Foundation
 import SwiftUI
 
-enum SkinRarity: String, CaseIterable {
+enum SkinRarity: String, CaseIterable, Codable {
     case consumer = "Consumer Grade"
     case industrial = "Industrial Grade"
     case milSpec = "Mil-Spec Grade"
@@ -24,15 +24,37 @@ enum SkinRarity: String, CaseIterable {
     }
 }
 
-struct CS2Item: Identifiable, Hashable {
+enum Timeframe: String, CaseIterable, Identifiable {
+    case day = "1T"
+    case week = "1W"
+    case month = "1M"
+    case year = "1J"
+    case max = "MAX"
+    
+    var id: String { self.rawValue }
+}
+
+struct PriceHistoryPoint: Identifiable {
+    let id = UUID()
+    let date: Date
+    let price: Double
+}
+
+struct CS2Item: Identifiable, Hashable, Codable {
     let id: UUID
+    let assetid: String
+    let classid: String
+    let instanceid: String
+    
     let name: String
+    let hashName: String
     let float: Double?
     let phase: String?
     let wear: String?
-    let lastPrice: Double
+    var lastPrice: Double
     let currency: String
     let skinCategory: String
     let rarity: SkinRarity
     let imageUrl: URL?
+    let marketable: Bool
 }

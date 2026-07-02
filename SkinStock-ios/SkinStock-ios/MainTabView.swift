@@ -2,27 +2,30 @@ import SwiftUI
 
 // MARK: - App Route definitions for CS2 Inventory Finance
 enum CS2Tab: String, CaseIterable, Identifiable {
-    case today = "Today"
-    case news = "News+"
-    case sports = "Sports"
-    case audio = "Audio"
+    case portfolio = "Portfolio"
+    case inventory = "Inventar"
+    case analytics = "Analyse"
+    case account = "Account"
     
     var id: String { self.rawValue }
     
     var systemImage: String {
         switch self {
-        case .today: return "newspaper"
-        case .news: return "newspaper.fill"
-        case .sports: return "sportscourt"
-        case .audio: return "headphones"
+        case .portfolio: return "chart.pie.fill"
+        case .inventory: return "archivebox.fill"
+        case .analytics: return "chart.bar.xaxis"
+        case .account: return "person.crop.circle.fill"
         }
     }
 }
 
 struct MainTabView: View {
-    @State private var selectedTab: CS2Tab = .today
+    @State private var selectedTab: CS2Tab = .portfolio
     @Namespace private var glassNamespace
     @State private var isSearchActive: Bool = false
+    
+    @EnvironmentObject var inventoryService: InventoryService
+    @EnvironmentObject var steamService: SteamService
     
     init() {
         UITabBar.appearance().isHidden = true
@@ -40,29 +43,37 @@ struct MainTabView: View {
             // 3. Liquid Glass Tab Bar
             customTabBar
         }
+        .onAppear {
+            if let steamId = steamService.profile?.steamId64 {
+                Task {
+                    await inventoryService.fetchInventory(for: steamId)
+                }
+            }
+        }
     }
     
     // MARK: - Subviews
     private var mainTabViewContent: some View {
         TabView(selection: $selectedTab) {
             ContentView()
-                .tag(CS2Tab.today)
+                .tag(CS2Tab.portfolio)
             
-            ZStack {
-                Text("News+ View").foregroundStyle(.white)
-            }
-            .tag(CS2Tab.news)
+            InventoryView()
+                .tag(CS2Tab.inventory)
             
-            ZStack {
-                Text("Sports View").foregroundStyle(.white)
-            }
-            .tag(CS2Tab.sports)
+            AnalyticsView()
+                .tag(CS2Tab.analytics)
             
             ZStack {
                 VStack(spacing: 20) {
-                    Text("Audio View").foregroundStyle(.white)
+                    Text("Account & Einstellungen").foregroundStyle(.white).font(.title)
                     
-                    Button("Onboarding neu starten") {
+                    if let profile = steamService.profile {
+                        Text("Angemeldet als: \(profile.name)")
+                            .foregroundColor(.secondary)
+                    }
+                    
+                    Button("Onboarding neu starten (Debug)") {
                         UserDefaults.standard.set(false, forKey: "has_completed_onboarding")
                     }
                     .font(.headline)
@@ -72,7 +83,7 @@ struct MainTabView: View {
                     .clipShape(RoundedRectangle(cornerRadius: 12))
                 }
             }
-            .tag(CS2Tab.audio)
+            .tag(CS2Tab.account)
         }
     }
     

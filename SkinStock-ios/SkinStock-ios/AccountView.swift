@@ -1,0 +1,100 @@
+import SwiftUI
+
+struct AccountView: View {
+    @EnvironmentObject var appState: AppStateManager
+    @EnvironmentObject var steamService: SteamService
+    @EnvironmentObject var userSettings: UserSettings
+    
+    var body: some View {
+        NavigationStack {
+            List {
+                Section {
+                    HStack(spacing: 16) {
+                        if let profile = steamService.profile {
+                            if let url = profile.avatarUrl {
+                                AsyncImage(url: url) { phase in
+                                    if let image = phase.image {
+                                        image
+                                            .resizable()
+                                            .scaledToFill()
+                                    } else {
+                                        ProgressView()
+                                    }
+                                }
+                                .frame(width: 60, height: 60)
+                                .clipShape(Circle())
+                            } else {
+                                Circle()
+                                    .fill(Color.gray.opacity(0.3))
+                                    .frame(width: 60, height: 60)
+                            }
+                            
+                            VStack(alignment: .leading, spacing: 4) {
+                                Text(profile.name)
+                                    .font(.headline)
+                                    .foregroundColor(.white)
+                                
+                                Text("ID: \(profile.steamId64)")
+                                    .font(.caption)
+                                    .foregroundColor(.secondary)
+                            }
+                        } else {
+                            // Placeholder falls noch geladen wird oder Fehler auftritt
+                            Circle()
+                                .fill(Color.gray.opacity(0.3))
+                                .frame(width: 60, height: 60)
+                            
+                            VStack(alignment: .leading, spacing: 4) {
+                                Text("Lade Profil...")
+                                    .font(.headline)
+                                    .foregroundColor(.white)
+                            }
+                        }
+                    }
+                    .padding(.vertical, 8)
+                } header: {
+                    Text("Dein Steam Profil")
+                }
+                .listRowBackground(Color.white.opacity(0.05))
+                
+                Section {
+                    Picker("Währung", selection: $userSettings.selectedCurrency) {
+                        ForEach(CurrencyType.allCases) { currency in
+                            Text(currency.rawValue).tag(currency)
+                        }
+                    }
+                    .pickerStyle(.menu)
+                } header: {
+                    Text("Einstellungen")
+                }
+                .listRowBackground(Color.white.opacity(0.05))
+                
+                Section {
+                    Button(role: .destructive) {
+                        withAnimation {
+                            appState.changeStatus(to: .onboarding)
+                        }
+                    } label: {
+                        HStack {
+                            Text("Abmelden")
+                            Spacer()
+                            Image(systemName: "rectangle.portrait.and.arrow.right")
+                        }
+                    }
+                }
+                .listRowBackground(Color.white.opacity(0.05))
+            }
+            .navigationTitle("Account")
+            .scrollContentBackground(.hidden)
+            .background(Color(red: 0.05, green: 0.05, blue: 0.1).edgesIgnoringSafeArea(.all))
+        }
+        .preferredColorScheme(.dark)
+    }
+}
+
+#Preview {
+    AccountView()
+        .environmentObject(AppStateManager())
+        .environmentObject(SteamService())
+        .environmentObject(UserSettings())
+}

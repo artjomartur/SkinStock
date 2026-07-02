@@ -4,10 +4,11 @@ struct SkinDetailView: View {
     let item: CS2Item
     @State private var floatValue: Double
     @Environment(\.dismiss) private var dismiss
+    @State private var selectedTimeframe: Timeframe = .month
     
     init(item: CS2Item) {
         self.item = item
-        // Initiale Float Value (Fallback auf 0.15 falls nil)
+        // Initiale Float Value für die statische Hintergrundfarbe
         _floatValue = State(initialValue: item.float ?? 0.15)
     }
     
@@ -16,7 +17,7 @@ struct SkinDetailView: View {
             // 1. Tiefschwarzer, tiefer Raum
             Color.black.ignoresSafeArea()
             
-            // 2. Chromatische Vollbild-Farben (Animiert durch Float-Value)
+            // 2. Chromatische Vollbild-Farben (basierend auf Float)
             chromaticBackground
             
             VStack {
@@ -30,7 +31,7 @@ struct SkinDetailView: View {
                     // Glasscheibe
                     RoundedRectangle(cornerRadius: 40, style: .continuous)
                         .fill(.ultraThinMaterial)
-                        .frame(height: 320)
+                        .frame(height: 280)
                         // Chromatische Kante
                         .overlay(
                             RoundedRectangle(cornerRadius: 40, style: .continuous)
@@ -46,13 +47,12 @@ struct SkinDetailView: View {
                         .shadow(color: item.rarity.color.opacity(0.15), radius: 40, x: 0, y: 20)
                         .padding(.horizontal, 24)
                     
-                    // Schwebendes Modell (Mock für 3D / PNG)
-                    // Da noch keine echten Assets da sind, nutzen wir ein schönes Symbol
+                    // Schwebendes Modell
                     VStack {
                         Image(systemName: "arkit")
                             .resizable()
                             .scaledToFit()
-                            .frame(width: 180, height: 180)
+                            .frame(width: 140, height: 140)
                             .foregroundStyle(
                                 LinearGradient(
                                     colors: [.white, .white.opacity(0.7)],
@@ -61,7 +61,7 @@ struct SkinDetailView: View {
                                 )
                             )
                             .shadow(color: .black.opacity(0.6), radius: 25, x: 0, y: 15)
-                            .offset(y: -40) // Item schwebt leicht aus der Scheibe heraus
+                            .offset(y: -40)
                         
                         Text(item.name)
                             .font(.title2.weight(.bold))
@@ -71,24 +71,8 @@ struct SkinDetailView: View {
                 
                 Spacer()
                 
-                // Details und LiquidFloatSlider
-                VStack(spacing: 28) {
-                    
-                    VStack(spacing: 8) {
-                        Text("Float Value")
-                            .font(.subheadline)
-                            .foregroundStyle(.secondary)
-                            .textCase(.uppercase)
-                            .tracking(2)
-                        
-                        Text(String(format: "%.4f", floatValue))
-                            .font(.system(size: 28, design: .monospaced).weight(.black))
-                            .foregroundStyle(.white)
-                    }
-                    
-                    // Der interaktive Slider, der du eben ausprobieren wolltest
-                    LiquidFloatSlider(value: $floatValue)
-                        .padding(.horizontal, 40)
+                // Preis und interaktiver Chart
+                VStack(spacing: 16) {
                     
                     // Preis
                     Text(item.lastPrice, format: .currency(code: item.currency))
@@ -96,8 +80,29 @@ struct SkinDetailView: View {
                         .foregroundStyle(.white)
                         .padding(.top, 10)
                         .shadow(color: item.rarity.color.opacity(0.5), radius: 10, x: 0, y: 5)
+                    
+                    // Chart & Picker
+                    VStack(alignment: .leading, spacing: 12) {
+                        HStack {
+                            Text("Preisverlauf")
+                                .font(.subheadline)
+                                .foregroundStyle(.secondary)
+                            Spacer()
+                            Picker("Zeitraum", selection: $selectedTimeframe) {
+                                ForEach(Timeframe.allCases) { tf in
+                                    Text(tf.rawValue).tag(tf)
+                                }
+                            }
+                            .pickerStyle(MenuPickerStyle())
+                            .tint(.white)
+                        }
+                        
+                        TrendlineView(data: PriceService().getPriceHistory(for: item.hashName, timeframe: selectedTimeframe), showAxes: false, lineWidth: 2, showIndicator: true)
+                            .frame(height: 120)
+                    }
+                    .padding(.horizontal, 40)
                 }
-                .padding(.bottom, 50)
+                .padding(.bottom, 20)
             }
         }
         .navigationBarBackButtonHidden(true)
@@ -181,14 +186,20 @@ struct SkinDetailView: View {
 #Preview {
     let mockItem = CS2Item(
         id: UUID(),
+        assetid: "123",
+        classid: "456",
+        instanceid: "789",
         name: "Karambit | Doppler",
+        hashName: "★ Karambit | Doppler (Factory New)",
         float: 0.032,
         phase: "Phase 2",
         wear: "Factory New",
         lastPrice: 1200.0,
         currency: "USD",
         skinCategory: "Knife",
-        rarity: .covert
+        rarity: .covert,
+        imageUrl: nil,
+        marketable: true
     )
-    return SkinDetailView(item: mockItem)
+    SkinDetailView(item: mockItem)
 }

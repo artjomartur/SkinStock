@@ -20,28 +20,15 @@ struct MainNavigationView: View {
             }
             
             Tab("Analyse", systemImage: "chart.bar", value: .analytics) {
-                Text("Analyse Content")
+                AnalyticsView()
             }
             
             Tab("Inventar", systemImage: "archivebox", value: .inventory) {
-                Text("Inventar Content")
+                InventoryView()
             }
             
             Tab("Account", systemImage: "person.crop.circle", value: .account) {
-                VStack(spacing: 20) {
-                    Text("Account Content")
-                    
-                    Button("Onboarding neu starten") {
-                        withAnimation {
-                            appState.changeStatus(to: .onboarding)
-                        }
-                    }
-                    .font(.headline)
-                    .foregroundStyle(.white)
-                    .padding()
-                    .background(Color.blue)
-                    .clipShape(RoundedRectangle(cornerRadius: 12))
-                }
+                AccountView()
             }
             .customizationBehavior(.disabled, for: .sidebar)
             // Optional: Wenn du den Tab auf dem iPad ganz unten rechts abtrennen willst (wie z.B. Suche oder Einstellungen)
@@ -53,11 +40,23 @@ struct MainNavigationView: View {
 
 // Universal Wrapper
 struct MainNavigationContainer: View {
+    @EnvironmentObject var steamService: SteamService
+    @EnvironmentObject var inventoryService: InventoryService
+    
     var body: some View {
-        if #available(iOS 18.0, *) {
-            MainNavigationView()
-        } else {
-            MainNavigationViewFallback()
+        Group {
+            if #available(iOS 18.0, *) {
+                MainNavigationView()
+            } else {
+                MainNavigationViewFallback()
+            }
+        }
+        .onAppear {
+            if let steamId = steamService.profile?.steamId64 {
+                Task {
+                    await inventoryService.fetchInventory(for: steamId)
+                }
+            }
         }
     }
 }
@@ -75,36 +74,23 @@ struct MainNavigationViewFallback: View {
                 }
                 .tag(AppTab.overview)
             
-            Text("Analyse Content")
+            AnalyticsView()
                 .tabItem {
                     Label("Analyse", systemImage: "chart.bar")
                 }
                 .tag(AppTab.analytics)
             
-            Text("Inventar Content")
+            InventoryView()
                 .tabItem {
                     Label("Inventar", systemImage: "archivebox")
                 }
                 .tag(AppTab.inventory)
             
-            VStack(spacing: 20) {
-                Text("Account Content")
-                
-                Button("Onboarding neu starten") {
-                    withAnimation {
-                        appState.changeStatus(to: .onboarding)
-                    }
+            AccountView()
+                .tabItem {
+                    Label("Account", systemImage: "person.crop.circle")
                 }
-                .font(.headline)
-                .foregroundStyle(.white)
-                .padding()
-                .background(Color.blue)
-                .clipShape(RoundedRectangle(cornerRadius: 12))
-            }
-            .tabItem {
-                Label("Account", systemImage: "person.crop.circle")
-            }
-            .tag(AppTab.account)
+                .tag(AppTab.account)
         }
     }
 }

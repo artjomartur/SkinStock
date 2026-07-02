@@ -9,7 +9,10 @@ import SwiftUI
 
 struct ContentView: View {
     @EnvironmentObject var steamService: SteamService
-    @StateObject private var viewModel = DashboardViewModel()
+    @EnvironmentObject var inventoryService: InventoryService
+    @EnvironmentObject var priceService: PriceService
+    @EnvironmentObject var userSettings: UserSettings
+    @State private var selectedTimeframe: Timeframe = .month
     
     var body: some View {
         NavigationStack {
@@ -33,21 +36,46 @@ struct ContentView: View {
                     .padding(.top, 60)
                     
                     // Glass Portfolio Card
-                    VStack(alignment: .leading, spacing: 8) {
-                        Text("Gesamtwert")
-                            .font(.caption)
-                            .foregroundColor(.secondary)
-                        Text(viewModel.totalValue, format: .currency(code: "USD"))
-                            .font(.system(.title, design: .rounded))
-                            .fontWeight(.bold)
-                            .foregroundColor(.white)
-                        HStack {
-                            Image(systemName: "arrow.trend.up")
+                    VStack(alignment: .leading, spacing: 16) {
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text("Gesamtwert")
                                 .font(.caption)
-                            Text("+14,8% diese Woche")
+                                .foregroundColor(.secondary)
+                            
+                            let totalValue = priceService.calculateTotalValue(inventory: inventoryService.inventory)
+                            
+                            Text(userSettings.formattedPrice(totalValue))
+                                .font(.system(.title, design: .rounded))
+                                .fontWeight(.bold)
+                                .foregroundColor(.white)
+                            
+                            // Let's compute profit/loss based on timeframe mock data
+                            let history = priceService.getPortfolioHistory(inventory: inventoryService.inventory, timeframe: selectedTimeframe)
+                            if let first = history.first, let last = history.last {
+                                let diff = last.price - first.price
+                                let percent = (diff / first.price) * 100
+                                let isUp = diff >= 0
+                                HStack {
+                                    Image(systemName: isUp ? "arrow.trend.up" : "arrow.trend.down")
+                                    Text("\(isUp ? "+" : "")\(String(format: "%.1f", percent))% (\(selectedTimeframe.rawValue))")
+                                }
                                 .font(.caption2)
+                                .foregroundColor(isUp ? .green : .red)
+                            }
                         }
-                        .foregroundColor(.green)
+                        
+                        // Main Trendline
+                        TrendlineView(data: priceService.getPortfolioHistory(inventory: inventoryService.inventory, timeframe: selectedTimeframe), showAxes: false, lineWidth: 3.0)
+                            .frame(height: 120)
+                            .padding(.vertical, 8)
+                        
+                        // Timeframe Picker
+                        Picker("Zeitraum", selection: $selectedTimeframe) {
+                            ForEach(Timeframe.allCases) { timeframe in
+                                Text(timeframe.rawValue).tag(timeframe)
+                            }
+                        }
+                        .pickerStyle(SegmentedPickerStyle())
                     }
                     .padding()
                     .frame(maxWidth: .infinity, alignment: .leading)
@@ -56,15 +84,21 @@ struct ContentView: View {
                     .overlay(RoundedRectangle(cornerRadius: 16).stroke(Color.white.opacity(0.1), lineWidth: 1))
                     
                     // Item Listings
-                    Text("Deine Investment-Objekte")
+                    Text("Deine Top Investment-Objekte")
                         .font(.headline)
                         .foregroundColor(.white)
                         .padding(.top, 10)
                     
                     VStack(spacing: 16) {
-                        ForEach(viewModel.inventory) { item in
-                            NavigationLink(destination: SkinDetailView(item: item)) {
-                                SkinCardView(item: item)
+                        let sortedItems = inventoryService.inventory.sorted { priceService.getPrice(for: $0) > priceService.getPrice(for: $1) }
+                        
+                        ForEach(sortedItems.prefix(5)) { item in
+                            var displayItem = item
+                            let price = priceService.getPrice(for: item)
+                            displayItem.lastPrice = price
+                            
+                            return NavigationLink(destination: SkinDetailView(item: displayItem)) {
+                                SkinCardView(item: displayItem)
                             }
                             .buttonStyle(PlainButtonStyle())
                         }
@@ -74,16 +108,12 @@ struct ContentView: View {
                 .padding(.horizontal, 20)
             }
         }
-        .onChange(of: steamService.inventory) { oldItems, newItems in
-            if !newItems.isEmpty {
-                viewModel.inventory = newItems
-                viewModel.calculateTotal()
-            }
-        }
         .onAppear {
-            if !steamService.inventory.isEmpty {
-                viewModel.inventory = steamService.inventory
-                viewModel.calculateTotal()
+            // Trigger price fetch in the background if we have an inventory
+            if !inventoryService.inventory.isEmpty {
+                Task {
+                    try? await priceService.fetchPrices()
+                }
             }
         }
     }
@@ -93,6 +123,7 @@ struct ContentView: View {
 
 struct SkinCardView: View {
     let item: CS2Item
+    @EnvironmentObject var userSettings: UserSettings
     
     var body: some View {
         HStack(spacing: 16) {
@@ -155,7 +186,7 @@ struct SkinCardView: View {
             Spacer(minLength: 0)
             
             VStack(alignment: .trailing, spacing: 4) {
-                Text(item.lastPrice, format: .currency(code: item.currency))
+                Text(userSettings.formattedPrice(item.lastPrice))
                     .font(.subheadline)
                     .fontWeight(.semibold)
                     .foregroundColor(.white)

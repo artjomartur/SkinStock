@@ -6,7 +6,16 @@
 	objectVersion = 77;
 	objects = {
 
+/* Begin PBXBuildFile section */
+		11B547540C47A2EDCBB75F94 /* GoogleService-Info.plist in Resources */ = {isa = PBXBuildFile; fileRef = 51577A28B20FAE6138CA634E /* GoogleService-Info.plist */; };
+		6EC2108B431AA62129016776 /* GoogleSignInSwift in Frameworks */ = {isa = PBXBuildFile; productRef = A4698A7C25457490D773DE9D /* GoogleSignInSwift */; };
+		9F94F16CB077687FD7DFE499 /* FirebaseAuth in Frameworks */ = {isa = PBXBuildFile; productRef = D8A58D7265A430079E14A0DD /* FirebaseAuth */; };
+		E7E8F8E0B0F96791AB323CBD /* FirebaseCore in Frameworks */ = {isa = PBXBuildFile; productRef = C6FE6247645135EA2EA3D2D9 /* FirebaseCore */; };
+		F424165B137B25E9E2F1FF10 /* GoogleSignIn in Frameworks */ = {isa = PBXBuildFile; productRef = BBC87576793E6ECC133A8634 /* GoogleSignIn */; };
+/* End PBXBuildFile section */
+
 /* Begin PBXFileReference section */
+		51577A28B20FAE6138CA634E /* GoogleService-Info.plist */ = {isa = PBXFileReference; explicitFileType = text.plist; name = "GoogleService-Info.plist"; path = "SkinStock-ios/GoogleService-Info.plist"; sourceTree = "<group>"; };
 		A92CF10E2FF6D42C004EA020 /* SkinStock-ios.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "SkinStock-ios.app"; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
@@ -36,6 +45,10 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				E7E8F8E0B0F96791AB323CBD /* FirebaseCore in Frameworks */,
+				9F94F16CB077687FD7DFE499 /* FirebaseAuth in Frameworks */,
+				F424165B137B25E9E2F1FF10 /* GoogleSignIn in Frameworks */,
+				6EC2108B431AA62129016776 /* GoogleSignInSwift in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -47,6 +60,7 @@
 			children = (
 				A92CF1102FF6D42C004EA020 /* SkinStock-ios */,
 				A92CF10F2FF6D42C004EA020 /* Products */,
+				51577A28B20FAE6138CA634E /* GoogleService-Info.plist */,
 			);
 			sourceTree = "<group>";
 		};
@@ -78,6 +92,10 @@
 			);
 			name = "SkinStock-ios";
 			packageProductDependencies = (
+				C6FE6247645135EA2EA3D2D9 /* FirebaseCore */,
+				D8A58D7265A430079E14A0DD /* FirebaseAuth */,
+				BBC87576793E6ECC133A8634 /* GoogleSignIn */,
+				A4698A7C25457490D773DE9D /* GoogleSignInSwift */,
 			);
 			productName = "SkinStock-ios";
 			productReference = A92CF10E2FF6D42C004EA020 /* SkinStock-ios.app */;
@@ -107,6 +125,10 @@
 			);
 			mainGroup = A92CF1052FF6D42C004EA020;
 			minimizedProjectReferenceProxies = 1;
+			packageReferences = (
+				5648BE483643E09FC8E0001C /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */,
+				F952E75A15EEF9C144F1FE64 /* XCRemoteSwiftPackageReference "GoogleSignIn-iOS" */,
+			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = A92CF10F2FF6D42C004EA020 /* Products */;
 			projectDirPath = "";
@@ -122,6 +144,7 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				11B547540C47A2EDCBB75F94 /* GoogleService-Info.plist in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -280,6 +303,7 @@
 					"@executable_path/Frameworks",
 				);
 				MARKETING_VERSION = 1.0;
+				OTHER_LDFLAGS = "-ObjC";
 				PRODUCT_BUNDLE_IDENTIFIER = "ArtjomBecker.SkinStock-ios";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
@@ -313,6 +337,7 @@
 					"@executable_path/Frameworks",
 				);
 				MARKETING_VERSION = 1.0;
+				OTHER_LDFLAGS = "-ObjC";
 				PRODUCT_BUNDLE_IDENTIFIER = "ArtjomBecker.SkinStock-ios";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
@@ -347,6 +372,48 @@
 			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
+
+/* Begin XCRemoteSwiftPackageReference section */
+		5648BE483643E09FC8E0001C /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/firebase/firebase-ios-sdk";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 11.0.0;
+			};
+		};
+		F952E75A15EEF9C144F1FE64 /* XCRemoteSwiftPackageReference "GoogleSignIn-iOS" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/google/GoogleSignIn-iOS";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 7.1.0;
+			};
+		};
+/* End XCRemoteSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		A4698A7C25457490D773DE9D /* GoogleSignInSwift */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = F952E75A15EEF9C144F1FE64 /* XCRemoteSwiftPackageReference "GoogleSignIn-iOS" */;
+			productName = GoogleSignInSwift;
+		};
+		BBC87576793E6ECC133A8634 /* GoogleSignIn */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = F952E75A15EEF9C144F1FE64 /* XCRemoteSwiftPackageReference "GoogleSignIn-iOS" */;
+			productName = GoogleSignIn;
+		};
+		C6FE6247645135EA2EA3D2D9 /* FirebaseCore */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 5648BE483643E09FC8E0001C /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
+			productName = FirebaseCore;
+		};
+		D8A58D7265A430079E14A0DD /* FirebaseAuth */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 5648BE483643E09FC8E0001C /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
+			productName = FirebaseAuth;
+		};
+/* End XCSwiftPackageProductDependency section */
 	};
 	rootObject = A92CF1062FF6D42C004EA020 /* Project object */;
 }
