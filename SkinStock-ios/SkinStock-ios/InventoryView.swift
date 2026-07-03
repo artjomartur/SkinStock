@@ -86,9 +86,9 @@ struct InventoryGridItemView: View {
     
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
-            ZStack {
-                RoundedRectangle(cornerRadius: 12)
-                    .fill(Color.white.opacity(0.05))
+            ZStack(alignment: .topLeading) {
+                RoundedRectangle(cornerRadius: 14)
+                    .fill(Color.white.opacity(0.04))
                     .aspectRatio(1, contentMode: .fit)
                 
                 if let url = item.imageUrl {
@@ -100,14 +100,14 @@ struct InventoryGridItemView: View {
                                 .padding(12)
                         } else if phase.error != nil {
                             Image(systemName: "photo")
-                                .foregroundColor(.white.opacity(0.5))
+                                .foregroundColor(.white.opacity(0.3))
                         } else {
-                            ProgressView()
+                            ProgressView().scaleEffect(0.8)
                         }
                     }
                 } else {
                     Image(systemName: "photo")
-                        .foregroundColor(.white.opacity(0.5))
+                        .foregroundColor(.white.opacity(0.3))
                 }
                 
                 // Rarity Rand unten
@@ -115,35 +115,55 @@ struct InventoryGridItemView: View {
                     Spacer()
                     Rectangle()
                         .fill(item.rarity.color)
-                        .frame(height: 4)
+                        .frame(height: 3)
                 }
-                .clipShape(RoundedRectangle(cornerRadius: 12))
+                .clipShape(RoundedRectangle(cornerRadius: 14))
+                
+                // Floating Trade-Lock Badge
+                if item.isTradeLocked {
+                    Image(systemName: "lock.fill")
+                        .font(.system(size: 10, weight: .bold))
+                        .foregroundColor(.orange)
+                        .padding(5)
+                        .background(Circle().fill(Color.black.opacity(0.6)))
+                        .padding(6)
+                }
             }
+            .overlay(
+                RoundedRectangle(cornerRadius: 14)
+                    .stroke(item.rarity.color.opacity(0.3), lineWidth: 0.5)
+            )
+            .oledGlow(color: item.rarity.color, intensity: 0.5)
             
             VStack(alignment: .leading, spacing: 4) {
                 Text(item.name)
-                    .font(.caption)
+                    .font(.system(.caption, design: .rounded))
                     .fontWeight(.bold)
                     .lineLimit(2)
                     .multilineTextAlignment(.leading)
                     .foregroundColor(.white)
+                    .frame(height: 30, alignment: .topLeading)
                 
                 HStack {
-                    Text(userSettings.formattedPrice(priceService.getPrice(for: item)))
-                        .font(.caption)
-                        .fontWeight(.semibold)
+                    let price = priceService.getPrice(for: item)
+                    let displayPrice = userSettings.showNetValue
+                        ? priceService.getNetPrice(for: item, marketplace: userSettings.preferredMarketplace)
+                        : price
+                    
+                    Text(userSettings.formattedPrice(displayPrice))
+                        .font(.system(size: 11, weight: .bold, design: .rounded))
                         .foregroundColor(.green)
                     
                     Spacer()
                     
                     if let wear = item.wear {
                         Text(wear.prefix(2).uppercased())
-                            .font(.system(size: 10, weight: .bold))
+                            .font(.system(size: 8, weight: .black))
                             .padding(.horizontal, 4)
                             .padding(.vertical, 2)
-                            .background(Color.white.opacity(0.2))
+                            .background(Color.white.opacity(0.12))
                             .clipShape(RoundedRectangle(cornerRadius: 4))
-                            .foregroundColor(.white)
+                            .foregroundColor(.secondary)
                     }
                 }
                 
@@ -156,9 +176,15 @@ struct InventoryGridItemView: View {
                 }
             }
         }
-        .padding(8)
-        .background(RoundedRectangle(cornerRadius: 16).fill(Color.white.opacity(0.02)))
-        .overlay(RoundedRectangle(cornerRadius: 16).stroke(Color.white.opacity(0.1), lineWidth: 1))
+        .padding(10)
+        .background(
+            RoundedRectangle(cornerRadius: 18)
+                .fill(Color.white.opacity(0.02))
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 18)
+                .stroke(Color.white.opacity(0.06), lineWidth: 0.5)
+        )
     }
 }
 

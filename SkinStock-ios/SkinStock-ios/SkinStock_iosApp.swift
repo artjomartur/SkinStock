@@ -29,6 +29,9 @@ struct SkinStock_iosApp: App {
     @StateObject private var priceHistoryStore = PriceHistoryStore()
     @StateObject private var inventoryService = InventoryService()
     @StateObject private var inventoryViewModel = InventoryViewModel()
+    @StateObject private var watchlistService = WatchlistService()
+    @StateObject private var achievementService = AchievementService()
+    @StateObject private var notificationService = NotificationService()
     
     var body: some Scene {
         WindowGroup {
@@ -54,6 +57,12 @@ struct SkinStock_iosApp: App {
                     .environmentObject(priceHistoryStore)
                     .environmentObject(inventoryService)
                     .environmentObject(inventoryViewModel)
+                    .environmentObject(watchlistService)
+                    .environmentObject(achievementService)
+                    .environmentObject(notificationService)
+                    .onAppear {
+                        notificationService.requestPermission()
+                    }
             }
         }
     }

@@ -3,6 +3,7 @@ import SwiftUI
 enum AppTab: Hashable {
     case overview
     case analytics
+    case hub
     case inventory
     case account
 }
@@ -23,6 +24,10 @@ struct MainNavigationView: View {
                 AnalyticsView()
             }
             
+            Tab("Tools", systemImage: "plus.circle.fill", value: .hub) {
+                InvestmentHubView()
+            }
+            
             Tab("Inventar", systemImage: "archivebox", value: .inventory) {
                 InventoryView()
             }
@@ -31,10 +36,9 @@ struct MainNavigationView: View {
                 AccountView()
             }
             .customizationBehavior(.disabled, for: .sidebar)
-            // Optional: Wenn du den Tab auf dem iPad ganz unten rechts abtrennen willst (wie z.B. Suche oder Einstellungen)
-            // kannst du auch den Parameter `role: .search` im Tab-Initialisierer testen.
         }
         .tabViewStyle(.sidebarAdaptable)
+        .tint(Color(hex: "00F0FF"))
     }
 }
 
@@ -42,19 +46,42 @@ struct MainNavigationView: View {
 struct MainNavigationContainer: View {
     @EnvironmentObject var steamService: SteamService
     @EnvironmentObject var inventoryService: InventoryService
+    @EnvironmentObject var priceService: PriceService
+    @EnvironmentObject var watchlistService: WatchlistService
+    @EnvironmentObject var achievementService: AchievementService
+    @EnvironmentObject var userSettings: UserSettings
+    @EnvironmentObject var notificationService: NotificationService
     
     var body: some View {
-        Group {
-            if #available(iOS 18.0, *) {
-                MainNavigationView()
-            } else {
-                MainNavigationViewFallback()
+        ZStack(alignment: .top) {
+            Group {
+                if #available(iOS 18.0, *) {
+                    MainNavigationView()
+                } else {
+                    MainNavigationViewFallback()
+                }
+            }
+            
+            // Achievement Toast Banner at root level
+            if let achievement = achievementService.newlyUnlocked {
+                AchievementBannerView(achievement: achievement)
+                    .padding(.top, 50)
+                    .transition(.move(edge: .top).combined(with: .opacity))
+                    .zIndex(100)
             }
         }
         .onAppear {
             if let steamId = steamService.profile?.steamId64 {
                 Task {
                     await inventoryService.fetchInventory(for: steamId)
+                    
+                    // Erfolge auswerten
+                    let totalVal = priceService.calculateTotalValue(inventory: inventoryService.inventory)
+                    achievementService.evaluate(
+                        inventory: inventoryService.inventory,
+                        totalValue: totalVal,
+                        watchlistCount: watchlistService.items.count
+                    )
                 }
             }
         }
@@ -80,6 +107,12 @@ struct MainNavigationViewFallback: View {
                 }
                 .tag(AppTab.analytics)
             
+            InvestmentHubView()
+                .tabItem {
+                    Label("Tools", systemImage: "plus.circle.fill")
+                }
+                .tag(AppTab.hub)
+            
             InventoryView()
                 .tabItem {
                     Label("Inventar", systemImage: "archivebox")
@@ -92,6 +125,7 @@ struct MainNavigationViewFallback: View {
                 }
                 .tag(AppTab.account)
         }
+        .tint(Color(hex: "00F0FF"))
     }
 }
 

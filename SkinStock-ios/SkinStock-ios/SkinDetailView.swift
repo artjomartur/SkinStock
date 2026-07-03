@@ -8,6 +8,7 @@ struct SkinDetailView: View {
     @EnvironmentObject var priceHistoryStore: PriceHistoryStore
     @EnvironmentObject var userSettings: UserSettings
     @State private var selectedTimeframe: Timeframe = .month
+    @State private var showSMA: Bool = false
     
     init(item: CS2Item) {
         self.item = item
@@ -22,114 +23,158 @@ struct SkinDetailView: View {
             // 2. Chromatische Vollbild-Farben (basierend auf Rarity)
             chromaticBackground
             
-            VStack {
-                // Header (Back Button, Titel)
-                header
-                
-                Spacer()
-                
-                // 3. Transluzente Glasscheibe mit schwebendem 3D-Item
-                ZStack {
-                    // Glasscheibe
-                    RoundedRectangle(cornerRadius: 40, style: .continuous)
-                        .fill(.ultraThinMaterial)
-                        .frame(height: 280)
-                        .overlay(
-                            RoundedRectangle(cornerRadius: 40, style: .continuous)
-                                .stroke(
-                                    LinearGradient(
-                                        colors: [.white.opacity(0.4), .white.opacity(0.05), item.rarity.color.opacity(0.3)],
-                                        startPoint: .topLeading,
-                                        endPoint: .bottomTrailing
-                                    ),
-                                    lineWidth: 1.5
-                                )
-                        )
-                        .shadow(color: item.rarity.color.opacity(0.15), radius: 40, x: 0, y: 20)
-                        .padding(.horizontal, 24)
+            ScrollView(.vertical, showsIndicators: false) {
+                VStack(spacing: 20) {
+                    // Header (Back Button, Titel)
+                    header
                     
-                    // Schwebendes Bild
-                    VStack {
-                        if let url = item.imageUrl {
-                            AsyncImage(url: url) { phase in
-                                if let image = phase.image {
-                                    image
-                                        .resizable()
-                                        .scaledToFit()
-                                        .frame(width: 140, height: 140)
-                                        .shadow(color: .black.opacity(0.6), radius: 25, x: 0, y: 15)
-                                        .offset(y: -40)
-                                } else {
-                                    Image(systemName: "arkit")
-                                        .resizable()
-                                        .scaledToFit()
-                                        .frame(width: 140, height: 140)
-                                        .foregroundStyle(LinearGradient(colors: [.white, .white.opacity(0.7)], startPoint: .top, endPoint: .bottom))
-                                        .shadow(color: .black.opacity(0.6), radius: 25, x: 0, y: 15)
-                                        .offset(y: -40)
-                                }
-                            }
-                        } else {
-                            Image(systemName: "arkit")
-                                .resizable()
-                                .scaledToFit()
-                                .frame(width: 140, height: 140)
-                                .foregroundStyle(LinearGradient(colors: [.white, .white.opacity(0.7)], startPoint: .top, endPoint: .bottom))
-                                .shadow(color: .black.opacity(0.6), radius: 25, x: 0, y: 15)
-                                .offset(y: -40)
-                        }
+                    // 3. Transluzente Glasscheibe mit schwebendem Item
+                    ZStack {
+                        RoundedRectangle(cornerRadius: 32, style: .continuous)
+                            .fill(.ultraThinMaterial)
+                            .frame(height: 220)
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 32, style: .continuous)
+                                    .stroke(
+                                        LinearGradient(
+                                            colors: [.white.opacity(0.4), .white.opacity(0.05), item.rarity.color.opacity(0.3)],
+                                            startPoint: .topLeading,
+                                            endPoint: .bottomTrailing
+                                        ),
+                                        lineWidth: 1
+                                    )
+                            )
+                            .shadow(color: item.rarity.color.opacity(0.12), radius: 30, x: 0, y: 15)
+                            .padding(.horizontal, 20)
                         
-                        Text(item.name)
-                            .font(.title2.weight(.bold))
-                            .foregroundStyle(.white)
+                        VStack(spacing: 8) {
+                            if let url = item.imageUrl {
+                                AsyncImage(url: url) { phase in
+                                    if let image = phase.image {
+                                        image
+                                            .resizable()
+                                            .scaledToFit()
+                                            .frame(width: 110, height: 110)
+                                            .shadow(color: .black.opacity(0.5), radius: 20, x: 0, y: 10)
+                                    } else {
+                                        Image(systemName: "cube.transparent")
+                                            .resizable()
+                                            .scaledToFit()
+                                            .frame(width: 80, height: 80)
+                                            .foregroundStyle(.white.opacity(0.4))
+                                    }
+                                }
+                            } else {
+                                Image(systemName: "cube.transparent")
+                                    .resizable()
+                                    .scaledToFit()
+                                    .frame(width: 80, height: 80)
+                                    .foregroundStyle(.white.opacity(0.4))
+                            }
+                            
+                            Text(item.name)
+                                .font(.headline.weight(.bold))
+                                .foregroundStyle(.white)
+                                .multilineTextAlignment(.center)
+                                .padding(.horizontal, 40)
+                            
+                            // Badges for Collection & Trade-Lock
+                            HStack(spacing: 8) {
+                                if let coll = item.collectionName {
+                                    Text(coll)
+                                        .font(.system(size: 10, weight: .bold))
+                                        .foregroundStyle(.secondary)
+                                        .padding(.horizontal, 8)
+                                        .padding(.vertical, 4)
+                                        .background(Capsule().fill(Color.white.opacity(0.08)))
+                                }
+                                
+                                TradeLockBadgeView(item: item)
+                            }
+                            
+                            // Stickers
+                            if !item.stickers.isEmpty {
+                                HStack(spacing: 6) {
+                                    ForEach(item.stickers, id: \.self) { sticker in
+                                        Text(sticker.name.prefix(4).uppercased())
+                                            .font(.system(size: 8, weight: .black))
+                                            .foregroundColor(.black)
+                                            .padding(.horizontal, 6)
+                                            .padding(.vertical, 3)
+                                            .background(Color(hex: "00F0FF"))
+                                            .cornerRadius(4)
+                                            .shadow(color: Color(hex: "00F0FF").opacity(0.3), radius: 2)
+                                    }
+                                }
+                                .padding(.top, 2)
+                            }
+                        }
+                        .offset(y: -10)
                     }
-                }
-                
-                Spacer()
-                
-                // Preis und interaktiver Chart
-                VStack(spacing: 16) {
                     
-                    // Preis (Brutto oder Netto je nach Einstellung)
+                    // Preis
                     let displayPrice = userSettings.showNetValue
                         ? priceService.getNetPrice(for: item, marketplace: userSettings.preferredMarketplace)
                         : priceService.getPrice(for: item)
                     
-                    VStack(spacing: 2) {
+                    VStack(spacing: 4) {
                         Text(userSettings.formattedPrice(displayPrice))
-                            .font(.system(size: 34, weight: .bold, design: .rounded))
+                            .font(.system(size: 32, weight: .bold, design: .rounded))
                             .foregroundStyle(.white)
-                            .shadow(color: item.rarity.color.opacity(0.5), radius: 10, x: 0, y: 5)
                         
                         if userSettings.showNetValue {
                             Text("Netto (\(userSettings.preferredMarketplace.rawValue))")
                                 .font(.caption2)
                                 .foregroundStyle(.secondary)
                         }
+                        
+                        let overpay = calculateStickerOverpay()
+                        if overpay > 0 {
+                            Text("+ \(userSettings.formattedPrice(overpay)) Sticker-Wert")
+                                .font(.caption2.bold())
+                                .foregroundStyle(Color(hex: "00FF77"))
+                                .padding(.horizontal, 8)
+                                .padding(.vertical, 3)
+                                .background(Capsule().fill(Color.green.opacity(0.12)))
+                                .padding(.top, 4)
+                        }
                     }
-                    .padding(.top, 10)
                     
                     // Arbitrage Spread
-                    if let spread = priceService.arbitrageSpread(for: item.hashName) {
+                    if let spread = priceService.arbitrageSpread(for: item.hashName), spread > 0 {
                         HStack(spacing: 4) {
-                            Image(systemName: spread > 0 ? "arrow.triangle.2.circlepath" : "equal.circle")
+                            Image(systemName: "arrow.triangle.2.circlepath")
                                 .font(.caption2)
-                            Text(spread > 0 ? "Skinport \(String(format: "%.1f", spread))% günstiger als Steam" : "Kein Spread")
+                            Text("Skinport \(String(format: "%.1f", spread))% günstiger als Steam")
                                 .font(.caption2)
                         }
                         .foregroundStyle(spread > 5 ? Color(hex: "00FF77") : .secondary)
                         .padding(.horizontal, 12)
-                        .padding(.vertical, 4)
-                        .background(Capsule().fill(Color.white.opacity(0.05)))
+                        .padding(.vertical, 6)
+                        .background(Capsule().fill(Color.white.opacity(0.06)))
                     }
                     
                     // Chart & Picker
                     VStack(alignment: .leading, spacing: 12) {
                         HStack {
                             Text("Preisverlauf")
-                                .font(.subheadline)
+                                .font(.subheadline.weight(.medium))
                                 .foregroundStyle(.secondary)
                             Spacer()
+                            Button {
+                                withAnimation {
+                                    showSMA.toggle()
+                                }
+                            } label: {
+                                Text("SMA")
+                                    .font(.caption2.bold())
+                                    .padding(.horizontal, 8)
+                                    .padding(.vertical, 4)
+                                    .background(showSMA ? Color(hex: "00F0FF") : Color.white.opacity(0.1))
+                                    .foregroundColor(showSMA ? .black : .white)
+                                    .cornerRadius(6)
+                            }
+                            
                             Picker("Zeitraum", selection: $selectedTimeframe) {
                                 ForEach(Timeframe.allCases) { tf in
                                     Text(tf.rawValue).tag(tf)
@@ -141,8 +186,8 @@ struct SkinDetailView: View {
                         
                         let history = priceHistoryStore.getHistory(for: item.hashName, timeframe: selectedTimeframe)
                         if history.count >= 2 {
-                            TrendlineView(data: history, showAxes: false, lineWidth: 2, showIndicator: true)
-                                .frame(height: 180)
+                            TrendlineView(data: history, showAxes: false, lineWidth: 2, showIndicator: true, showSMA: showSMA)
+                                .frame(height: 200)
                         } else {
                             VStack(spacing: 8) {
                                 Image(systemName: "clock.arrow.circlepath")
@@ -152,13 +197,17 @@ struct SkinDetailView: View {
                                     .font(.caption)
                                     .foregroundStyle(.secondary)
                             }
-                            .frame(height: 180)
+                            .frame(height: 200)
                             .frame(maxWidth: .infinity)
                         }
                     }
-                    .padding(.horizontal, 40)
+                    .padding(20)
+                    .background(RoundedRectangle(cornerRadius: 20).fill(Color.white.opacity(0.04)))
+                    .overlay(RoundedRectangle(cornerRadius: 20).stroke(Color.white.opacity(0.08), lineWidth: 0.5))
+                    .padding(.horizontal, 20)
+                    
+                    Spacer().frame(height: 40)
                 }
-                .padding(.bottom, 20)
             }
         }
         .navigationBarBackButtonHidden(true)
@@ -241,6 +290,22 @@ struct SkinDetailView: View {
         if clamped < 0.45 { return Color(hex: "FF8C00") }
         return Color(hex: "FF0033")
     }
+    
+    private func calculateStickerOverpay() -> Double {
+        guard !item.stickers.isEmpty else { return 0 }
+        var overpay = 0.0
+        for sticker in item.stickers {
+            let nameLower = sticker.name.lowercased()
+            if nameLower.contains("katowice 2014") || nameLower.contains("ibuypower") || nameLower.contains("titan") {
+                overpay += 150.0
+            } else if nameLower.contains("holo") || nameLower.contains("gold") {
+                overpay += 15.0
+            } else {
+                overpay += 2.0
+            }
+        }
+        return overpay
+    }
 }
 
 // MARK: - Preview
@@ -260,7 +325,11 @@ struct SkinDetailView: View {
         skinCategory: "Knife",
         rarity: .covert,
         imageUrl: nil,
-        marketable: true
+        marketable: true,
+        tradable: true,
+        stickers: [],
+        firstSeenDate: nil,
+        collectionName: nil
     )
     SkinDetailView(item: mockItem)
         .environmentObject(PriceService())

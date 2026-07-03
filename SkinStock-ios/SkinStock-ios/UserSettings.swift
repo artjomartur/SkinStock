@@ -1,21 +1,34 @@
 import Foundation
 import SwiftUI
+import Combine
 
-enum CurrencyType: String, CaseIterable, Identifiable {
-    case usd = "USD"
+enum CurrencyType: String, CaseIterable, Identifiable, Codable {
     case eur = "EUR"
+    case usd = "USD"
+    case gbp = "GBP"
+    case chf = "CHF"
+    case cny = "CNY"
+    case rub = "RUB"
+    case pln = "PLN"
+    case cad = "CAD"
+    case uah = "UAH"
     
     var id: String { self.rawValue }
     
     var symbol: String {
         switch self {
-        case .usd: return "$"
         case .eur: return "€"
+        case .usd: return "$"
+        case .gbp: return "£"
+        case .chf: return "CHF"
+        case .cny: return "¥"
+        case .rub: return "₽"
+        case .pln: return "zł"
+        case .cad: return "C$"
+        case .uah: return "₴"
         }
     }
 }
-
-import Combine
 
 class UserSettings: ObservableObject {
     @Published var selectedCurrency: CurrencyType = .eur
@@ -64,17 +77,24 @@ class UserSettings: ObservableObject {
             }
             .store(in: &cancellables)
     }
-    // Einfache Umrechnung: API liefert USD
-    // Für ein echtes Projekt könnte man hier live Kurse laden.
-    private let usdToEurRate: Double = 0.92
+    
+    // Umrechnungskurse von der Basis USD
+    private func rate(for currency: CurrencyType) -> Double {
+        switch currency {
+        case .usd: return 1.0
+        case .eur: return 0.92
+        case .gbp: return 0.79
+        case .chf: return 0.89
+        case .cny: return 7.25
+        case .rub: return 90.0
+        case .pln: return 4.0
+        case .cad: return 1.36
+        case .uah: return 40.50
+        }
+    }
     
     func convertPrice(_ priceInUSD: Double) -> Double {
-        switch selectedCurrency {
-        case .usd:
-            return priceInUSD
-        case .eur:
-            return priceInUSD * usdToEurRate
-        }
+        return priceInUSD * rate(for: selectedCurrency)
     }
     
     func formattedPrice(_ priceInUSD: Double) -> String {
@@ -82,7 +102,22 @@ class UserSettings: ObservableObject {
         let formatter = NumberFormatter()
         formatter.numberStyle = .currency
         formatter.currencyCode = selectedCurrency.rawValue
+        formatter.locale = locale(for: selectedCurrency)
         
-        return formatter.string(from: NSNumber(value: converted)) ?? "\(converted)"
+        return formatter.string(from: NSNumber(value: converted)) ?? "\(converted) \(selectedCurrency.symbol)"
+    }
+    
+    private func locale(for currency: CurrencyType) -> Locale {
+        switch currency {
+        case .eur: return Locale(identifier: "de_DE")
+        case .usd: return Locale(identifier: "en_US")
+        case .gbp: return Locale(identifier: "en_GB")
+        case .chf: return Locale(identifier: "de_CH")
+        case .cny: return Locale(identifier: "zh_CN")
+        case .rub: return Locale(identifier: "ru_RU")
+        case .pln: return Locale(identifier: "pl_PL")
+        case .cad: return Locale(identifier: "en_CA")
+        case .uah: return Locale(identifier: "uk_UA")
+        }
     }
 }

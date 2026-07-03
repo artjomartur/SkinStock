@@ -19,22 +19,7 @@ struct ContentView: View {
         NavigationStack {
             ScrollView(.vertical, showsIndicators: false) {
                 VStack(alignment: .leading, spacing: 20) {
-                    // Header
-                    HStack {
-                        VStack(alignment: .leading, spacing: 4) {
-                            Text("FINANZ RADAR")
-                                .font(.system(.caption, design: .rounded))
-                                .fontWeight(.bold)
-                                .foregroundColor(.secondary)
-                                .tracking(2)
-                            Text("Portfolio")
-                                .font(.system(.largeTitle, design: .rounded))
-                                .fontWeight(.black)
-                                .foregroundColor(.white)
-                        }
-                        Spacer()
-                    }
-                    .padding(.top, 60)
+                    Spacer().frame(height: 10)
                     
                     // Glass Portfolio Card
                     VStack(alignment: .leading, spacing: 16) {
@@ -102,7 +87,7 @@ struct ContentView: View {
                                 let percent = (diff / first.price) * 100
                                 let isUp = diff >= 0
                                 HStack {
-                                    Image(systemName: isUp ? "arrow.trend.up" : "arrow.trend.down")
+                                    Image(systemName: isUp ? "arrow.up.right" : "arrow.down.right")
                                     if userSettings.showAbsoluteValues {
                                         Text("\(isUp ? "+" : "")\(userSettings.formattedPrice(abs(diff))) (\(selectedTimeframe.rawValue))")
                                     } else {
@@ -152,6 +137,11 @@ struct ContentView: View {
                     .background(RoundedRectangle(cornerRadius: 16).fill(Color.white.opacity(0.04)))
                     .overlay(RoundedRectangle(cornerRadius: 16).stroke(Color.white.opacity(0.1), lineWidth: 1))
                     
+                    // Portfolio-Score
+                    if !inventoryService.inventory.isEmpty {
+                        PortfolioScoreView()
+                    }
+                    
                     // Item Listings
                     Text("Deine Top Investment-Objekte")
                         .font(.headline)
@@ -176,6 +166,7 @@ struct ContentView: View {
                 }
                 .padding(.horizontal, 20)
             }
+            .navigationTitle("Portfolio")
             .background(Color.black.edgesIgnoringSafeArea(.all))
         }
         .onAppear {
@@ -196,12 +187,14 @@ struct ContentView: View {
 struct SkinCardView: View {
     let item: CS2Item
     @EnvironmentObject var userSettings: UserSettings
+    @EnvironmentObject var priceService: PriceService
     
     var body: some View {
         HStack(spacing: 16) {
-            // Placeholder for 3D Model / Icon
+            // Image Box
             ZStack {
-                Color.clear
+                Color.black.opacity(0.2)
+                
                 if let url = item.imageUrl {
                     AsyncImage(url: url) { phase in
                         if let image = phase.image {
@@ -211,65 +204,89 @@ struct SkinCardView: View {
                                 .padding(8)
                         } else if phase.error != nil {
                             Image(systemName: "photo")
-                                .foregroundColor(Color.white.opacity(0.5))
+                                .foregroundColor(Color.white.opacity(0.3))
                         } else {
-                            ProgressView()
+                            ProgressView().scaleEffect(0.8)
                         }
                     }
                 } else {
                     Image(systemName: "photo")
-                        .foregroundColor(Color.white.opacity(0.5))
+                        .foregroundColor(Color.white.opacity(0.3))
                 }
             }
-            .frame(width: 80, height: 80)
-            .background(RoundedRectangle(cornerRadius: 16).fill(Color.white.opacity(0.05)))
-            .overlay(RoundedRectangle(cornerRadius: 16).stroke(item.rarity.color.opacity(0.5), lineWidth: 1))
+            .frame(width: 72, height: 72)
+            .background(RoundedRectangle(cornerRadius: 14).fill(Color.white.opacity(0.04)))
+            .overlay(
+                RoundedRectangle(cornerRadius: 14)
+                    .stroke(item.rarity.color.opacity(0.4), lineWidth: 1)
+            )
+            .oledGlow(color: item.rarity.color, intensity: 0.6)
             
             VStack(alignment: .leading, spacing: 6) {
                 Text(item.name)
-                    .font(.subheadline)
+                    .font(.system(.subheadline, design: .rounded))
                     .fontWeight(.bold)
                     .foregroundColor(.white)
+                    .lineLimit(1)
                 
-                HStack {
+                HStack(spacing: 6) {
                     if let wear = item.wear {
                         Text(wear)
-                            .font(.caption)
+                            .font(.system(size: 11, weight: .semibold))
                             .foregroundColor(.secondary)
                     }
                     if let float = item.float {
                         Text("(\(String(format: "%.3f", float)))")
-                            .font(.caption)
-                            .foregroundColor(.secondary)
+                            .font(.system(size: 11))
+                            .foregroundColor(.secondary.opacity(0.8))
                     }
+                    
+                    TradeLockBadgeView(item: item)
                 }
                 
-                if let phase = item.phase {
-                    Text(phase)
-                        .font(.caption2.weight(.medium))
-                        .padding(.horizontal, 8)
-                        .padding(.vertical, 4)
-                        .background(item.rarity.color.opacity(0.15))
-                        .clipShape(Capsule())
-                        .foregroundColor(item.rarity.color)
+                // Mini stickers
+                if !item.stickers.isEmpty {
+                    HStack(spacing: 4) {
+                        ForEach(item.stickers.prefix(4), id: \.self) { sticker in
+                            Text(sticker.name.prefix(3).uppercased())
+                                .font(.system(size: 7, weight: .black))
+                                .foregroundColor(.black)
+                                .padding(.horizontal, 4)
+                                .padding(.vertical, 2)
+                                .background(Color(hex: "00F0FF"))
+                                .cornerRadius(3)
+                        }
+                    }
                 }
             }
             
-            Spacer(minLength: 0)
+            Spacer(minLength: 4)
             
             VStack(alignment: .trailing, spacing: 4) {
-                Text(userSettings.formattedPrice(item.lastPrice))
-                    .font(.subheadline)
-                    .fontWeight(.semibold)
+                let price = priceService.getPrice(for: item)
+                let displayPrice = userSettings.showNetValue
+                    ? priceService.getNetPrice(for: item, marketplace: userSettings.preferredMarketplace)
+                    : price
+                
+                Text(userSettings.formattedPrice(displayPrice))
+                    .font(.system(.subheadline, design: .rounded))
+                    .fontWeight(.bold)
                     .foregroundColor(.white)
                 
                 Text(item.rarity.rawValue)
-                    .font(.caption2)
+                    .font(.system(size: 9, weight: .semibold))
                     .foregroundColor(item.rarity.color)
             }
         }
-        .padding()
-        .background(RoundedRectangle(cornerRadius: 16).fill(Color.white.opacity(0.02)))
+        .padding(12)
+        .background(
+            RoundedRectangle(cornerRadius: 18)
+                .fill(Color.white.opacity(0.03))
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 18)
+                .stroke(Color.white.opacity(0.06), lineWidth: 0.5)
+        )
     }
 }
 

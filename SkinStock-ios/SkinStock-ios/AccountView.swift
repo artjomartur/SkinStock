@@ -90,6 +90,41 @@ struct AccountView: View {
                 .listRowBackground(Color.white.opacity(0.05))
                 
                 Section {
+                    NavigationLink {
+                        WatchlistView()
+                    } label: {
+                        Label("Beobachtungsliste (Watchlist)", systemImage: "eye.fill")
+                    }
+                    
+                    NavigationLink {
+                        AchievementsListView()
+                    } label: {
+                        Label("Erfolge (Achievements)", systemImage: "crown.fill")
+                    }
+                    
+                    NavigationLink {
+                        CollectionsView()
+                    } label: {
+                        Label("Sammlungen (Collections)", systemImage: "shippingbox.fill")
+                    }
+                    
+                    NavigationLink {
+                        TradeUpCalculatorView()
+                    } label: {
+                        Label("Trade-Up Rechner", systemImage: "flask.fill")
+                    }
+                    
+                    NavigationLink {
+                        WhatIfView()
+                    } label: {
+                        Label("Was-wäre-wenn Rechner", systemImage: "clock.arrow.circlepath")
+                    }
+                } header: {
+                    Text("Investment Tools")
+                }
+                .listRowBackground(Color.white.opacity(0.05))
+                
+                Section {
                     Button(role: .destructive) {
                         withAnimation {
                             appState.changeStatus(to: .onboarding)

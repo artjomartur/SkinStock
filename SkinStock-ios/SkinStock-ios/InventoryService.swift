@@ -8,12 +8,16 @@ class InventoryService: ObservableObject {
     @Published var inventory: [CS2Item] = []
     
     private let cacheKey = "cached_inventory_items"
+    private let firstSeenKey = "item_first_seen_dates"
+    
+    /// Gespeicherte "erstmals gesehen"-Daten für Trade-Lock-Berechnung
+    private var firstSeenDates: [String: Date] = [:]
     
     init() {
+        loadFirstSeenDates()
         loadCachedInventory()
     }
     
-    /// Lädt gecachte Items sofort beim Start
     private func loadCachedInventory() {
         if let data = UserDefaults.standard.data(forKey: cacheKey),
            let cached = try? JSONDecoder().decode([CS2Item].self, from: data) {
@@ -21,10 +25,22 @@ class InventoryService: ObservableObject {
         }
     }
     
-    /// Speichert die Items lokal
     private func saveInventoryToCache() {
         if let data = try? JSONEncoder().encode(inventory) {
             UserDefaults.standard.set(data, forKey: cacheKey)
+        }
+    }
+    
+    private func loadFirstSeenDates() {
+        if let data = UserDefaults.standard.data(forKey: firstSeenKey),
+           let dates = try? JSONDecoder().decode([String: Date].self, from: data) {
+            self.firstSeenDates = dates
+        }
+    }
+    
+    private func saveFirstSeenDates() {
+        if let data = try? JSONEncoder().encode(firstSeenDates) {
+            UserDefaults.standard.set(data, forKey: firstSeenKey)
         }
     }
     
@@ -33,7 +49,6 @@ class InventoryService: ObservableObject {
         self.error = nil
         
         do {
-            // Offizieller, öffentlicher Steam Endpoint für Inventare
             let steamURL = URL(string: "https://steamcommunity.com/inventory/\(steamId)/730/2?l=english&count=5000")!
             let (data, response) = try await URLSession.shared.data(from: steamURL)
             
@@ -52,6 +67,7 @@ class InventoryService: ObservableObject {
             
             self.inventory = items
             self.saveInventoryToCache()
+            self.saveFirstSeenDates()
             
         } catch {
             self.error = error.localizedDescription
@@ -64,11 +80,9 @@ class InventoryService: ObservableObject {
         guard let json = try JSONSerialization.jsonObject(with: data, options: []) as? [String: Any],
               let assets = json["assets"] as? [[String: Any]],
               let descriptions = json["descriptions"] as? [[String: Any]] else {
-            // Falls das Inventar leer ist, hat JSON keine "assets" Node.
             return []
         }
         
-        // Map für schnellen Zugriff auf Descriptions
         var descMap: [String: [String: Any]] = [:]
         for desc in descriptions {
             let classid = String(describing: desc["classid"] ?? "")
@@ -77,25 +91,24 @@ class InventoryService: ObservableObject {
         }
         
         var parsedItems: [CS2Item] = []
-        var seenInstanceIds: Set<String> = [] // Damit wir keine doppelten Asset-Logiken haben (wobei assetid unique ist)
+        var seenAssetIds: Set<String> = []
         
         for asset in assets {
             let assetid = String(describing: asset["assetid"] ?? "")
             let classid = String(describing: asset["classid"] ?? "")
             let instanceid = String(describing: asset["instanceid"] ?? "")
             
-            guard !seenInstanceIds.contains(assetid) else { continue }
+            guard !seenAssetIds.contains(assetid) else { continue }
             
             if let desc = descMap["\(classid)_\(instanceid)"] {
                 let hashName = (desc["market_hash_name"] as? String) ?? (desc["market_name"] as? String) ?? (desc["name"] as? String) ?? "Unknown"
                 
-                seenInstanceIds.insert(assetid)
+                seenAssetIds.insert(assetid)
                 
                 let marketableFlag = desc["marketable"] as? Int ?? 0
                 let marketable = (marketableFlag == 1)
-                
-                // Wir filtern untauschbare/unverkaufbare Default-Waffen (Medaillen etc. bleiben, wenn man will, aber meistens tradable == 1)
-                // Default CS2 items are not marketable and not tradable.
+                let tradableFlag = desc["tradable"] as? Int ?? 0
+                let tradable = (tradableFlag == 1)
                 
                 let name = desc["name"] as? String ?? "Unknown Item"
                 
@@ -111,6 +124,9 @@ class InventoryService: ObservableObject {
                             else if color == "d32ce6" { rarity = .classified }
                             else if color == "8847ff" { rarity = .restricted }
                             else if color == "e4ae39" { rarity = .contraband }
+                            else if color == "4b69ff" { rarity = .milSpec }
+                            else if color == "5e98d9" { rarity = .industrial }
+                            else if color == "b0c3d9" { rarity = .consumer }
                         }
                         if category == "Exterior", let localizedTag = tag["localized_tag_name"] as? String {
                             wear = localizedTag
@@ -121,7 +137,7 @@ class InventoryService: ObservableObject {
                     }
                 }
                 
-                // Messer/Handschuhe Kategorie Fix
+                // Messer/Handschuhe Fix
                 if hashName.contains("★") {
                     if hashName.contains("Gloves") || hashName.contains("Hand Wraps") || hashName.contains("Bloodhound") {
                         skinCategory = "Gloves"
@@ -130,10 +146,41 @@ class InventoryService: ObservableObject {
                     }
                 }
                 
+                // Sticker extrahieren
+                var stickers: [StickerInfo] = []
+                if let descArray = desc["descriptions"] as? [[String: Any]] {
+                    for descEntry in descArray {
+                        if let htmlValue = descEntry["value"] as? String,
+                           htmlValue.contains("sticker_info") {
+                            // Parse Sticker-Namen aus HTML
+                            stickers = parseStickerHTML(htmlValue)
+                        }
+                    }
+                }
+                
+                // Collection extrahieren
+                var collectionName: String? = nil
+                if let tags = desc["tags"] as? [[String: Any]] {
+                    for tag in tags {
+                        let category = tag["category"] as? String ?? ""
+                        if category == "ItemSet", let localizedTag = tag["localized_tag_name"] as? String {
+                            collectionName = localizedTag
+                        }
+                    }
+                }
+                
+                // Bild-URL
                 var itemImageUrl: URL? = nil
                 if let iconUrlHash = desc["icon_url"] as? String {
                     itemImageUrl = URL(string: "https://community.cloudflare.steamstatic.com/economy/image/\(iconUrlHash)/360fx360f")
                 }
+                
+                // Trade-Lock: Erstmals gesehen tracken
+                let assetKey = "\(classid)_\(instanceid)_\(assetid)"
+                if firstSeenDates[assetKey] == nil {
+                    firstSeenDates[assetKey] = Date()
+                }
+                let firstSeen = firstSeenDates[assetKey]
                 
                 let item = CS2Item(
                     id: UUID(),
@@ -142,20 +189,55 @@ class InventoryService: ObservableObject {
                     instanceid: instanceid,
                     name: name,
                     hashName: hashName,
-                    float: nil, // Wird von Steam API nicht geliefert
-                    phase: nil, // Wird von Steam API nicht geliefert
+                    float: nil,
+                    phase: nil,
                     wear: wear,
-                    lastPrice: 0.0, // Wird später vom PriceService injiziert
+                    lastPrice: 0.0,
                     currency: "EUR",
                     skinCategory: skinCategory,
                     rarity: rarity,
                     imageUrl: itemImageUrl,
-                    marketable: marketable
+                    marketable: marketable,
+                    tradable: tradable,
+                    stickers: stickers,
+                    firstSeenDate: firstSeen,
+                    collectionName: collectionName
                 )
                 
                 parsedItems.append(item)
             }
         }
         return parsedItems
+    }
+    
+    /// Extrahiert Sticker-Namen aus dem Steam HTML-Snippet
+    private func parseStickerHTML(_ html: String) -> [StickerInfo] {
+        var stickers: [StickerInfo] = []
+        
+        // Steam gibt Sticker-Info als HTML mit img-Tags
+        // Format: <img ... src="..."> Sticker: Name1, Name2, ...
+        // Oder im neueren Format einzelne Sticker-Einträge
+        
+        let namePattern = "Sticker: (.+?)(?:</|$)"
+        if let range = html.range(of: namePattern, options: .regularExpression) {
+            let match = String(html[range])
+            let cleaned = match
+                .replacingOccurrences(of: "Sticker: ", with: "")
+                .replacingOccurrences(of: "</", with: "")
+            
+            let names = cleaned.components(separatedBy: ", ")
+            for (index, name) in names.enumerated() {
+                let trimmed = name.trimmingCharacters(in: .whitespacesAndNewlines)
+                if !trimmed.isEmpty {
+                    stickers.append(StickerInfo(
+                        name: trimmed,
+                        imageUrl: nil,
+                        slot: index
+                    ))
+                }
+            }
+        }
+        
+        return stickers
     }
 }

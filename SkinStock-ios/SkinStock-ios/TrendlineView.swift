@@ -9,6 +9,22 @@ struct TrendlineView: View {
     
     @State private var selectedDate: Date?
     
+    var showSMA: Bool = false
+    var smaPeriod: Int = 7
+    
+    // Berechnet die SMA-Linie
+    private var smaData: [PriceHistoryPoint] {
+        var smaPoints: [PriceHistoryPoint] = []
+        for i in 0..<data.count {
+            let start = max(0, i - smaPeriod + 1)
+            let subset = data[start...i]
+            let avg = subset.reduce(0.0) { $0 + $1.price } / Double(subset.count)
+            // Kopiere ID aus data für Stabilität
+            smaPoints.append(PriceHistoryPoint(date: data[i].date, price: avg))
+        }
+        return smaPoints
+    }
+    
     // Gradient Colors
     private var isProfitable: Bool {
         guard let first = data.first, let last = data.last else { return true }
@@ -16,13 +32,13 @@ struct TrendlineView: View {
     }
     
     private var chartColor: Color {
-        isProfitable ? Color(hex: "00FF77") : Color.red
+        isProfitable ? Color(hex: "00FF77") : Color(hex: "FF4D6A")
     }
     
     private var gradient: LinearGradient {
         LinearGradient(
             gradient: Gradient(colors: [
-                chartColor.opacity(0.3),
+                chartColor.opacity(0.25),
                 chartColor.opacity(0.0)
             ]),
             startPoint: .top,
@@ -37,21 +53,17 @@ struct TrendlineView: View {
     }
     
     var body: some View {
-        if data.isEmpty {
+        if data.count < 2 {
             Text("Keine Daten")
                 .foregroundColor(.secondary)
+                .font(.caption)
         } else {
             Chart {
+                // Startlinie (dezente gestrichelte Linie, ohne Text-Annotation)
                 if showIndicator, let firstPrice = data.first?.price {
                     RuleMark(y: .value("Start", firstPrice))
-                        .lineStyle(StrokeStyle(lineWidth: 1, dash: [5, 5]))
-                        .foregroundStyle(Color.white.opacity(0.3))
-                        .annotation(position: .top, alignment: .leading) {
-                            Text("Start (\(String(format: "%.2f", firstPrice)))")
-                                .font(.system(size: 8))
-                                .foregroundColor(Color.white.opacity(0.5))
-                                .padding(.leading, 2)
-                        }
+                        .lineStyle(StrokeStyle(lineWidth: 0.5, dash: [4, 4]))
+                        .foregroundStyle(Color.white.opacity(0.15))
                 }
                 
                 ForEach(data) { point in
@@ -59,46 +71,73 @@ struct TrendlineView: View {
                         x: .value("Datum", point.date),
                         y: .value("Preis", point.price)
                     )
-                    .interpolationMethod(.monotone)
+                    .interpolationMethod(.catmullRom)
                     .lineStyle(StrokeStyle(lineWidth: lineWidth, lineCap: .round, lineJoin: .round))
                     .foregroundStyle(chartColor)
                     
                     AreaMark(
                         x: .value("Datum", point.date),
-                        yStart: .value("Min", (data.map { $0.price }.min() ?? 0) * 0.95),
+                        yStart: .value("Min", (data.map { $0.price }.min() ?? 0)),
                         yEnd: .value("Preis", point.price)
                     )
-                    .interpolationMethod(.monotone)
+                    .interpolationMethod(.catmullRom)
                     .foregroundStyle(gradient)
+                }
+                
+                // SMA Trendlinie (Cyan gestrichelt)
+                if showSMA {
+                    ForEach(smaData) { point in
+                        LineMark(
+                            x: .value("Datum", point.date),
+                            y: .value("Preis", point.price)
+                        )
+                        .interpolationMethod(.catmullRom)
+                        .lineStyle(StrokeStyle(lineWidth: 1.5, dash: [4, 4]))
+                        .foregroundStyle(Color(hex: "00F0FF"))
+                    }
                 }
                 
                 if showIndicator, let selected = selectedPoint {
                     RuleMark(x: .value("Auswahl", selected.date))
-                        .lineStyle(StrokeStyle(lineWidth: 1, dash: [5, 5]))
-                        .foregroundStyle(Color.white.opacity(0.5))
+                        .lineStyle(StrokeStyle(lineWidth: 1, dash: [3, 3]))
+                        .foregroundStyle(Color.white.opacity(0.4))
                         .annotation(position: .top, overflowResolution: .init(x: .fit(to: .chart), y: .fit(to: .chart))) {
                             VStack(spacing: 2) {
                                 Text(selected.price, format: .currency(code: "EUR"))
-                                    .font(.system(size: 12, weight: .bold))
+                                    .font(.system(size: 11, weight: .bold, design: .rounded))
                                     .foregroundColor(.white)
                                 Text(selected.date, style: .date)
-                                    .font(.system(size: 9))
+                                    .font(.system(size: 8))
                                     .foregroundColor(.secondary)
                             }
-                            .padding(6)
-                            .background(Color.black.opacity(0.8))
-                            .cornerRadius(6)
-                            .overlay(RoundedRectangle(cornerRadius: 6).stroke(Color.white.opacity(0.2), lineWidth: 1))
+                            .padding(.horizontal, 8)
+                            .padding(.vertical, 5)
+                            .background(.ultraThinMaterial)
+                            .cornerRadius(8)
+                            .overlay(RoundedRectangle(cornerRadius: 8).stroke(Color.white.opacity(0.15), lineWidth: 0.5))
                         }
+                    
+                    PointMark(
+                        x: .value("Auswahl", selected.date),
+                        y: .value("Preis", selected.price)
+                    )
+                    .symbolSize(40)
+                    .foregroundStyle(chartColor)
+                    .annotation(position: .bottom) {
+                        Circle()
+                            .fill(chartColor)
+                            .frame(width: 6, height: 6)
+                            .shadow(color: chartColor, radius: 4)
+                    }
                 }
             }
             .chartXAxis(showAxes ? .visible : .hidden)
             .chartYAxis(showAxes ? .visible : .hidden)
             .chartYScale(domain: .automatic(includesZero: false))
             .chartXSelection(value: showIndicator ? $selectedDate : .constant(nil))
+            .clipShape(RoundedRectangle(cornerRadius: 4))
             .onChange(of: selectedPoint?.id) { oldValue, newValue in
                 if newValue != nil && oldValue != newValue {
-                    // Sehr feines Vibrationsfeedback
                     UISelectionFeedbackGenerator().selectionChanged()
                 }
             }
