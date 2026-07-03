@@ -7,6 +7,8 @@ enum SortOption: String, CaseIterable {
     case lowestValue = "Niedrigster Wert"
     case nameAZ = "Name (A-Z)"
     case nameZA = "Name (Z-A)"
+    case floatAscending = "Niedrigster Float (FN zuerst)"
+    case floatDescending = "Höchster Float (BS zuerst)"
 }
 
 @MainActor
@@ -83,6 +85,10 @@ class InventoryViewModel: ObservableObject {
             result.sort { $0.name < $1.name }
         case .nameZA:
             result.sort { $0.name > $1.name }
+        case .floatAscending:
+            result.sort { ($0.float ?? 1.0) < ($1.float ?? 1.0) }
+        case .floatDescending:
+            result.sort { ($0.float ?? 0.0) > ($1.float ?? 0.0) }
         }
         
         self.displayedItems = result

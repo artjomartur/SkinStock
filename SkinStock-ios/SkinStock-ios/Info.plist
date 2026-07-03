@@ -12,14 +12,6 @@
 				<string>cs2app</string>
 			</array>
 		</dict>
-		<dict>
-			<key>CFBundleTypeRole</key>
-			<string>Editor</string>
-			<key>CFBundleURLSchemes</key>
-			<array>
-				<string>com.googleusercontent.apps.318819777231-51fpcfg8b5gepcdd13j71jr3qpna4bib</string>
-			</array>
-		</dict>
 	</array>
 </dict>
 </plist>

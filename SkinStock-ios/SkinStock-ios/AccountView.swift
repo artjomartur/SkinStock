@@ -64,6 +64,13 @@ struct AccountView: View {
                     }
                     .pickerStyle(.menu)
                     
+                    Picker("Design", selection: $userSettings.selectedTheme) {
+                        ForEach(ThemeType.allCases) { theme in
+                            Text(theme.rawValue).tag(theme)
+                        }
+                    }
+                    .pickerStyle(.menu)
+                    
                     Toggle("Netto-Wert anzeigen", isOn: $userSettings.showNetValue)
                     
                     if userSettings.showNetValue {
@@ -143,7 +150,6 @@ struct AccountView: View {
             .scrollContentBackground(.hidden)
             .background(Color.black.edgesIgnoringSafeArea(.all))
         }
-        .preferredColorScheme(.dark)
     }
 }
 

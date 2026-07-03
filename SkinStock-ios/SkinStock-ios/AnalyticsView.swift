@@ -214,7 +214,6 @@ struct AnalyticsView: View {
             .navigationTitle("Analyse")
             .background(Color.black.edgesIgnoringSafeArea(.all))
         }
-        .preferredColorScheme(.dark)
     }
     
     // MARK: - Liquiditäts-Barometer

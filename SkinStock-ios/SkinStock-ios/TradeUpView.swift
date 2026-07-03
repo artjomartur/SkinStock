@@ -180,7 +180,6 @@ struct TradeUpCalculatorView: View {
                 }
             }
         }
-        .preferredColorScheme(.dark)
     }
     
     private func runSimulatedTradeUp() {

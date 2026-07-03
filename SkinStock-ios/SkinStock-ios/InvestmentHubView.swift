@@ -40,6 +40,14 @@ struct InvestmentHubView: View {
                     } label: {
                         Label("Was-wäre-wenn Rechner", systemImage: "clock.arrow.circlepath")
                     }
+                    
+                    NavigationLink {
+                        PriceAlertsView()
+                            .environmentObject(userSettings)
+                            .environmentObject(priceService)
+                    } label: {
+                        Label("Preisalarme", systemImage: "bell.fill")
+                    }
                 } header: {
                     Text("Tools")
                 }
@@ -49,6 +57,5 @@ struct InvestmentHubView: View {
             .scrollContentBackground(.hidden)
             .background(Color.black.edgesIgnoringSafeArea(.all))
         }
-        .preferredColorScheme(.dark)
     }
 }

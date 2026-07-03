@@ -74,7 +74,6 @@ struct InventoryView: View {
                 viewModel.updateData(inventory: inventoryService.inventory, priceService: priceService)
             }
         }
-        .preferredColorScheme(.dark)
     }
 }
 

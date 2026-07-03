@@ -155,6 +155,27 @@ class PriceService: ObservableObject {
         // Positiver Spread = günstiger auf Skinport
         return ((steamPrice - skinportPrice) / steamPrice) * 100
     }
+    
+    func checkCustomPriceAlerts(userSettings: UserSettings, notificationService: NotificationService) {
+        for alert in userSettings.priceAlerts {
+            guard alert.isActive else { continue }
+            if let currentUSDPrice = priceMap[alert.hashName] {
+                if alert.isAbove && currentUSDPrice >= alert.targetPrice {
+                    notificationService.sendPriceAlert(
+                        title: "Preisalarm ausgelöst! 📈",
+                        body: "\(alert.hashName) ist über \(userSettings.formattedPrice(alert.targetPrice)) gestiegen!"
+                    )
+                    userSettings.toggleAlertActive(id: alert.id)
+                } else if !alert.isAbove && currentUSDPrice <= alert.targetPrice {
+                    notificationService.sendPriceAlert(
+                        title: "Preisalarm ausgelöst! 📉",
+                        body: "\(alert.hashName) ist unter \(userSettings.formattedPrice(alert.targetPrice)) gefallen!"
+                    )
+                    userSettings.toggleAlertActive(id: alert.id)
+                }
+            }
+        }
+    }
 }
 
 // MARK: - Helper Models

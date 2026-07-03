@@ -35,35 +35,39 @@ struct SkinStock_iosApp: App {
     
     var body: some Scene {
         WindowGroup {
-            switch appState.status {
-            case .onboarding:
-                OnboardingView(
-                    authManager: authManager,
-                    steamService: steamService
-                )
-                .environmentObject(appState)
-                
-            case .steamLogin:
-                SteamLoginView(steamService: steamService)
-                .environmentObject(appState)
-                
-            case .mainApp:
-                MainNavigationContainer()
+            Group {
+                switch appState.status {
+                case .onboarding:
+                    OnboardingView(
+                        authManager: authManager,
+                        steamService: steamService
+                    )
                     .environmentObject(appState)
-                    .environmentObject(authManager)
-                    .environmentObject(steamService)
                     .environmentObject(userSettings)
-                    .environmentObject(priceService)
-                    .environmentObject(priceHistoryStore)
-                    .environmentObject(inventoryService)
-                    .environmentObject(inventoryViewModel)
-                    .environmentObject(watchlistService)
-                    .environmentObject(achievementService)
-                    .environmentObject(notificationService)
-                    .onAppear {
-                        notificationService.requestPermission()
-                    }
+                    
+                case .steamLogin:
+                    SteamLoginView(steamService: steamService)
+                    .environmentObject(appState)
+                    
+                case .mainApp:
+                    MainNavigationContainer()
+                        .environmentObject(appState)
+                        .environmentObject(authManager)
+                        .environmentObject(steamService)
+                        .environmentObject(userSettings)
+                        .environmentObject(priceService)
+                        .environmentObject(priceHistoryStore)
+                        .environmentObject(inventoryService)
+                        .environmentObject(inventoryViewModel)
+                        .environmentObject(watchlistService)
+                        .environmentObject(achievementService)
+                        .environmentObject(notificationService)
+                        .onAppear {
+                            notificationService.requestPermission()
+                        }
+                }
             }
+            .preferredColorScheme(userSettings.selectedTheme.colorScheme)
         }
     }
 }

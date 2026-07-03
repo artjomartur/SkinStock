@@ -156,7 +156,6 @@ struct WhatIfView: View {
             .navigationTitle("What-If Rechner")
             .background(Color.black.edgesIgnoringSafeArea(.all))
         }
-        .preferredColorScheme(.dark)
     }
     
     private func runSimulation() {

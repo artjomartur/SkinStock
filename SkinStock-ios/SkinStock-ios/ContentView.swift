@@ -13,6 +13,7 @@ struct ContentView: View {
     @EnvironmentObject var priceService: PriceService
     @EnvironmentObject var priceHistoryStore: PriceHistoryStore
     @EnvironmentObject var userSettings: UserSettings
+    @EnvironmentObject var notificationService: NotificationService
     @State private var selectedTimeframe: Timeframe = .month
     
     var body: some View {
@@ -167,6 +168,26 @@ struct ContentView: View {
                 .padding(.horizontal, 20)
             }
             .navigationTitle("Portfolio")
+            .toolbar {
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    Menu {
+                        if let pdfURL = ExportService.generatePDF(inventory: inventoryService.inventory, priceService: priceService, userSettings: userSettings) {
+                            ShareLink(item: pdfURL) {
+                                Label("PDF Report exportieren", systemImage: "doc.text.fill")
+                            }
+                        }
+                        
+                        if let csvURL = ExportService.generateCSV(inventory: inventoryService.inventory, priceService: priceService, userSettings: userSettings) {
+                            ShareLink(item: csvURL) {
+                                Label("CSV Tabelle exportieren", systemImage: "tablecells.fill")
+                            }
+                        }
+                    } label: {
+                        Image(systemName: "square.and.arrow.up")
+                            .foregroundColor(Color(hex: "00F0FF"))
+                    }
+                }
+            }
             .background(Color.black.edgesIgnoringSafeArea(.all))
         }
         .onAppear {
@@ -176,6 +197,8 @@ struct ContentView: View {
                     try? await priceService.fetchPrices()
                     // Preise in die Historie schreiben
                     priceHistoryStore.recordAllPrices(priceMap: priceService.priceMap)
+                    // Preisalarme prüfen
+                    priceService.checkCustomPriceAlerts(userSettings: userSettings, notificationService: notificationService)
                 }
             }
         }

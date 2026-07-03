@@ -30,14 +30,51 @@ enum CurrencyType: String, CaseIterable, Identifiable, Codable {
     }
 }
 
+struct PriceAlert: Codable, Identifiable, Hashable {
+    var id: UUID
+    var hashName: String
+    var targetPrice: Double // Basis in USD
+    var isAbove: Bool
+    var isActive: Bool
+}
+
+enum ThemeType: String, CaseIterable, Identifiable, Codable {
+    case system = "System"
+    case light = "Hell"
+    case dark = "Dunkel"
+    
+    var id: String { self.rawValue }
+    
+    var colorScheme: ColorScheme? {
+        switch self {
+        case .system: return nil
+        case .light: return .light
+        case .dark: return .dark
+        }
+    }
+}
+
 class UserSettings: ObservableObject {
     @Published var selectedCurrency: CurrencyType = .eur
     @Published var showAbsoluteValues: Bool = false
     @Published var showNetValue: Bool = false
     @Published var preferredMarketplace: Marketplace = .skinport
+    @Published var priceAlerts: [PriceAlert] = []
+    @Published var selectedTheme: ThemeType = .system
+    
     private var cancellables = Set<AnyCancellable>()
     
     init() {
+        if let savedTheme = UserDefaults.standard.string(forKey: "selectedTheme"),
+           let theme = ThemeType(rawValue: savedTheme) {
+            self.selectedTheme = theme
+        }
+        
+        if let alertsData = UserDefaults.standard.data(forKey: "priceAlerts"),
+           let decoded = try? JSONDecoder().decode([PriceAlert].self, from: alertsData) {
+            self.priceAlerts = decoded
+        }
+        
         if let savedString = UserDefaults.standard.string(forKey: "selectedCurrency"),
            let type = CurrencyType(rawValue: savedString) {
             self.selectedCurrency = type
@@ -49,6 +86,13 @@ class UserSettings: ObservableObject {
             self.preferredMarketplace = mp
         }
         
+        $selectedTheme
+            .dropFirst()
+            .sink { newValue in
+                UserDefaults.standard.set(newValue.rawValue, forKey: "selectedTheme")
+            }
+            .store(in: &cancellables)
+            
         $selectedCurrency
             .dropFirst()
             .sink { newValue in
@@ -118,6 +162,30 @@ class UserSettings: ObservableObject {
         case .pln: return Locale(identifier: "pl_PL")
         case .cad: return Locale(identifier: "en_CA")
         case .uah: return Locale(identifier: "uk_UA")
+        }
+    }
+    
+    func saveAlerts() {
+        if let encoded = try? JSONEncoder().encode(priceAlerts) {
+            UserDefaults.standard.set(encoded, forKey: "priceAlerts")
+        }
+    }
+    
+    func addAlert(hashName: String, targetPriceUSD: Double, isAbove: Bool) {
+        let alert = PriceAlert(id: UUID(), hashName: hashName, targetPrice: targetPriceUSD, isAbove: isAbove, isActive: true)
+        priceAlerts.append(alert)
+        saveAlerts()
+    }
+    
+    func deleteAlert(at offsets: IndexSet) {
+        priceAlerts.remove(atOffsets: offsets)
+        saveAlerts()
+    }
+    
+    func toggleAlertActive(id: UUID) {
+        if let index = priceAlerts.firstIndex(where: { $0.id == id }) {
+            priceAlerts[index].isActive.toggle()
+            saveAlerts()
         }
     }
 }

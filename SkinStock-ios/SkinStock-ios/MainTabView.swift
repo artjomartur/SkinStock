@@ -29,13 +29,13 @@ struct MainTabView: View {
     @State private var showAchievements: Bool = false
     @State private var showCollections: Bool = false
     @State private var showTradeUp: Bool = false
+    @State private var showWhatIf: Bool = false
     
     @EnvironmentObject var inventoryService: InventoryService
     @EnvironmentObject var steamService: SteamService
     @EnvironmentObject var priceService: PriceService
     @EnvironmentObject var watchlistService: WatchlistService
     @EnvironmentObject var achievementService: AchievementService
-    
     @EnvironmentObject var userSettings: UserSettings
     
     init() {
@@ -45,8 +45,8 @@ struct MainTabView: View {
     var body: some View {
         ZStack(alignment: .bottom) {
             
-            // 1. Dynamic Animated Liquid Glass Backdrop
-            LiquidGlassBackdrop()
+            // 1. Pure OLED Black Background (completely black as requested)
+            Color.black.ignoresSafeArea()
             
             // 2. Main content views
             mainTabViewContent
@@ -91,6 +91,11 @@ struct MainTabView: View {
                 .environmentObject(inventoryService)
                 .environmentObject(priceService)
                 .environmentObject(userSettings)
+        }
+        .sheet(isPresented: $showWhatIf) {
+            WhatIfView()
+                .environmentObject(userSettings)
+                .environmentObject(priceService)
         }
         .onAppear {
             if let steamId = steamService.profile?.steamId64 {
@@ -143,6 +148,11 @@ struct MainTabView: View {
                     
                     actionHubButton(title: "Trade-Up Rechner", icon: "flask.fill", desc: "Simuliere rentable Aufwertungen") {
                         showTradeUp = true
+                        showActionHub = false
+                    }
+                    
+                    actionHubButton(title: "Was-wäre-wenn Rechner", icon: "clock.arrow.circlepath", desc: "Simuliere historische ROI") {
+                        showWhatIf = true
                         showActionHub = false
                     }
                 }
@@ -221,11 +231,18 @@ struct MainTabView: View {
     }
     
     private var customTabBar: some View {
-        HStack(spacing: 12) {
+        ZStack {
+            // Centered capsule tab bar (pill)
             tabsRow
-            fabButton
+                .frame(maxWidth: 300)
+            
+            // Separated, round floating button on the far right
+            HStack {
+                Spacer()
+                fabButton
+            }
+            .padding(.trailing, 20)
         }
-        .padding(.horizontal, 16)
         .padding(.bottom, 10)
     }
     
@@ -248,7 +265,6 @@ struct MainTabView: View {
         }
         .padding(.horizontal, 8)
         .frame(height: 60)
-        // Verwende unseren neuen Liquid Glass Modifier!
         .glassEffect(cornerRadius: 24)
     }
     
@@ -266,7 +282,7 @@ struct MainTabView: View {
             }
             .frame(maxWidth: .infinity)
             .padding(.vertical, 8)
-            .foregroundStyle(selectedTab == tab ? Color.white : Color.white.opacity(0.4))
+            .foregroundStyle(selectedTab == tab ? Color(hex: "00F0FF") : Color.white.opacity(0.4))
         }
         .buttonStyle(.plain)
         .background(tabBackground(for: tab))

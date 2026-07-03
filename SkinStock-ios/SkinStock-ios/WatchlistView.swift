@@ -78,7 +78,6 @@ struct WatchlistView: View {
             .navigationTitle("Watchlist")
             .background(Color.black.edgesIgnoringSafeArea(.all))
         }
-        .preferredColorScheme(.dark)
     }
     
     // MARK: - Search
