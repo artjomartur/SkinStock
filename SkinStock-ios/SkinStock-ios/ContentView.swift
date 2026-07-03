@@ -42,9 +42,9 @@ struct ContentView: View {
                                 }
                             }
                             
-                            let grossValue = priceService.calculateTotalValue(inventory: inventoryService.inventory)
+                            let grossValue = priceService.calculateTotalValue(inventory: inventoryService.inventory, includeSticker: userSettings.includeStickerValue)
                             let displayValue = userSettings.showNetValue
-                                ? priceService.calculateNetValue(inventory: inventoryService.inventory, marketplace: userSettings.preferredMarketplace)
+                                ? priceService.calculateNetValue(inventory: inventoryService.inventory, marketplace: userSettings.preferredMarketplace, includeSticker: userSettings.includeStickerValue)
                                 : grossValue
                             
                             Text(userSettings.formattedPrice(displayValue))
@@ -137,6 +137,14 @@ struct ContentView: View {
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .background(RoundedRectangle(cornerRadius: 16).fill(Color.primary.opacity(0.04)))
                     .overlay(RoundedRectangle(cornerRadius: 16).stroke(Color.primary.opacity(0.1), lineWidth: 1))
+                    
+                    // Goal Progress Bar
+                    if userSettings.targetValue > 0 {
+                        let totalVal = userSettings.showNetValue
+                            ? priceService.calculateNetValue(inventory: inventoryService.inventory, marketplace: userSettings.preferredMarketplace, includeSticker: userSettings.includeStickerValue)
+                            : priceService.calculateTotalValue(inventory: inventoryService.inventory, includeSticker: userSettings.includeStickerValue)
+                        GoalProgressView(currentValue: totalVal)
+                    }
                     
                     // Portfolio-Score
                     if !inventoryService.inventory.isEmpty {
@@ -286,9 +294,9 @@ struct SkinCardView: View {
             Spacer(minLength: 4)
             
             VStack(alignment: .trailing, spacing: 4) {
-                let price = priceService.getPrice(for: item)
+                let price = priceService.getPrice(for: item, includeSticker: userSettings.includeStickerValue)
                 let displayPrice = userSettings.showNetValue
-                    ? priceService.getNetPrice(for: item, marketplace: userSettings.preferredMarketplace)
+                    ? priceService.getNetPrice(for: item, marketplace: userSettings.preferredMarketplace, includeSticker: userSettings.includeStickerValue)
                     : price
                 
                 Text(userSettings.formattedPrice(displayPrice))
@@ -310,6 +318,72 @@ struct SkinCardView: View {
             RoundedRectangle(cornerRadius: 18)
                 .stroke(Color.primary.opacity(0.06), lineWidth: 0.5)
         )
+    }
+}
+
+struct GoalProgressView: View {
+    @EnvironmentObject var userSettings: UserSettings
+    let currentValue: Double
+    
+    var body: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            HStack {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("INVESTMENT-ZIEL")
+                        .font(.caption2.bold())
+                        .foregroundColor(.secondary)
+                        .tracking(1.5)
+                    
+                    Text(userSettings.targetName.isEmpty ? "Meilenstein" : userSettings.targetName)
+                        .font(.headline)
+                        .foregroundColor(.primary)
+                }
+                
+                Spacer()
+                
+                let percent = userSettings.targetValue > 0 ? min((currentValue / userSettings.targetValue) * 100, 100) : 0
+                Text(String(format: "%.1f%%", percent))
+                    .font(.system(.title3, design: .rounded))
+                    .fontWeight(.bold)
+                    .foregroundColor(percent >= 100 ? .green : Color(hex: "00F0FF"))
+            }
+            
+            // Progress bar
+            let progress = userSettings.targetValue > 0 ? min(currentValue / userSettings.targetValue, 1.0) : 0
+            GeometryReader { geo in
+                ZStack(alignment: .leading) {
+                    RoundedRectangle(cornerRadius: 4)
+                        .fill(Color.primary.opacity(0.1))
+                        .frame(height: 8)
+                    
+                    RoundedRectangle(cornerRadius: 4)
+                        .fill(
+                            LinearGradient(
+                                colors: progress >= 1.0 ? [.green, Color(hex: "00FF77")] : [Color(hex: "00F0FF"), Color(hex: "00FF77")],
+                                startPoint: .leading, endPoint: .trailing
+                            )
+                        )
+                        .frame(width: geo.size.width * CGFloat(progress), height: 8)
+                }
+            }
+            .frame(height: 8)
+            
+            HStack {
+                Text(userSettings.formattedPrice(currentValue))
+                    .font(.caption.bold())
+                    .foregroundColor(.secondary)
+                
+                Spacer()
+                
+                Text("Ziel: \(userSettings.formattedPrice(userSettings.targetValue))")
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+            }
+        }
+        .padding(16)
+        .background(RoundedRectangle(cornerRadius: 16).fill(Color.primary.opacity(0.04)))
+        .overlay(RoundedRectangle(cornerRadius: 16).stroke(Color.primary.opacity(0.08), lineWidth: 0.5))
+        .padding(.horizontal, 20)
     }
 }
 

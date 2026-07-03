@@ -5,6 +5,21 @@ struct AccountView: View {
     @EnvironmentObject var steamService: SteamService
     @EnvironmentObject var userSettings: UserSettings
     
+    private var targetValueBinding: Binding<String> {
+        Binding<String>(
+            get: {
+                userSettings.targetValue > 0 ? String(format: "%.0f", userSettings.targetValue) : ""
+            },
+            set: { newValue in
+                if let val = Double(newValue.replacingOccurrences(of: ",", with: ".")) {
+                    userSettings.targetValue = val
+                } else {
+                    userSettings.targetValue = 0.0
+                }
+            }
+        )
+    }
+    
     var body: some View {
         NavigationStack {
             List {
@@ -86,12 +101,35 @@ struct AccountView: View {
                         }
                         .pickerStyle(.menu)
                     }
+                    
+                    Toggle("Sticker-Wert einberechnen (10%)", isOn: $userSettings.includeStickerValue)
                 } header: {
                     Text("Einstellungen")
                 } footer: {
                     if userSettings.showNetValue {
                         Text("Der Netto-Wert zeigt dir, wie viel echtes Geld du nach Verkaufsgebühren auf dein Bankkonto überwiesen bekommst.")
                     }
+                }
+                
+                Section {
+                    HStack {
+                        Text("Name des Ziels")
+                        Spacer()
+                        TextField("z.B. Knives / Cases", text: $userSettings.targetName)
+                            .multilineTextAlignment(.trailing)
+                    }
+                    
+                    HStack {
+                        Text("Zielwert (\(userSettings.selectedCurrency.symbol))")
+                        Spacer()
+                        TextField("Inaktiv", text: targetValueBinding)
+                            .keyboardType(.decimalPad)
+                            .multilineTextAlignment(.trailing)
+                    }
+                } header: {
+                    Text("Investment-Ziel")
+                } footer: {
+                    Text("Definiere ein Meilenstein-Ziel für dein Gesamtportfolio. Ein Fortschrittsbalken wird auf der Übersicht angezeigt.")
                 }
                 
                 Section {

@@ -107,33 +107,48 @@ class PriceService: ObservableObject {
     
     // MARK: - Portfolio Berechnungen
     
-    func calculateTotalValue(inventory: [CS2Item]) -> Double {
-        return inventory.reduce(0) { $0 + getPrice(for: $1) }
+    func calculateTotalValue(inventory: [CS2Item], includeSticker: Bool = false) -> Double {
+        return inventory.reduce(0) { $0 + getPrice(for: $1, includeSticker: includeSticker) }
     }
     
     /// Berechnet den Netto-Liquidationswert nach Abzug der Plattform-Gebühren
-    func calculateNetValue(inventory: [CS2Item], marketplace: Marketplace) -> Double {
-        let gross = calculateTotalValue(inventory: inventory)
+    func calculateNetValue(inventory: [CS2Item], marketplace: Marketplace, includeSticker: Bool = false) -> Double {
+        let gross = calculateTotalValue(inventory: inventory, includeSticker: includeSticker)
         return gross * (1.0 - marketplace.feeRate)
     }
     
-    func getPrice(for item: CS2Item) -> Double {
-        return priceMap[item.hashName] ?? item.lastPrice
+    func calculateStickerOverpay(for item: CS2Item) -> Double {
+        var overpay = 0.0
+        for sticker in item.stickers {
+            let stickerHashName = "Sticker | \(sticker.name)"
+            if let stickerPrice = priceMap[stickerHashName] {
+                overpay += stickerPrice * 0.10
+            }
+        }
+        return overpay
+    }
+    
+    func getPrice(for item: CS2Item, includeSticker: Bool = false) -> Double {
+        let base = priceMap[item.hashName] ?? item.lastPrice
+        if includeSticker {
+            return base + calculateStickerOverpay(for: item)
+        }
+        return base
     }
     
     /// Netto-Preis eines einzelnen Items nach Gebühren
-    func getNetPrice(for item: CS2Item, marketplace: Marketplace) -> Double {
-        return getPrice(for: item) * (1.0 - marketplace.feeRate)
+    func getNetPrice(for item: CS2Item, marketplace: Marketplace, includeSticker: Bool = false) -> Double {
+        return getPrice(for: item, includeSticker: includeSticker) * (1.0 - marketplace.feeRate)
     }
     
-    func calculatePortfolioDistribution(inventory: [CS2Item]) -> [String: Double] {
+    func calculatePortfolioDistribution(inventory: [CS2Item], includeSticker: Bool = false) -> [String: Double] {
         var distribution: [String: Double] = [:]
-        let totalValue = calculateTotalValue(inventory: inventory)
+        let totalValue = calculateTotalValue(inventory: inventory, includeSticker: includeSticker)
         
         guard totalValue > 0 else { return [:] }
         
         for item in inventory {
-            let itemValue = getPrice(for: item)
+            let itemValue = getPrice(for: item, includeSticker: includeSticker)
             let category = item.skinCategory
             distribution[category, default: 0.0] += itemValue
         }

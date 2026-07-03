@@ -61,6 +61,9 @@ class UserSettings: ObservableObject {
     @Published var preferredMarketplace: Marketplace = .skinport
     @Published var priceAlerts: [PriceAlert] = []
     @Published var selectedTheme: ThemeType = .system
+    @Published var targetValue: Double = 0.0
+    @Published var targetName: String = ""
+    @Published var includeStickerValue: Bool = false
     
     private var cancellables = Set<AnyCancellable>()
     
@@ -85,6 +88,10 @@ class UserSettings: ObservableObject {
            let mp = Marketplace(rawValue: mpString) {
             self.preferredMarketplace = mp
         }
+        
+        self.targetValue = UserDefaults.standard.double(forKey: "targetValue")
+        self.targetName = UserDefaults.standard.string(forKey: "targetName") ?? ""
+        self.includeStickerValue = UserDefaults.standard.bool(forKey: "includeStickerValue")
         
         $selectedTheme
             .dropFirst()
@@ -118,6 +125,27 @@ class UserSettings: ObservableObject {
             .dropFirst()
             .sink { newValue in
                 UserDefaults.standard.set(newValue.rawValue, forKey: "preferredMarketplace")
+            }
+            .store(in: &cancellables)
+            
+        $targetValue
+            .dropFirst()
+            .sink { newValue in
+                UserDefaults.standard.set(newValue, forKey: "targetValue")
+            }
+            .store(in: &cancellables)
+            
+        $targetName
+            .dropFirst()
+            .sink { newValue in
+                UserDefaults.standard.set(newValue, forKey: "targetName")
+            }
+            .store(in: &cancellables)
+            
+        $includeStickerValue
+            .dropFirst()
+            .sink { newValue in
+                UserDefaults.standard.set(newValue, forKey: "includeStickerValue")
             }
             .store(in: &cancellables)
     }
