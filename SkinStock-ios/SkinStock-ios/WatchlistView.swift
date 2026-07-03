@@ -21,13 +21,13 @@ struct WatchlistView: View {
                         Image(systemName: "magnifyingglass")
                             .foregroundStyle(.secondary)
                         TextField("Skin suchen...", text: $searchText)
-                            .foregroundColor(.white)
+                            .foregroundColor(.primary)
                             .autocapitalization(.none)
                             .onSubmit { searchSkins() }
                     }
                     .padding(14)
-                    .background(RoundedRectangle(cornerRadius: 14).fill(Color.white.opacity(0.06)))
-                    .overlay(RoundedRectangle(cornerRadius: 14).stroke(Color.white.opacity(0.1), lineWidth: 0.5))
+                    .background(RoundedRectangle(cornerRadius: 14).fill(Color.primary.opacity(0.06)))
+                    .overlay(RoundedRectangle(cornerRadius: 14).stroke(Color.primary.opacity(0.1), lineWidth: 0.5))
                     .padding(.horizontal, 20)
                     
                     // Search Results
@@ -52,7 +52,7 @@ struct WatchlistView: View {
                                 .foregroundStyle(.secondary)
                             Text("Deine Watchlist ist leer")
                                 .font(.headline)
-                                .foregroundStyle(.white)
+                                .foregroundStyle(.primary)
                             Text("Suche nach Skins die du kaufen möchtest")
                                 .font(.subheadline)
                                 .foregroundStyle(.secondary)
@@ -76,7 +76,7 @@ struct WatchlistView: View {
                 .padding(.top, 10)
             }
             .navigationTitle("Watchlist")
-            .background(Color.black.edgesIgnoringSafeArea(.all))
+            .background(Color(uiColor: .systemBackground).edgesIgnoringSafeArea(.all))
         }
     }
     
@@ -86,15 +86,14 @@ struct WatchlistView: View {
         guard !searchText.isEmpty else { return }
         isSearching = true
         
-        // Filtere aus dem priceMap
-        let query = searchText.lowercased()
-        let matches = priceService.priceMap.filter { key, _ in
-            key.lowercased().contains(query)
+        // Suche in der priceMap des PriceServices
+        let matches = priceService.priceMap.filter {
+            $0.key.localizedCaseInsensitiveContains(searchText)
         }
         
-        searchResults = matches.prefix(15).map { key, price in
-            SkinportSearchItem(hashName: key, price: price)
-        }.sorted { $0.price > $1.price }
+        self.searchResults = matches.map {
+            SkinportSearchItem(hashName: $0.key, price: $0.value)
+        }.sorted { $0.hashName < $1.hashName }
         
         isSearching = false
     }
@@ -107,7 +106,7 @@ struct WatchlistView: View {
             VStack(alignment: .leading, spacing: 4) {
                 Text(result.hashName)
                     .font(.subheadline)
-                    .foregroundStyle(.white)
+                    .foregroundStyle(.primary)
                     .lineLimit(1)
                 Text(userSettings.formattedPrice(result.price))
                     .font(.caption)
@@ -156,14 +155,14 @@ struct WatchlistView: View {
                     .frame(width: 60, height: 30)
             } else {
                 RoundedRectangle(cornerRadius: 4)
-                    .fill(Color.white.opacity(0.05))
+                    .fill(Color.primary.opacity(0.05))
                     .frame(width: 60, height: 30)
             }
             
             VStack(alignment: .leading, spacing: 4) {
                 Text(item.name)
                     .font(.subheadline.bold())
-                    .foregroundStyle(.white)
+                    .foregroundStyle(.primary)
                     .lineLimit(1)
                 
                 if currentPrice > 0 {
@@ -182,7 +181,7 @@ struct WatchlistView: View {
                     .font(.caption2.bold())
                     .padding(.horizontal, 8)
                     .padding(.vertical, 4)
-                    .background(Capsule().fill(isBelow ? Color.green.opacity(0.2) : Color.white.opacity(0.05)))
+                    .background(Capsule().fill(isBelow ? Color.green.opacity(0.2) : Color.primary.opacity(0.05)))
                     .foregroundStyle(isBelow ? .green : .secondary)
             }
             
@@ -197,7 +196,7 @@ struct WatchlistView: View {
         }
         .padding(.horizontal, 20)
         .padding(.vertical, 10)
-        .background(RoundedRectangle(cornerRadius: 12).fill(Color.white.opacity(0.03)))
+        .background(RoundedRectangle(cornerRadius: 12).fill(Color.primary.opacity(0.03)))
         .padding(.horizontal, 12)
     }
 }

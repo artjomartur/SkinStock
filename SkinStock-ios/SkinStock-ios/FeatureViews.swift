@@ -225,14 +225,14 @@ struct PortfolioScoreView: View {
         VStack(alignment: .leading, spacing: 16) {
             Text("Portfolio Score")
                 .font(.headline)
-                .foregroundStyle(.white)
+                .foregroundStyle(.primary)
             
             HStack(spacing: 24) {
                 // Diversifikation
                 VStack(spacing: 8) {
                     ZStack {
                         Circle()
-                            .stroke(Color.white.opacity(0.1), lineWidth: 6)
+                            .stroke(Color.primary.opacity(0.1), lineWidth: 6)
                             .frame(width: 70, height: 70)
                         
                         Circle()
@@ -246,7 +246,7 @@ struct PortfolioScoreView: View {
                         
                         Text("\(diversificationScore)")
                             .font(.headline.bold())
-                            .foregroundStyle(.white)
+                            .foregroundStyle(.primary)
                     }
                     Text("Diversifikation")
                         .font(.caption2)
@@ -273,12 +273,12 @@ struct PortfolioScoreView: View {
                 VStack(spacing: 8) {
                     ZStack {
                         Circle()
-                            .fill(Color.white.opacity(0.05))
+                            .fill(Color.primary.opacity(0.05))
                             .frame(width: 70, height: 70)
                         
                         Text("\(inventoryService.inventory.count)")
                             .font(.title2.bold())
-                            .foregroundStyle(.white)
+                            .foregroundStyle(.primary)
                     }
                     Text("Items")
                         .font(.caption2)
@@ -288,8 +288,8 @@ struct PortfolioScoreView: View {
             .frame(maxWidth: .infinity)
         }
         .padding(20)
-        .background(RoundedRectangle(cornerRadius: 16).fill(Color.white.opacity(0.05)))
-        .overlay(RoundedRectangle(cornerRadius: 16).stroke(Color.white.opacity(0.1), lineWidth: 0.5))
+        .background(RoundedRectangle(cornerRadius: 16).fill(Color.primary.opacity(0.05)))
+        .overlay(RoundedRectangle(cornerRadius: 16).stroke(Color.primary.opacity(0.1), lineWidth: 0.5))
     }
 }
 

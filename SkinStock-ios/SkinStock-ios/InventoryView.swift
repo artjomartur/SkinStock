@@ -66,7 +66,7 @@ struct InventoryView: View {
                     }
                 }
             }
-            .background(Color.black.edgesIgnoringSafeArea(.all))
+            .background(Color(uiColor: .systemBackground).edgesIgnoringSafeArea(.all))
             .onReceive(inventoryService.$inventory) { newInventory in
                 viewModel.updateData(inventory: newInventory, priceService: priceService)
             }
@@ -87,7 +87,7 @@ struct InventoryGridItemView: View {
         VStack(alignment: .leading, spacing: 8) {
             ZStack(alignment: .topLeading) {
                 RoundedRectangle(cornerRadius: 14)
-                    .fill(Color.white.opacity(0.04))
+                    .fill(Color.primary.opacity(0.04))
                     .aspectRatio(1, contentMode: .fit)
                 
                 if let url = item.imageUrl {
@@ -140,7 +140,7 @@ struct InventoryGridItemView: View {
                     .fontWeight(.bold)
                     .lineLimit(2)
                     .multilineTextAlignment(.leading)
-                    .foregroundColor(.white)
+                    .foregroundColor(.primary)
                     .frame(height: 30, alignment: .topLeading)
                 
                 HStack {

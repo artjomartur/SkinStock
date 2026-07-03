@@ -32,7 +32,7 @@ struct AccountView: View {
                             VStack(alignment: .leading, spacing: 4) {
                                 Text(profile.name)
                                     .font(.headline)
-                                    .foregroundColor(.white)
+                                    .foregroundColor(.primary)
                                 
                                 Text("ID: \(profile.steamId64)")
                                     .font(.caption)
@@ -46,7 +46,7 @@ struct AccountView: View {
                             VStack(alignment: .leading, spacing: 4) {
                                 Text("Lade Profil...")
                                     .font(.headline)
-                                    .foregroundColor(.white)
+                                    .foregroundColor(.primary)
                             }
                         }
                     }
@@ -54,7 +54,6 @@ struct AccountView: View {
                 } header: {
                     Text("Dein Steam Profil")
                 }
-                .listRowBackground(Color.white.opacity(0.05))
                 
                 Section {
                     Picker("Währung", selection: $userSettings.selectedCurrency) {
@@ -94,7 +93,6 @@ struct AccountView: View {
                         Text("Der Netto-Wert zeigt dir, wie viel echtes Geld du nach Verkaufsgebühren auf dein Bankkonto überwiesen bekommst.")
                     }
                 }
-                .listRowBackground(Color.white.opacity(0.05))
                 
                 Section {
                     NavigationLink {
@@ -129,7 +127,6 @@ struct AccountView: View {
                 } header: {
                     Text("Investment Tools")
                 }
-                .listRowBackground(Color.white.opacity(0.05))
                 
                 Section {
                     Button(role: .destructive) {
@@ -144,11 +141,8 @@ struct AccountView: View {
                         }
                     }
                 }
-                .listRowBackground(Color.white.opacity(0.05))
             }
             .navigationTitle("Account")
-            .scrollContentBackground(.hidden)
-            .background(Color.black.edgesIgnoringSafeArea(.all))
         }
     }
 }

@@ -10,7 +10,7 @@ struct InvestmentHubView: View {
     var body: some View {
         NavigationStack {
             List {
-                Section {
+                Section(header: Text("Tools")) {
                     NavigationLink {
                         WatchlistView()
                     } label: {
@@ -48,14 +48,9 @@ struct InvestmentHubView: View {
                     } label: {
                         Label("Preisalarme", systemImage: "bell.fill")
                     }
-                } header: {
-                    Text("Tools")
                 }
-                .listRowBackground(Color.white.opacity(0.05))
             }
             .navigationTitle("SkinStock Hub")
-            .scrollContentBackground(.hidden)
-            .background(Color.black.edgesIgnoringSafeArea(.all))
         }
     }
 }

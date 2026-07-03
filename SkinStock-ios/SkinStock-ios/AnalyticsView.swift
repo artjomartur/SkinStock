@@ -104,7 +104,7 @@ struct AnalyticsView: View {
                         VStack(alignment: .leading, spacing: 8) {
                             Text("Portfolio Aufteilung")
                                 .font(.headline)
-                                .foregroundColor(.white)
+                                .foregroundColor(.primary)
                             Text("Nach Seltenheit (Wert)")
                                 .font(.subheadline)
                                 .foregroundColor(.secondary)
@@ -137,18 +137,18 @@ struct AnalyticsView: View {
                                             .frame(width: 10, height: 10)
                                         Text(data.rarity.rawValue)
                                             .font(.subheadline)
-                                            .foregroundColor(.white)
+                                            .foregroundColor(.primary)
                                         Spacer()
                                         Text(userSettings.formattedPrice(data.value))
                                             .font(.subheadline.bold())
-                                            .foregroundColor(.white)
+                                            .foregroundColor(.primary)
                                     }
                                 }
                             }
                         }
                         .padding()
-                        .background(RoundedRectangle(cornerRadius: 16).fill(Color.white.opacity(0.05)))
-                        .overlay(RoundedRectangle(cornerRadius: 16).stroke(Color.white.opacity(0.1), lineWidth: 1))
+                        .background(RoundedRectangle(cornerRadius: 16).fill(Color.primary.opacity(0.05)))
+                        .overlay(RoundedRectangle(cornerRadius: 16).stroke(Color.primary.opacity(0.1), lineWidth: 1))
                         
                         // Performance Section
                         VStack(alignment: .leading, spacing: 16) {
@@ -156,7 +156,7 @@ struct AnalyticsView: View {
                                 VStack(alignment: .leading, spacing: 4) {
                                     Text("Performance")
                                         .font(.headline)
-                                        .foregroundColor(.white)
+                                        .foregroundColor(.primary)
                                     Text("Top Gewinner & Verlierer")
                                         .font(.subheadline)
                                         .foregroundColor(.secondary)
@@ -168,7 +168,7 @@ struct AnalyticsView: View {
                                     }
                                 }
                                 .pickerStyle(MenuPickerStyle())
-                                .tint(.white)
+                                .tint(.primary)
                             }
                             
                             let sorted = performanceList.sorted { $0.percentChange > $1.percentChange }
@@ -180,7 +180,7 @@ struct AnalyticsView: View {
                                     .font(.subheadline.bold())
                                     .foregroundColor(.green)
                                     .padding(.top, 8)
-                                
+                                    
                                 ForEach(Array(topMovers)) { perf in
                                     performanceRow(perf: perf, isUp: perf.percentChange >= 0)
                                         .transition(.move(edge: .leading).combined(with: .opacity))
@@ -192,7 +192,7 @@ struct AnalyticsView: View {
                                     .font(.subheadline.bold())
                                     .foregroundColor(.red)
                                     .padding(.top, 8)
-                                
+                                    
                                 ForEach(Array(topLosers)) { perf in
                                     performanceRow(perf: perf, isUp: perf.percentChange >= 0)
                                         .transition(.move(edge: .trailing).combined(with: .opacity))
@@ -201,8 +201,8 @@ struct AnalyticsView: View {
                         }
                         .animation(.spring(response: 0.5, dampingFraction: 0.7), value: selectedTimeframe)
                         .padding()
-                        .background(RoundedRectangle(cornerRadius: 16).fill(Color.white.opacity(0.05)))
-                        .overlay(RoundedRectangle(cornerRadius: 16).stroke(Color.white.opacity(0.1), lineWidth: 1))
+                        .background(RoundedRectangle(cornerRadius: 16).fill(Color.primary.opacity(0.05)))
+                        .overlay(RoundedRectangle(cornerRadius: 16).stroke(Color.primary.opacity(0.1), lineWidth: 1))
                         
                         // Platz für das TabBar Overlay
                         Spacer().frame(height: 100)
@@ -212,7 +212,7 @@ struct AnalyticsView: View {
                 .animation(.spring(response: 0.5, dampingFraction: 0.7), value: selectedTimeframe)
             }
             .navigationTitle("Analyse")
-            .background(Color.black.edgesIgnoringSafeArea(.all))
+            .background(Color(uiColor: .systemBackground).edgesIgnoringSafeArea(.all))
         }
     }
     
@@ -222,7 +222,7 @@ struct AnalyticsView: View {
         VStack(alignment: .leading, spacing: 12) {
             Text("Liquiditäts-Score")
                 .font(.headline)
-                .foregroundColor(.white)
+                .foregroundColor(.primary)
             Text("Wie schnell ist dein Portfolio verkaufbar?")
                 .font(.subheadline)
                 .foregroundColor(.secondary)
@@ -248,7 +248,7 @@ struct AnalyticsView: View {
             }
             .frame(height: 12)
             .clipShape(RoundedRectangle(cornerRadius: 6))
-            .background(RoundedRectangle(cornerRadius: 6).fill(Color.white.opacity(0.05)))
+            .background(RoundedRectangle(cornerRadius: 6).fill(Color.primary.opacity(0.05)))
             
             // Legende
             HStack(spacing: 20) {
@@ -257,7 +257,7 @@ struct AnalyticsView: View {
                     VStack(alignment: .leading) {
                         Text("Liquid (\(String(format: "%.0f", breakdown.liquidPercent))%)")
                             .font(.caption2.bold())
-                            .foregroundColor(.white)
+                            .foregroundColor(.primary)
                         Text(userSettings.formattedPrice(breakdown.liquidValue))
                             .font(.caption2)
                             .foregroundColor(.secondary)
@@ -269,7 +269,7 @@ struct AnalyticsView: View {
                     VStack(alignment: .leading) {
                         Text("Illiquid (\(String(format: "%.0f", breakdown.illiquidPercent))%)")
                             .font(.caption2.bold())
-                            .foregroundColor(.white)
+                            .foregroundColor(.primary)
                         Text(userSettings.formattedPrice(breakdown.illiquidValue))
                             .font(.caption2)
                             .foregroundColor(.secondary)
@@ -278,8 +278,8 @@ struct AnalyticsView: View {
             }
         }
         .padding()
-        .background(RoundedRectangle(cornerRadius: 16).fill(Color.white.opacity(0.05)))
-        .overlay(RoundedRectangle(cornerRadius: 16).stroke(Color.white.opacity(0.1), lineWidth: 1))
+        .background(RoundedRectangle(cornerRadius: 16).fill(Color.primary.opacity(0.05)))
+        .overlay(RoundedRectangle(cornerRadius: 16).stroke(Color.primary.opacity(0.1), lineWidth: 1))
     }
     
     @ViewBuilder
@@ -288,7 +288,7 @@ struct AnalyticsView: View {
             VStack(alignment: .leading) {
                 Text(perf.item.name)
                     .font(.subheadline.bold())
-                    .foregroundColor(.white)
+                    .foregroundColor(.primary)
                     .lineLimit(1)
                 if let wear = perf.item.wear {
                     Text(wear)
@@ -300,7 +300,7 @@ struct AnalyticsView: View {
             VStack(alignment: .trailing) {
                 Text(userSettings.formattedPrice(perf.currentValue))
                     .font(.subheadline.bold())
-                    .foregroundColor(.white)
+                    .foregroundColor(.primary)
                 
                 if userSettings.showAbsoluteValues {
                     Text("\(isUp ? "+" : "")\(userSettings.formattedPrice(abs(perf.absoluteChange)))")

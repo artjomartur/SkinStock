@@ -2,20 +2,19 @@ import SwiftUI
 
 struct WhatIfView: View {
     @EnvironmentObject var userSettings: UserSettings
-    @EnvironmentObject var priceService: PriceService
     
-    @State private var investmentAmount: String = "1000"
-    @State private var selectedTimeframe: String = "1 Jahr"
-    @State private var selectedCategory: String = "Cases"
+    @State private var investmentAmount = "1000"
+    @State private var selectedTimeframe = "1 Jahr"
+    @State private var selectedCategory = "Cases"
     @State private var showResult = false
     
-    // Result fields
+    // Simulations-Ergebnis
     @State private var finalValue: Double = 0.0
     @State private var profit: Double = 0.0
     @State private var roiPercent: Double = 0.0
     
     let timeframes = ["3 Monate", "6 Monate", "1 Jahr", "2 Jahre"]
-    let categories = ["Cases", "Messer (★ Knives)", "Gewehre (Rifles)", "Handschuhe (Gloves)"]
+    let categories = ["Cases", "Skins (Mittelwert)", "High-Tier (Knives/Gloves)", "Aufkleber (Stickers)"]
     
     var body: some View {
         NavigationStack {
@@ -24,7 +23,7 @@ struct WhatIfView: View {
                     VStack(alignment: .leading, spacing: 8) {
                         Text("Was wäre wenn...")
                             .font(.title2.bold())
-                            .foregroundColor(.white)
+                            .foregroundColor(.primary)
                         Text("Simuliere, wie viel Gewinn du gemacht hättest, wenn du in der Vergangenheit investiert hättest.")
                             .font(.subheadline)
                             .foregroundColor(.secondary)
@@ -42,14 +41,14 @@ struct WhatIfView: View {
                             HStack {
                                 Text(userSettings.selectedCurrency.symbol)
                                     .font(.headline)
-                                    .foregroundColor(.white)
+                                    .foregroundColor(.primary)
                                 TextField("1000", text: $investmentAmount)
                                     .font(.title3.bold())
-                                    .foregroundColor(.white)
+                                    .foregroundColor(.primary)
                                     .keyboardType(.decimalPad)
                             }
                             .padding()
-                            .background(RoundedRectangle(cornerRadius: 12).fill(Color.white.opacity(0.05)))
+                            .background(RoundedRectangle(cornerRadius: 12).fill(Color.primary.opacity(0.05)))
                         }
                         
                         // Timeframe Picker
@@ -78,10 +77,10 @@ struct WhatIfView: View {
                                 }
                             }
                             .pickerStyle(MenuPickerStyle())
-                            .tint(.white)
+                            .tint(.primary)
                             .padding()
                             .frame(maxWidth: .infinity, alignment: .leading)
-                            .background(RoundedRectangle(cornerRadius: 12).fill(Color.white.opacity(0.05)))
+                            .background(RoundedRectangle(cornerRadius: 12).fill(Color.primary.opacity(0.05)))
                         }
                         
                         // Simulate Button
@@ -100,8 +99,8 @@ struct WhatIfView: View {
                         .padding(.top, 10)
                     }
                     .padding(20)
-                    .background(RoundedRectangle(cornerRadius: 24).fill(Color.white.opacity(0.04)))
-                    .overlay(RoundedRectangle(cornerRadius: 24).stroke(Color.white.opacity(0.08), lineWidth: 0.5))
+                    .background(RoundedRectangle(cornerRadius: 24).fill(Color.primary.opacity(0.04)))
+                    .overlay(RoundedRectangle(cornerRadius: 24).stroke(Color.primary.opacity(0.08), lineWidth: 0.5))
                     .padding(.horizontal, 20)
                     
                     if showResult {
@@ -117,7 +116,7 @@ struct WhatIfView: View {
                                     .foregroundColor(.secondary)
                                 Text(userSettings.formattedPrice(finalValue / (userSettings.selectedCurrency == .usd ? 1.0 : 0.92))) // Basis USD convert back and apply format
                                     .font(.system(size: 36, weight: .bold, design: .rounded))
-                                    .foregroundColor(.white)
+                                    .foregroundColor(.primary)
                             }
                             
                             HStack(spacing: 20) {
@@ -152,9 +151,10 @@ struct WhatIfView: View {
                     
                     Spacer().frame(height: 100)
                 }
+                .padding(.top, 10)
             }
             .navigationTitle("What-If Rechner")
-            .background(Color.black.edgesIgnoringSafeArea(.all))
+            .background(Color(uiColor: .systemBackground).edgesIgnoringSafeArea(.all))
         }
     }
     
@@ -168,36 +168,39 @@ struct WhatIfView: View {
         case "3 Monate":
             switch selectedCategory {
             case "Cases": multiplier = 1.12
-            case "Messer (★ Knives)": multiplier = 1.05
-            case "Gewehre (Rifles)": multiplier = 1.02
-            default: multiplier = 1.04
+            case "Skins (Mittelwert)": multiplier = 1.03
+            case "High-Tier (Knives/Gloves)": multiplier = 1.05
+            case "Aufkleber (Stickers)": multiplier = 0.95
+            default: break
             }
         case "6 Monate":
             switch selectedCategory {
-            case "Cases": multiplier = 1.35
-            case "Messer (★ Knives)": multiplier = 1.14
-            case "Gewehre (Rifles)": multiplier = 1.08
-            default: multiplier = 1.10
+            case "Cases": multiplier = 1.25
+            case "Skins (Mittelwert)": multiplier = 1.08
+            case "High-Tier (Knives/Gloves)": multiplier = 1.10
+            case "Aufkleber (Stickers)": multiplier = 1.15
+            default: break
             }
         case "1 Jahr":
             switch selectedCategory {
-            case "Cases": multiplier = 1.85 // Cases gingen historisch steil
-            case "Messer (★ Knives)": multiplier = 1.28
-            case "Gewehre (Rifles)": multiplier = 1.15
-            default: multiplier = 1.22
+            case "Cases": multiplier = 1.68
+            case "Skins (Mittelwert)": multiplier = 1.20
+            case "High-Tier (Knives/Gloves)": multiplier = 1.28
+            case "Aufkleber (Stickers)": multiplier = 1.45
+            default: break
             }
         case "2 Jahre":
             switch selectedCategory {
-            case "Cases": multiplier = 3.10 // 210% Anstieg
-            case "Messer (★ Knives)": multiplier = 1.65
-            case "Gewehre (Rifles)": multiplier = 1.35
-            default: multiplier = 1.55
+            case "Cases": multiplier = 2.45
+            case "Skins (Mittelwert)": multiplier = 1.40
+            case "High-Tier (Knives/Gloves)": multiplier = 1.65
+            case "Aufkleber (Stickers)": multiplier = 2.10
+            default: break
             }
-        default:
-            multiplier = 1.2
+        default: break
         }
         
-        withAnimation(.spring) {
+        withAnimation(.spring(response: 0.6, dampingFraction: 0.8)) {
             finalValue = amount * multiplier
             profit = finalValue - amount
             roiPercent = (multiplier - 1.0) * 100

@@ -25,7 +25,7 @@ struct PriceAlertsView: View {
                                 .foregroundColor(.gray)
                             Text("Keine Preisalarme aktiv")
                                 .font(.headline)
-                                .foregroundColor(.white)
+                                .foregroundColor(.primary)
                             Text("Erstelle einen Alarm, um benachrichtigt zu werden, wenn ein Skin einen bestimmten Preis erreicht.")
                                 .font(.caption)
                                 .foregroundColor(.secondary)
@@ -34,7 +34,6 @@ struct PriceAlertsView: View {
                         .padding(.vertical, 20)
                         .frame(maxWidth: .infinity)
                     }
-                    .listRowBackground(Color.white.opacity(0.05))
                 } else {
                     Section(header: Text("Aktive Alarme")) {
                         ForEach(userSettings.priceAlerts) { alert in
@@ -43,7 +42,7 @@ struct PriceAlertsView: View {
                                     Text(alert.hashName)
                                         .font(.subheadline.bold())
                                         .lineLimit(1)
-                                        .foregroundColor(.white)
+                                        .foregroundColor(.primary)
                                     
                                     HStack(spacing: 4) {
                                         Image(systemName: alert.isAbove ? "arrow.up.circle.fill" : "arrow.down.circle.fill")
@@ -53,7 +52,7 @@ struct PriceAlertsView: View {
                                             .foregroundColor(.secondary)
                                         Text(userSettings.formattedPrice(alert.targetPrice))
                                             .font(.caption.bold())
-                                            .foregroundColor(.white)
+                                            .foregroundColor(.primary)
                                     }
                                 }
                                 
@@ -69,7 +68,6 @@ struct PriceAlertsView: View {
                         }
                         .onDelete(perform: userSettings.deleteAlert)
                     }
-                    .listRowBackground(Color.white.opacity(0.05))
                 }
             }
             .navigationTitle("Preisalarme")
@@ -103,7 +101,7 @@ struct PriceAlertsView: View {
                                 }) {
                                     HStack {
                                         Text(skinName)
-                                            .foregroundColor(selectedSkin == skinName ? Color(hex: "00F0FF") : .white)
+                                            .foregroundColor(selectedSkin == skinName ? Color(hex: "00F0FF") : .primary)
                                         Spacer()
                                         if selectedSkin == skinName {
                                             Image(systemName: "checkmark")
@@ -155,8 +153,6 @@ struct PriceAlertsView: View {
                     .navigationTitle("Alarm hinzufügen")
                 }
             }
-            .scrollContentBackground(.hidden)
-            .background(Color.black.edgesIgnoringSafeArea(.all))
         }
     }
 }

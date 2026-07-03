@@ -50,7 +50,7 @@ struct ContentView: View {
                             Text(userSettings.formattedPrice(displayValue))
                                 .font(.system(.title, design: .rounded))
                                 .fontWeight(.bold)
-                                .foregroundColor(.white)
+                                .foregroundColor(.primary)
                                 .contentTransition(.numericText())
                             
                             // Netto-Info
@@ -135,8 +135,8 @@ struct ContentView: View {
                     }
                     .padding()
                     .frame(maxWidth: .infinity, alignment: .leading)
-                    .background(RoundedRectangle(cornerRadius: 16).fill(Color.white.opacity(0.04)))
-                    .overlay(RoundedRectangle(cornerRadius: 16).stroke(Color.white.opacity(0.1), lineWidth: 1))
+                    .background(RoundedRectangle(cornerRadius: 16).fill(Color.primary.opacity(0.04)))
+                    .overlay(RoundedRectangle(cornerRadius: 16).stroke(Color.primary.opacity(0.1), lineWidth: 1))
                     
                     // Portfolio-Score
                     if !inventoryService.inventory.isEmpty {
@@ -146,7 +146,7 @@ struct ContentView: View {
                     // Item Listings
                     Text("Deine Top Investment-Objekte")
                         .font(.headline)
-                        .foregroundColor(.white)
+                        .foregroundColor(.primary)
                         .padding(.top, 10)
                     
                     VStack(spacing: 16) {
@@ -188,7 +188,7 @@ struct ContentView: View {
                     }
                 }
             }
-            .background(Color.black.edgesIgnoringSafeArea(.all))
+            .background(Color(uiColor: .systemBackground).edgesIgnoringSafeArea(.all))
         }
         .onAppear {
             // Trigger price fetch and record to history
@@ -249,7 +249,7 @@ struct SkinCardView: View {
                 Text(item.name)
                     .font(.system(.subheadline, design: .rounded))
                     .fontWeight(.bold)
-                    .foregroundColor(.white)
+                    .foregroundColor(.primary)
                     .lineLimit(1)
                 
                 HStack(spacing: 6) {
@@ -294,7 +294,7 @@ struct SkinCardView: View {
                 Text(userSettings.formattedPrice(displayPrice))
                     .font(.system(.subheadline, design: .rounded))
                     .fontWeight(.bold)
-                    .foregroundColor(.white)
+                    .foregroundColor(.primary)
                 
                 Text(item.rarity.rawValue)
                     .font(.system(size: 9, weight: .semibold))
@@ -304,11 +304,11 @@ struct SkinCardView: View {
         .padding(12)
         .background(
             RoundedRectangle(cornerRadius: 18)
-                .fill(Color.white.opacity(0.03))
+                .fill(Color.primary.opacity(0.03))
         )
         .overlay(
             RoundedRectangle(cornerRadius: 18)
-                .stroke(Color.white.opacity(0.06), lineWidth: 0.5)
+                .stroke(Color.primary.opacity(0.06), lineWidth: 0.5)
         )
     }
 }

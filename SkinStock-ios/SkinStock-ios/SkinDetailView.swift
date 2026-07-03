@@ -18,7 +18,7 @@ struct SkinDetailView: View {
     var body: some View {
         ZStack {
             // 1. Tiefschwarzer, tiefer Raum
-            Color.black.ignoresSafeArea()
+            Color(uiColor: .systemBackground).ignoresSafeArea()
             
             // 2. Chromatische Vollbild-Farben (basierend auf Rarity)
             chromaticBackground
@@ -74,7 +74,7 @@ struct SkinDetailView: View {
                             
                             Text(item.name)
                                 .font(.headline.weight(.bold))
-                                .foregroundStyle(.white)
+                                .foregroundStyle(.primary)
                                 .multilineTextAlignment(.center)
                                 .padding(.horizontal, 40)
                             
@@ -86,7 +86,7 @@ struct SkinDetailView: View {
                                         .foregroundStyle(.secondary)
                                         .padding(.horizontal, 8)
                                         .padding(.vertical, 4)
-                                        .background(Capsule().fill(Color.white.opacity(0.08)))
+                                        .background(Capsule().fill(Color.primary.opacity(0.08)))
                                 }
                                 
                                 TradeLockBadgeView(item: item)
@@ -120,7 +120,7 @@ struct SkinDetailView: View {
                     VStack(spacing: 4) {
                         Text(userSettings.formattedPrice(displayPrice))
                             .font(.system(size: 32, weight: .bold, design: .rounded))
-                            .foregroundStyle(.white)
+                            .foregroundStyle(.primary)
                         
                         if userSettings.showNetValue {
                             Text("Netto (\(userSettings.preferredMarketplace.rawValue))")
@@ -227,11 +227,11 @@ struct SkinDetailView: View {
             } label: {
                 Image(systemName: "chevron.left")
                     .font(.title3.weight(.bold))
-                    .foregroundStyle(.white)
+                    .foregroundStyle(.primary)
                     .padding(14)
                     .background(.ultraThinMaterial)
                     .clipShape(Circle())
-                    .overlay(Circle().stroke(.white.opacity(0.2), lineWidth: 1))
+                    .overlay(Circle().stroke(Color.primary.opacity(0.2), lineWidth: 1))
             }
             
             Spacer()
@@ -249,11 +249,11 @@ struct SkinDetailView: View {
             } label: {
                 Image(systemName: "heart")
                     .font(.title3.weight(.bold))
-                    .foregroundStyle(.white)
+                    .foregroundStyle(.primary)
                     .padding(14)
                     .background(.ultraThinMaterial)
                     .clipShape(Circle())
-                    .overlay(Circle().stroke(.white.opacity(0.2), lineWidth: 1))
+                    .overlay(Circle().stroke(Color.primary.opacity(0.2), lineWidth: 1))
             }
         }
         .padding(.horizontal, 20)
