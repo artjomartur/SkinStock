@@ -76,7 +76,7 @@ struct ContentView: View {
                                     } label: {
                                         Text(userSettings.preferredMarketplace.rawValue)
                                             .font(.caption2.bold())
-                                            .foregroundStyle(Color(hex: "00F0FF"))
+                                            .foregroundStyle(.primary)
                                     }
                                 }
                             }
@@ -192,7 +192,7 @@ struct ContentView: View {
                         }
                     } label: {
                         Image(systemName: "square.and.arrow.up")
-                            .foregroundColor(Color(hex: "00F0FF"))
+                            .foregroundColor(.primary)
                     }
                 }
             }
@@ -345,7 +345,7 @@ struct GoalProgressView: View {
                 Text(String(format: "%.1f%%", percent))
                     .font(.system(.title3, design: .rounded))
                     .fontWeight(.bold)
-                    .foregroundColor(percent >= 100 ? .green : Color(hex: "00F0FF"))
+                    .foregroundColor(percent >= 100 ? .green : .primary)
             }
             
             // Progress bar
@@ -359,7 +359,7 @@ struct GoalProgressView: View {
                     RoundedRectangle(cornerRadius: 4)
                         .fill(
                             LinearGradient(
-                                colors: progress >= 1.0 ? [.green, Color(hex: "00FF77")] : [Color(hex: "00F0FF"), Color(hex: "00FF77")],
+                                colors: progress >= 1.0 ? [.green, .green.opacity(0.8)] : [.primary, .primary.opacity(0.6)],
                                 startPoint: .leading, endPoint: .trailing
                             )
                         )

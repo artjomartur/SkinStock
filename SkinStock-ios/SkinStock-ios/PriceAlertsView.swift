@@ -63,7 +63,7 @@ struct PriceAlertsView: View {
                                     set: { _ in userSettings.toggleAlertActive(id: alert.id) }
                                 ))
                                 .labelsHidden()
-                                .tint(Color(hex: "00F0FF"))
+                                .tint(.primary)
                             }
                         }
                         .onDelete(perform: userSettings.deleteAlert)
@@ -75,7 +75,7 @@ struct PriceAlertsView: View {
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Button(action: { showingAddAlert = true }) {
                         Image(systemName: "plus")
-                            .foregroundColor(Color(hex: "00F0FF"))
+                            .foregroundColor(.primary)
                     }
                 }
             }
@@ -101,11 +101,11 @@ struct PriceAlertsView: View {
                                 }) {
                                     HStack {
                                         Text(skinName)
-                                            .foregroundColor(selectedSkin == skinName ? Color(hex: "00F0FF") : .primary)
+                                            .foregroundColor(selectedSkin == skinName ? .primary : .primary)
                                         Spacer()
                                         if selectedSkin == skinName {
                                             Image(systemName: "checkmark")
-                                                .foregroundColor(Color(hex: "00F0FF"))
+                                                .foregroundColor(.primary)
                                         }
                                     }
                                 }

@@ -93,19 +93,19 @@ struct TrendlineView: View {
                         )
                         .interpolationMethod(.catmullRom)
                         .lineStyle(StrokeStyle(lineWidth: 1.5, dash: [4, 4]))
-                        .foregroundStyle(Color(hex: "00F0FF"))
+                        .foregroundStyle(.secondary)
                     }
                 }
                 
                 if showIndicator, let selected = selectedPoint {
                     RuleMark(x: .value("Auswahl", selected.date))
                         .lineStyle(StrokeStyle(lineWidth: 1, dash: [3, 3]))
-                        .foregroundStyle(Color.white.opacity(0.4))
+                        .foregroundStyle(Color.primary.opacity(0.4))
                         .annotation(position: .top, overflowResolution: .init(x: .fit(to: .chart), y: .fit(to: .chart))) {
                             VStack(spacing: 2) {
                                 Text(selected.price, format: .currency(code: "EUR"))
                                     .font(.system(size: 11, weight: .bold, design: .rounded))
-                                    .foregroundColor(.white)
+                                    .foregroundColor(.primary)
                                 Text(selected.date, style: .date)
                                     .font(.system(size: 8))
                                     .foregroundColor(.secondary)
@@ -114,7 +114,7 @@ struct TrendlineView: View {
                             .padding(.vertical, 5)
                             .background(.ultraThinMaterial)
                             .cornerRadius(8)
-                            .overlay(RoundedRectangle(cornerRadius: 8).stroke(Color.white.opacity(0.15), lineWidth: 0.5))
+                            .overlay(RoundedRectangle(cornerRadius: 8).stroke(Color.primary.opacity(0.15), lineWidth: 0.5))
                         }
                     
                     PointMark(

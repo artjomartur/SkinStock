@@ -38,7 +38,7 @@ struct MainNavigationView: View {
             .customizationBehavior(.disabled, for: .sidebar)
         }
         .tabViewStyle(.sidebarAdaptable)
-        .tint(Color(hex: "00F0FF"))
+        .tint(.primary)
     }
 }
 
@@ -125,7 +125,7 @@ struct MainNavigationViewFallback: View {
                 }
                 .tag(AppTab.account)
         }
-        .tint(Color(hex: "00F0FF"))
+        .tint(.primary)
     }
 }
 
