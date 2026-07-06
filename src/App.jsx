@@ -55,7 +55,7 @@ const ACHIEVEMENT_DEFINITIONS = [
 import defaultInventory from './defaultInventory.json'
 import Onboarding from './components/Onboarding'
 import { auth, db } from './firebase'
-import { onAuthStateChanged, signOut } from 'firebase/auth'
+import { onAuthStateChanged, signOut, signInAnonymously } from 'firebase/auth'
 import { doc, getDoc, setDoc } from 'firebase/firestore'
 import confetti from 'canvas-confetti'
 import Tilt from 'react-parallax-tilt'
@@ -431,6 +431,26 @@ export default function App() {
     }, 1800)
     return () => clearTimeout(timer)
   }, [])
+
+  useEffect(() => {
+    // Check if redirecting back from Steam OpenID login
+    const params = new URLSearchParams(window.location.search);
+    const claimedId = params.get('openid.claimed_id');
+    if (claimedId) {
+      const components = claimedId.split('/');
+      const steamId = components[components.length - 1];
+      if (steamId && steamId.length === 17) {
+        localStorage.setItem('skinstock_steam_id', steamId);
+        // Clean URL query parameters
+        window.history.replaceState({}, document.title, window.location.pathname);
+        setSteamIdInput(steamId);
+        // Sign in anonymously to Firebase to allow firestore syncing if needed
+        if (auth) {
+          signInAnonymously(auth).catch(console.error);
+        }
+      }
+    }
+  }, []);
 
   useEffect(() => {
     if (!authLoading && minTimeElapsed) {
@@ -1455,7 +1475,16 @@ export default function App() {
 
   const renderContent = () => {
     if (!user || !steamIdInput) {
-      return <Onboarding user={user} setSteamIdInput={setSteamIdInput} />;
+      return (
+        <Onboarding 
+          user={user} 
+          setSteamIdInput={setSteamIdInput} 
+          currency={currency}
+          setCurrency={setCurrency}
+          valuationMode={valuationMode}
+          setValuationMode={setValuationMode}
+        />
+      );
     }
     return (
       <div className="app-layout">

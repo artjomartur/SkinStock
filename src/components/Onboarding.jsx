@@ -1,99 +1,16 @@
 import React, { useState, useEffect } from 'react';
 import { Mail, Lock, AlertTriangle, ArrowRight, ArrowLeft, TrendingUp, Briefcase, Link as LinkIcon } from 'lucide-react';
 import { auth, db } from '../firebase';
-import { 
-  createUserWithEmailAndPassword, 
-  signInWithEmailAndPassword, 
-  GoogleAuthProvider, 
-  OAuthProvider, 
-  signInWithPopup,
-  signInWithCredential
-} from 'firebase/auth';
+import { signInAnonymously } from 'firebase/auth';
 import { doc, setDoc } from 'firebase/firestore';
-import { Capacitor } from '@capacitor/core';
-import { FirebaseAuthentication } from '@capacitor-firebase/authentication';
 
-export default function Onboarding({ user, setSteamIdInput }) {
+export default function Onboarding({ user, setSteamIdInput, currency, setCurrency, valuationMode, setValuationMode }) {
   const [step, setStep] = useState(0);
-  const [isLogin, setIsLogin] = useState(false);
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
+  const [steamIdLocal, setSteamIdLocal] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
-  
-  const [steamIdLocal, setSteamIdLocal] = useState('');
 
   const lang = typeof navigator !== 'undefined' && navigator.language && navigator.language.startsWith('de') ? 'de' : 'en';
-
-  useEffect(() => {
-    if (user) {
-      setStep(3);
-    }
-  }, [user]);
-
-  const handleEmailAuth = async (e) => {
-    e.preventDefault();
-    if (!auth) {
-      setError(lang === 'de' ? 'Firebase ist nicht konfiguriert.' : 'Firebase is not configured.');
-      return;
-    }
-    setError('');
-    setLoading(true);
-
-    try {
-      if (isLogin) {
-        await signInWithEmailAndPassword(auth, email, password);
-      } else {
-        await createUserWithEmailAndPassword(auth, email, password);
-      }
-    } catch (err) {
-      console.error(err);
-      setError(err.message);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleGoogleAuth = async () => {
-    setError('');
-    setLoading(true);
-    try {
-      if (Capacitor.isNativePlatform()) {
-        const result = await FirebaseAuthentication.signInWithGoogle();
-        const credential = GoogleAuthProvider.credential(result.credential?.idToken);
-        await signInWithCredential(auth, credential);
-      } else {
-        const provider = new GoogleAuthProvider();
-        await signInWithPopup(auth, provider);
-      }
-    } catch (err) {
-      setError('Fehler: ' + err.message);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleAppleAuth = async () => {
-    setError('');
-    setLoading(true);
-    try {
-      if (Capacitor.isNativePlatform()) {
-        const result = await FirebaseAuthentication.signInWithApple();
-        const credential = new OAuthProvider('apple.com').credential({
-          idToken: result.credential?.idToken,
-          rawNonce: result.credential?.nonce,
-        });
-        await signInWithCredential(auth, credential);
-      } else {
-        const provider = new OAuthProvider('apple.com');
-        await signInWithPopup(auth, provider);
-      }
-    } catch (err) {
-      setError(err.message);
-    } finally {
-      setLoading(false);
-    }
-  };
 
   const handleSaveSteamId = async (e) => {
     e.preventDefault();
@@ -113,12 +30,18 @@ export default function Onboarding({ user, setSteamIdInput }) {
     setLoading(true);
     setError('');
     try {
+      localStorage.setItem('skinstock_steam_id', finalId);
+      if (setSteamIdInput) {
+        setSteamIdInput(finalId);
+      }
+      
+      // Auto sign in anonymously to keep database syncing working if firebase is configured
+      if (auth && !user) {
+        await signInAnonymously(auth);
+      }
+      
       if (user && db) {
         await setDoc(doc(db, 'users', user.uid), { steamId: finalId }, { merge: true });
-        localStorage.setItem('skinstock_steam_id', finalId);
-        if (setSteamIdInput) {
-          setSteamIdInput(finalId);
-        }
       }
     } catch (err) {
       console.error(err);
@@ -132,7 +55,7 @@ export default function Onboarding({ user, setSteamIdInput }) {
     if (step === 0) {
       return (
         <div className="onboarding-step-content slide-in-right">
-          <div className="step-icon-wrapper">
+          <div className="step-icon-wrapper" style={{ marginBottom: '24px' }}>
             <Briefcase size={48} color="var(--color-green)" />
           </div>
           <h2>{lang === 'de' ? 'Dein CS2 Portfolio' : 'Your CS2 Portfolio'}</h2>
@@ -151,7 +74,7 @@ export default function Onboarding({ user, setSteamIdInput }) {
     if (step === 1) {
       return (
         <div className="onboarding-step-content slide-in-right">
-          <div className="step-icon-wrapper">
+          <div className="step-icon-wrapper" style={{ marginBottom: '24px' }}>
             <TrendingUp size={48} color="#a855f7" />
           </div>
           <h2>{lang === 'de' ? 'Analysen & Trends' : 'Analytics & Trends'}</h2>
@@ -172,142 +95,159 @@ export default function Onboarding({ user, setSteamIdInput }) {
       );
     }
 
+    if (step === 2) {
+      return (
+        <div className="onboarding-step-content slide-in-right">
+          <div className="step-icon-wrapper" style={{ marginBottom: '16px' }}>
+            <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#00F0FF" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <line x1="4" y1="21" x2="4" y2="14" />
+              <line x1="4" y1="10" x2="4" y2="3" />
+              <line x1="12" y1="21" x2="12" y2="12" />
+              <line x1="12" y1="8" x2="12" y2="3" />
+              <line x1="20" y1="21" x2="20" y2="16" />
+              <line x1="20" y1="12" x2="20" y2="3" />
+              <line x1="1" y1="14" x2="7" y2="14" />
+              <line x1="9" y1="8" x2="15" y2="8" />
+              <line x1="17" y1="16" x2="23" y2="16" />
+            </svg>
+          </div>
+          <h2>{lang === 'de' ? 'Einstellungen' : 'Settings'}</h2>
+          <p style={{ fontSize: '0.9rem', color: '#8e8e93', marginBottom: '20px' }}>
+            {lang === 'de' ? 'Passe deine Währung und deinen favorisierten Marktplatz an.' : 'Customize your currency and preferred marketplace.'}
+          </p>
+
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', width: '100%', textAlign: 'left', marginBottom: '24px' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+              <label style={{ fontSize: '10px', color: 'rgba(255,255,255,0.4)', fontWeight: 'bold', textTransform: 'uppercase' }}>Währung</label>
+              <select 
+                value={currency} 
+                onChange={(e) => setCurrency(e.target.value)}
+                style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '12px', padding: '12px', color: '#fff', fontSize: '14px', outline: 'none', cursor: 'pointer' }}
+              >
+                <option value="EUR" style={{ background: '#000' }}>EUR (€)</option>
+                <option value="USD" style={{ background: '#000' }}>USD ($)</option>
+              </select>
+            </div>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+              <label style={{ fontSize: '10px', color: 'rgba(255,255,255,0.4)', fontWeight: 'bold', textTransform: 'uppercase' }}>Marktplatz</label>
+              <select 
+                value={valuationMode} 
+                onChange={(e) => setValuationMode(e.target.value)}
+                style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '12px', padding: '12px', color: '#fff', fontSize: '14px', outline: 'none', cursor: 'pointer' }}
+              >
+                <option value="STEAM" style={{ background: '#000' }}>Steam (Standard)</option>
+                <option value="CASHOUT" style={{ background: '#000' }}>Cashout (75% Realwert)</option>
+              </select>
+            </div>
+          </div>
+
+          <div className="step-nav-buttons" style={{ display: 'flex', gap: '12px', width: '100%' }}>
+            <button onClick={() => setStep(1)} className="onboarding-btn secondary-btn" style={{ flex: 1 }}>
+              <ArrowLeft size={18} /> {lang === 'de' ? 'Zurück' : 'Back'}
+            </button>
+            <button onClick={() => setStep(3)} className="onboarding-btn primary-btn" style={{ flex: 1 }}>
+              {lang === 'de' ? 'Speichern & Weiter' : 'Save & Next'} <ArrowRight size={18} />
+            </button>
+          </div>
+        </div>
+      );
+    }
+
     if (step === 3) {
+      const getSteamAuthURL = () => {
+        const returnUrl = window.location.origin;
+        const url = new URL("https://steamcommunity.com/openid/login");
+        url.searchParams.set("openid.ns", "http://specs.openid.net/auth/2.0");
+        url.searchParams.set("openid.mode", "checkid_setup");
+        url.searchParams.set("openid.return_to", returnUrl);
+        url.searchParams.set("openid.realm", returnUrl);
+        url.searchParams.set("openid.identity", "http://specs.openid.net/auth/2.0/identifier_select");
+        url.searchParams.set("openid.claimed_id", "http://specs.openid.net/auth/2.0/identifier_select");
+        return url.toString();
+      };
+
+      const handleSteamRedirect = () => {
+        window.location.href = getSteamAuthURL();
+      };
+
+      const handleSkipMock = async () => {
+        const mockId = "76561198000000000";
+        localStorage.setItem('skinstock_steam_id', mockId);
+        
+        if (auth && !user) {
+          try {
+            await signInAnonymously(auth);
+          } catch (e) {
+            console.error('Anonymous sign in failed', e);
+          }
+        }
+        
+        if (setSteamIdInput) {
+          setSteamIdInput(mockId);
+        }
+      };
+
       return (
         <div className="onboarding-step-content fade-in">
           <div className="step-icon-wrapper" style={{ marginBottom: '16px' }}>
-            <LinkIcon size={40} color="var(--color-amber)" />
+            <LinkIcon size={40} color="#4B69FF" />
           </div>
-          <h2 style={{ marginBottom: '8px', fontSize: '1.5rem' }}>{lang === 'de' ? 'Steam verbinden' : 'Connect Steam'}</h2>
+          <h2 style={{ marginBottom: '8px', fontSize: '1.5rem' }}>{lang === 'de' ? 'Mit Steam verbinden' : 'Connect Steam'}</h2>
           <p style={{ marginBottom: '24px', fontSize: '0.95rem' }}>
             {lang === 'de' 
-              ? 'Fast geschafft! Gib deine Steam ID oder Profil-URL ein, um dein Inventar zu laden.'
-              : 'Almost done! Enter your Steam ID or Profile URL to load your inventory.'}
+              ? 'Verbinde deinen Account sicher über Steam OpenID, um dein CS2-Inventar automatisch zu laden.'
+              : 'Connect your account securely via Steam OpenID to load your CS2 inventory automatically.'}
           </p>
 
           {error && (
-            <div className="onboarding-error">
+            <div className="onboarding-error" style={{ marginBottom: '16px' }}>
               <AlertTriangle size={18} />
               <span>{error}</span>
             </div>
           )}
 
-          <form onSubmit={handleSaveSteamId} className="onboarding-form" style={{ width: '100%' }}>
-            <div className="input-group">
-              <input 
-                type="text" 
-                placeholder={lang === 'de' ? 'Steam ID / URL (z.B. 76561198...)' : 'Steam ID / URL (e.g. 76561198...)'} 
-                value={steamIdLocal}
-                onChange={(e) => setSteamIdLocal(e.target.value)}
-                required
-                style={{ paddingLeft: '16px' }}
-              />
-            </div>
-            
-            <button type="submit" className="onboarding-btn primary-btn" disabled={loading} style={{ marginTop: '16px' }}>
-              {loading ? (
-                <span className="spinner"></span>
-              ) : (
-                <>
-                  {lang === 'de' ? 'Inventar laden' : 'Load Inventory'}
-                  <ArrowRight size={18} />
-                </>
-              )}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', width: '100%' }}>
+            <button 
+              onClick={handleSteamRedirect} 
+              className="onboarding-btn primary-btn"
+              style={{ background: 'linear-gradient(135deg, #4B69FF 0%, #00F0FF 100%)', color: '#fff', fontWeight: 'bold' }}
+            >
+              {lang === 'de' ? 'Jetzt mit Steam anmelden 🎮' : 'Sign in with Steam 🎮'}
             </button>
-          </form>
+
+            {/* Manual entry fallback */}
+            <div style={{ marginTop: '16px', borderTop: '1px solid rgba(255,255,255,0.08)', paddingTop: '16px' }}>
+              <div style={{ fontSize: '11px', color: 'rgba(255,255,255,0.4)', fontWeight: 'bold', textTransform: 'uppercase', marginBottom: '8px', textAlign: 'center' }}>
+                Oder manuell mit SteamID verbinden
+              </div>
+              <form onSubmit={handleSaveSteamId} className="onboarding-form">
+                <div className="input-group">
+                  <input 
+                    type="text" 
+                    placeholder={lang === 'de' ? 'SteamID64 eingeben (z.B. 7656119...)' : 'Enter SteamID64 (e.g. 7656119...)'} 
+                    value={steamIdLocal}
+                    onChange={(e) => setSteamIdLocal(e.target.value)}
+                    required
+                    style={{ paddingLeft: '16px' }}
+                  />
+                </div>
+                <button type="submit" className="onboarding-btn secondary-btn" disabled={loading} style={{ marginTop: '8px' }}>
+                  {loading ? <span className="spinner"></span> : (lang === 'de' ? 'Manuell laden' : 'Load Manually')}
+                </button>
+              </form>
+            </div>
+
+            <button 
+              onClick={handleSkipMock} 
+              style={{ background: 'none', border: 'none', color: '#8e8e93', fontSize: '0.8rem', cursor: 'pointer', marginTop: '12px' }}
+            >
+              {lang === 'de' ? 'Ohne Steam fortfahren (Mock Data)' : 'Continue without Steam (Mock Data)'}
+            </button>
+          </div>
         </div>
       );
     }
-
-    return (
-      <div className="onboarding-step-content slide-in-right">
-        <div className="step-icon-wrapper" style={{ marginBottom: '16px' }}>
-          <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="url(#gradient)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <defs>
-              <linearGradient id="gradient" x1="0%" y1="0%" x2="100%" y2="100%">
-                <stop offset="0%" stopColor="#00d182" />
-                <stop offset="100%" stopColor="#009688" />
-              </linearGradient>
-            </defs>
-            <polyline points="22 12 18 12 15 21 9 3 6 12 2 12" />
-          </svg>
-        </div>
-        <h2 style={{ marginBottom: '24px', fontSize: '1.5rem' }}>{lang === 'de' ? 'Account erstellen' : 'Create Account'}</h2>
-
-        {error && (
-          <div className="onboarding-error">
-            <AlertTriangle size={18} />
-            <span>{error}</span>
-          </div>
-        )}
-
-        <form onSubmit={handleEmailAuth} className="onboarding-form" style={{ width: '100%' }}>
-          <div className="input-group">
-            <div className="input-icon"><Mail size={18} /></div>
-            <input 
-              type="email" 
-              placeholder={lang === 'de' ? 'E-Mail Adresse' : 'Email Address'} 
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              required
-            />
-          </div>
-          <div className="input-group">
-            <div className="input-icon"><Lock size={18} /></div>
-            <input 
-              type="password" 
-              placeholder={lang === 'de' ? 'Passwort' : 'Password'} 
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              required
-              minLength="6"
-            />
-          </div>
-          
-          <button type="submit" className="onboarding-btn primary-btn" disabled={loading}>
-            {loading ? (
-              <span className="spinner"></span>
-            ) : (
-              <>
-                {isLogin ? (lang === 'de' ? 'Anmelden' : 'Log In') : (lang === 'de' ? 'Account erstellen' : 'Create Account')}
-                <ArrowRight size={18} />
-              </>
-            )}
-          </button>
-        </form>
-
-        <div className="onboarding-divider">
-          <span>{lang === 'de' ? 'ODER' : 'OR'}</span>
-        </div>
-
-        <div className="social-auth-container" style={{ width: '100%' }}>
-          <button onClick={handleGoogleAuth} className="onboarding-btn social-btn" disabled={loading}>
-            <svg width="20" height="20" viewBox="0 0 24 24">
-              <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" />
-              <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" />
-              <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" />
-              <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" />
-            </svg>
-            {lang === 'de' ? 'Weiter mit Google' : 'Continue with Google'}
-          </button>
-
-          <button onClick={handleAppleAuth} className="onboarding-btn social-btn" disabled={loading}>
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
-              <path d="M12.152 6.896c-.948 0-2.415-1.078-3.96-1.04-2.04.027-3.91 1.183-4.961 3.014-2.117 3.675-.546 9.103 1.519 12.09 1.013 1.454 2.208 3.126 3.805 3.075 1.52-.05 2.116-.969 3.936-.969 1.802 0 2.348.969 3.936.936 1.627-.035 2.668-1.52 3.64-2.95 1.14-1.663 1.611-3.275 1.629-3.359-.036-.017-3.14-1.206-3.167-4.814-.025-3.02 2.457-4.475 2.57-4.542-1.423-2.078-3.626-2.361-4.407-2.42-1.89-.187-3.774 1.134-4.54 1.134zM15.82 3.646c.833-1.012 1.393-2.416 1.24-3.824-1.205.048-2.698.802-3.551 1.815-.765.894-1.419 2.33-.16 3.702 1.34.104 2.638-.679 3.471-1.693z" />
-            </svg>
-            {lang === 'de' ? 'Weiter mit Apple' : 'Continue with Apple'}
-          </button>
-        </div>
-
-        <div className="onboarding-toggle" style={{ marginTop: '16px' }}>
-          <button type="button" onClick={() => setIsLogin(!isLogin)} className="toggle-btn">
-            {isLogin 
-              ? (lang === 'de' ? 'Noch keinen Account? Hier registrieren' : "Don't have an account? Sign up here")
-              : (lang === 'de' ? 'Bereits einen Account? Hier einloggen' : 'Already have an account? Log in here')}
-          </button>
-        </div>
-      </div>
-    );
   };
 
   return (
