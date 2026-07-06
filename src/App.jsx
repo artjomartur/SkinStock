@@ -921,6 +921,58 @@ export default function App() {
     })
   }, [])
 
+  const realInventorySummary = useMemo(() => {
+    let holdingsValue = 0
+    let totalInvested = 0
+    let marketableValue = 0
+    let nonMarketableCount = 0
+    
+    let distKnives = 0;
+    let distGloves = 0;
+    let distCases = 0;
+    let distWeapons = 0;
+
+    realInventoryItems.forEach((item) => {
+      const itemVal = (item.price || 0) * item.qty
+      holdingsValue += itemVal
+      totalInvested += (item.basePrice || 0) * item.qty
+      if (item.marketable !== false) {
+        marketableValue += itemVal
+      } else {
+        nonMarketableCount += item.qty
+      }
+      
+      const n = item.name.toLowerCase();
+      if (n.includes('★') && !n.includes('glove') && !n.includes('handschuhe') && !n.includes('wrap')) {
+        distKnives += itemVal;
+      } else if ((n.includes('★') && (n.includes('glove') || n.includes('handschuhe') || n.includes('wrap'))) || n.includes('bloodhound') || n.includes('hand wraps')) {
+        distGloves += itemVal;
+      } else if (n.includes('case') || n.includes('kiste') || n.includes('container') || n.includes('capsule')) {
+        distCases += itemVal;
+      } else {
+        distWeapons += itemVal;
+      }
+    })
+
+    const pnlVal = parseFloat((holdingsValue - totalInvested).toFixed(2))
+    const pnlPct = totalInvested === 0 ? 0 : parseFloat((pnlVal / totalInvested * 100).toFixed(2))
+
+    return {
+      totalValue: parseFloat(holdingsValue.toFixed(2)),
+      marketableValue: parseFloat(marketableValue.toFixed(2)),
+      nonMarketableCount,
+      pnlVal,
+      pnlPct,
+      totalInvested: parseFloat(totalInvested.toFixed(2)),
+      distribution: {
+        knives: distKnives,
+        gloves: distGloves,
+        cases: distCases,
+        weapons: distWeapons
+      }
+    }
+  }, [realInventoryItems])
+
   const evaluateAchievements = useCallback((inventoryList, totalValue, watchlistCount) => {
     if (totalValue >= 100) unlockAchievement('portfolio_100')
     if (totalValue >= 500) unlockAchievement('portfolio_500')
@@ -1175,57 +1227,7 @@ export default function App() {
     playTradeSound('sell')
   }
 
-  const realInventorySummary = useMemo(() => {
-    let holdingsValue = 0
-    let totalInvested = 0
-    let marketableValue = 0
-    let nonMarketableCount = 0
-    
-    let distKnives = 0;
-    let distGloves = 0;
-    let distCases = 0;
-    let distWeapons = 0;
 
-    realInventoryItems.forEach((item) => {
-      const itemVal = (item.price || 0) * item.qty
-      holdingsValue += itemVal
-      totalInvested += (item.basePrice || 0) * item.qty
-      if (item.marketable !== false) {
-        marketableValue += itemVal
-      } else {
-        nonMarketableCount += item.qty
-      }
-      
-      const n = item.name.toLowerCase();
-      if (n.includes('★') && !n.includes('glove') && !n.includes('handschuhe') && !n.includes('wrap')) {
-        distKnives += itemVal;
-      } else if ((n.includes('★') && (n.includes('glove') || n.includes('handschuhe') || n.includes('wrap'))) || n.includes('bloodhound') || n.includes('hand wraps')) {
-        distGloves += itemVal;
-      } else if (n.includes('case') || n.includes('kiste') || n.includes('container') || n.includes('capsule')) {
-        distCases += itemVal;
-      } else {
-        distWeapons += itemVal;
-      }
-    })
-
-    const pnlVal = parseFloat((holdingsValue - totalInvested).toFixed(2))
-    const pnlPct = totalInvested === 0 ? 0 : parseFloat((pnlVal / totalInvested * 100).toFixed(2))
-
-    return {
-      totalValue: parseFloat(holdingsValue.toFixed(2)),
-      marketableValue: parseFloat(marketableValue.toFixed(2)),
-      nonMarketableCount,
-      pnlVal,
-      pnlPct,
-      totalInvested: parseFloat(totalInvested.toFixed(2)),
-      distribution: {
-        knives: distKnives,
-        gloves: distGloves,
-        cases: distCases,
-        weapons: distWeapons
-      }
-    }
-  }, [realInventoryItems])
 
   const [hasFiredConfetti, setHasFiredConfetti] = useState(false)
   useEffect(() => {
