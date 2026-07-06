@@ -453,6 +453,12 @@ export default function App() {
   }, []);
 
   useEffect(() => {
+    if (auth && !user && steamIdInput) {
+      signInAnonymously(auth).catch(console.error);
+    }
+  }, [user, steamIdInput]);
+
+  useEffect(() => {
     if (!authLoading && minTimeElapsed) {
       setSplashFadingOut(true)
       const timer = setTimeout(() => {
@@ -1474,7 +1480,7 @@ export default function App() {
   }
 
   const renderContent = () => {
-    if (!user || !steamIdInput) {
+    if (!steamIdInput) {
       return (
         <Onboarding 
           user={user} 

@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { Mail, Lock, AlertTriangle, ArrowRight, ArrowLeft, TrendingUp, Briefcase, Link as LinkIcon } from 'lucide-react';
+import React, { useState } from 'react';
+import { Mail, Lock, AlertTriangle, ArrowRight, ArrowLeft, TrendingUp, Briefcase, Link as LinkIcon, Settings2 } from 'lucide-react';
 import { auth, db } from '../firebase';
 import { signInAnonymously } from 'firebase/auth';
 import { doc, setDoc } from 'firebase/firestore';
@@ -19,7 +19,6 @@ export default function Onboarding({ user, setSteamIdInput, currency, setCurrenc
       return;
     }
     
-    // Extract ID if it's a URL
     let finalId = steamIdLocal.trim();
     if (finalId.includes('steamcommunity.com/profiles/')) {
       finalId = finalId.split('steamcommunity.com/profiles/')[1].split('/')[0];
@@ -35,7 +34,6 @@ export default function Onboarding({ user, setSteamIdInput, currency, setCurrenc
         setSteamIdInput(finalId);
       }
       
-      // Auto sign in anonymously to keep database syncing working if firebase is configured
       if (auth && !user) {
         await signInAnonymously(auth);
       }
@@ -51,20 +49,43 @@ export default function Onboarding({ user, setSteamIdInput, currency, setCurrenc
     }
   };
 
+  const getGlowColor = () => {
+    switch(step) {
+      case 0: return '#00FF77';
+      case 1: return '#a855f7';
+      case 2: return '#00F0FF';
+      case 3: return '#FF2E93';
+      default: return '#00F0FF';
+    }
+  };
+
   const renderStepContent = () => {
     if (step === 0) {
       return (
-        <div className="onboarding-step-content slide-in-right">
-          <div className="step-icon-wrapper" style={{ marginBottom: '24px' }}>
-            <Briefcase size={48} color="var(--color-green)" />
+        <div className="onboarding-step-content slide-in-right" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center' }}>
+          <div className="step-icon-wrapper" style={{ filter: 'drop-shadow(0 0 15px rgba(0, 255, 119, 0.35))' }}>
+            <Briefcase size={36} color="#00FF77" />
           </div>
-          <h2>{lang === 'de' ? 'Dein CS2 Portfolio' : 'Your CS2 Portfolio'}</h2>
-          <p>
+          <h2 style={{ fontSize: '1.6rem', fontWeight: 'bold', color: '#fff', marginBottom: '12px' }}>
+            {lang === 'de' ? 'Dein CS2 Portfolio' : 'Your CS2 Portfolio'}
+          </h2>
+          <p style={{ color: '#94a3b8', fontSize: '14px', lineHeight: '1.6', padding: '0 12px' }}>
             {lang === 'de' 
               ? 'Behalte den Überblick über all deine Skins. Verfolge den Gesamtwert deines Inventars in Echtzeit und sieh sofort, wie viel du im Plus bist.'
               : 'Keep track of all your skins. Monitor the total value of your inventory in real-time and instantly see your profits.'}
           </p>
-          <button onClick={() => setStep(1)} className="onboarding-btn primary-btn" style={{ marginTop: '24px' }}>
+          <button 
+            onClick={() => setStep(1)} 
+            className="onboarding-btn primary-btn" 
+            style={{ 
+              marginTop: '32px', 
+              background: '#fff', 
+              color: '#000', 
+              boxShadow: '0 8px 24px rgba(255,255,255,0.15)',
+              borderRadius: '16px',
+              height: '52px'
+            }}
+          >
             {lang === 'de' ? 'Weiter' : 'Next'} <ArrowRight size={18} />
           </button>
         </div>
@@ -73,21 +94,38 @@ export default function Onboarding({ user, setSteamIdInput, currency, setCurrenc
 
     if (step === 1) {
       return (
-        <div className="onboarding-step-content slide-in-right">
-          <div className="step-icon-wrapper" style={{ marginBottom: '24px' }}>
-            <TrendingUp size={48} color="#a855f7" />
+        <div className="onboarding-step-content slide-in-right" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center' }}>
+          <div className="step-icon-wrapper" style={{ filter: 'drop-shadow(0 0 15px rgba(168, 85, 247, 0.35))' }}>
+            <TrendingUp size={36} color="#a855f7" />
           </div>
-          <h2>{lang === 'de' ? 'Analysen & Trends' : 'Analytics & Trends'}</h2>
-          <p>
+          <h2 style={{ fontSize: '1.6rem', fontWeight: 'bold', color: '#fff', marginBottom: '12px' }}>
+            {lang === 'de' ? 'Analysen & Trends' : 'Analytics & Trends'}
+          </h2>
+          <p style={{ color: '#94a3b8', fontSize: '14px', lineHeight: '1.6', padding: '0 12px' }}>
             {lang === 'de'
               ? 'Nutze technische Indikatoren (RSI, SMA) und Marktdaten, um den perfekten Kauf- oder Verkaufszeitpunkt für deine Skins zu finden.'
               : 'Use technical indicators (RSI, SMA) and market data to find the perfect time to buy or sell your skins.'}
           </p>
-          <div className="step-nav-buttons" style={{ display: 'flex', gap: '12px', marginTop: '24px' }}>
-            <button onClick={() => setStep(0)} className="onboarding-btn secondary-btn" style={{ flex: 1 }}>
+          <div className="step-nav-buttons" style={{ display: 'flex', gap: '12px', width: '100%', marginTop: '32px' }}>
+            <button 
+              onClick={() => setStep(0)} 
+              className="onboarding-btn secondary-btn" 
+              style={{ flex: 1, height: '52px', borderRadius: '16px', border: '1px solid rgba(255,255,255,0.08)' }}
+            >
               <ArrowLeft size={18} /> {lang === 'de' ? 'Zurück' : 'Back'}
             </button>
-            <button onClick={() => setStep(2)} className="onboarding-btn primary-btn" style={{ flex: 1 }}>
+            <button 
+              onClick={() => setStep(2)} 
+              className="onboarding-btn primary-btn" 
+              style={{ 
+                flex: 1, 
+                height: '52px', 
+                borderRadius: '16px', 
+                background: '#fff', 
+                color: '#000',
+                boxShadow: '0 8px 24px rgba(255,255,255,0.15)'
+              }}
+            >
               {lang === 'de' ? 'Loslegen' : 'Get Started'} <ArrowRight size={18} />
             </button>
           </div>
@@ -97,56 +135,105 @@ export default function Onboarding({ user, setSteamIdInput, currency, setCurrenc
 
     if (step === 2) {
       return (
-        <div className="onboarding-step-content slide-in-right">
-          <div className="step-icon-wrapper" style={{ marginBottom: '16px' }}>
-            <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#00F0FF" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <line x1="4" y1="21" x2="4" y2="14" />
-              <line x1="4" y1="10" x2="4" y2="3" />
-              <line x1="12" y1="21" x2="12" y2="12" />
-              <line x1="12" y1="8" x2="12" y2="3" />
-              <line x1="20" y1="21" x2="20" y2="16" />
-              <line x1="20" y1="12" x2="20" y2="3" />
-              <line x1="1" y1="14" x2="7" y2="14" />
-              <line x1="9" y1="8" x2="15" y2="8" />
-              <line x1="17" y1="16" x2="23" y2="16" />
-            </svg>
+        <div className="onboarding-step-content slide-in-right" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+          <div className="step-icon-wrapper" style={{ filter: 'drop-shadow(0 0 15px rgba(0, 240, 255, 0.35))' }}>
+            <Settings2 size={36} color="#00F0FF" />
           </div>
-          <h2>{lang === 'de' ? 'Einstellungen' : 'Settings'}</h2>
-          <p style={{ fontSize: '0.9rem', color: '#8e8e93', marginBottom: '20px' }}>
+          <h2 style={{ fontSize: '1.6rem', fontWeight: 'bold', color: '#fff', marginBottom: '8px' }}>
+            {lang === 'de' ? 'Einstellungen' : 'Settings'}
+          </h2>
+          <p style={{ fontSize: '13px', color: '#94a3b8', marginBottom: '28px', textAlign: 'center', lineHeight: '1.5' }}>
             {lang === 'de' ? 'Passe deine Währung und deinen favorisierten Marktplatz an.' : 'Customize your currency and preferred marketplace.'}
           </p>
 
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', width: '100%', textAlign: 'left', marginBottom: '24px' }}>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-              <label style={{ fontSize: '10px', color: 'rgba(255,255,255,0.4)', fontWeight: 'bold', textTransform: 'uppercase' }}>Währung</label>
-              <select 
-                value={currency} 
-                onChange={(e) => setCurrency(e.target.value)}
-                style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '12px', padding: '12px', color: '#fff', fontSize: '14px', outline: 'none', cursor: 'pointer' }}
-              >
-                <option value="EUR" style={{ background: '#000' }}>EUR (€)</option>
-                <option value="USD" style={{ background: '#000' }}>USD ($)</option>
-              </select>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '20px', width: '100%', textAlign: 'left', marginBottom: '32px' }}>
+            {/* Currency Selector */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+              <label style={{ fontSize: '10px', color: 'rgba(255,255,255,0.4)', fontWeight: 'bold', letterSpacing: '1px', textTransform: 'uppercase' }}>
+                {lang === 'de' ? 'WÄHRUNG' : 'CURRENCY'}
+              </label>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '4px', background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '14px', padding: '4px' }}>
+                <button 
+                  type="button" 
+                  onClick={() => setCurrency('EUR')} 
+                  className="segmented-control-btn"
+                  style={{ 
+                    background: currency === 'EUR' ? 'rgba(255,255,255,0.1)' : 'transparent', 
+                    color: currency === 'EUR' ? '#fff' : 'rgba(255,255,255,0.4)',
+                    boxShadow: currency === 'EUR' ? '0 2px 8px rgba(0,0,0,0.3)' : 'none'
+                  }}
+                >
+                  EUR (€)
+                </button>
+                <button 
+                  type="button" 
+                  onClick={() => setCurrency('USD')} 
+                  className="segmented-control-btn"
+                  style={{ 
+                    background: currency === 'USD' ? 'rgba(255,255,255,0.1)' : 'transparent', 
+                    color: currency === 'USD' ? '#fff' : 'rgba(255,255,255,0.4)',
+                    boxShadow: currency === 'USD' ? '0 2px 8px rgba(0,0,0,0.3)' : 'none'
+                  }}
+                >
+                  USD ($)
+                </button>
+              </div>
             </div>
 
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-              <label style={{ fontSize: '10px', color: 'rgba(255,255,255,0.4)', fontWeight: 'bold', textTransform: 'uppercase' }}>Marktplatz</label>
-              <select 
-                value={valuationMode} 
-                onChange={(e) => setValuationMode(e.target.value)}
-                style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '12px', padding: '12px', color: '#fff', fontSize: '14px', outline: 'none', cursor: 'pointer' }}
-              >
-                <option value="STEAM" style={{ background: '#000' }}>Steam (Standard)</option>
-                <option value="CASHOUT" style={{ background: '#000' }}>Cashout (75% Realwert)</option>
-              </select>
+            {/* Valuation Mode Selector */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+              <label style={{ fontSize: '10px', color: 'rgba(255,255,255,0.4)', fontWeight: 'bold', letterSpacing: '1px', textTransform: 'uppercase' }}>
+                {lang === 'de' ? 'BEVORZUGTER MARKTPLATZ' : 'PREFERRED MARKETPLACE'}
+              </label>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '4px', background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '14px', padding: '4px' }}>
+                <button 
+                  type="button" 
+                  onClick={() => setValuationMode('STEAM')} 
+                  className="segmented-control-btn"
+                  style={{ 
+                    background: valuationMode === 'STEAM' ? 'rgba(255,255,255,0.1)' : 'transparent', 
+                    color: valuationMode === 'STEAM' ? '#fff' : 'rgba(255,255,255,0.4)',
+                    boxShadow: valuationMode === 'STEAM' ? '0 2px 8px rgba(0,0,0,0.3)' : 'none'
+                  }}
+                >
+                  Steam (Standard)
+                </button>
+                <button 
+                  type="button" 
+                  onClick={() => setValuationMode('CASHOUT')} 
+                  className="segmented-control-btn"
+                  style={{ 
+                    background: valuationMode === 'CASHOUT' ? 'rgba(255,255,255,0.1)' : 'transparent', 
+                    color: valuationMode === 'CASHOUT' ? '#fff' : 'rgba(255,255,255,0.4)',
+                    boxShadow: valuationMode === 'CASHOUT' ? '0 2px 8px rgba(0,0,0,0.3)' : 'none'
+                  }}
+                >
+                  Cashout (75%)
+                </button>
+              </div>
             </div>
           </div>
 
           <div className="step-nav-buttons" style={{ display: 'flex', gap: '12px', width: '100%' }}>
-            <button onClick={() => setStep(1)} className="onboarding-btn secondary-btn" style={{ flex: 1 }}>
+            <button 
+              onClick={() => setStep(1)} 
+              className="onboarding-btn secondary-btn" 
+              style={{ flex: 1, height: '52px', borderRadius: '16px', border: '1px solid rgba(255,255,255,0.08)' }}
+            >
               <ArrowLeft size={18} /> {lang === 'de' ? 'Zurück' : 'Back'}
             </button>
-            <button onClick={() => setStep(3)} className="onboarding-btn primary-btn" style={{ flex: 1 }}>
+            <button 
+              onClick={() => setStep(3)} 
+              className="onboarding-btn primary-btn" 
+              style={{ 
+                flex: 1, 
+                height: '52px', 
+                borderRadius: '16px', 
+                background: '#fff', 
+                color: '#000',
+                boxShadow: '0 8px 24px rgba(255,255,255,0.15)'
+              }}
+            >
               {lang === 'de' ? 'Speichern & Weiter' : 'Save & Next'} <ArrowRight size={18} />
             </button>
           </div>
@@ -189,50 +276,77 @@ export default function Onboarding({ user, setSteamIdInput, currency, setCurrenc
       };
 
       return (
-        <div className="onboarding-step-content fade-in">
-          <div className="step-icon-wrapper" style={{ marginBottom: '16px' }}>
-            <LinkIcon size={40} color="#4B69FF" />
+        <div className="onboarding-step-content fade-in" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+          <div className="step-icon-wrapper" style={{ filter: 'drop-shadow(0 0 15px rgba(255, 46, 147, 0.35))' }}>
+            <LinkIcon size={36} color="#FF2E93" />
           </div>
-          <h2 style={{ marginBottom: '8px', fontSize: '1.5rem' }}>{lang === 'de' ? 'Mit Steam verbinden' : 'Connect Steam'}</h2>
-          <p style={{ marginBottom: '24px', fontSize: '0.95rem' }}>
+          <h2 style={{ fontSize: '1.6rem', fontWeight: 'bold', color: '#fff', marginBottom: '8px' }}>
+            {lang === 'de' ? 'Mit Steam verbinden' : 'Connect Steam'}
+          </h2>
+          <p style={{ fontSize: '13px', color: '#94a3b8', marginBottom: '28px', textAlign: 'center', lineHeight: '1.5', padding: '0 12px' }}>
             {lang === 'de' 
               ? 'Verbinde deinen Account sicher über Steam OpenID, um dein CS2-Inventar automatisch zu laden.'
               : 'Connect your account securely via Steam OpenID to load your CS2 inventory automatically.'}
           </p>
 
           {error && (
-            <div className="onboarding-error" style={{ marginBottom: '16px' }}>
+            <div className="onboarding-error" style={{ marginBottom: '16px', width: '100%' }}>
               <AlertTriangle size={18} />
               <span>{error}</span>
             </div>
           )}
 
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', width: '100%' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', width: '100%' }}>
             <button 
               onClick={handleSteamRedirect} 
               className="onboarding-btn primary-btn"
-              style={{ background: 'linear-gradient(135deg, #4B69FF 0%, #00F0FF 100%)', color: '#fff', fontWeight: 'bold' }}
+              style={{ 
+                background: 'linear-gradient(135deg, #4B69FF 0%, #00F0FF 100%)', 
+                color: '#fff', 
+                fontWeight: '700',
+                height: '52px',
+                borderRadius: '16px',
+                boxShadow: '0 8px 24px rgba(75, 105, 255, 0.3)',
+                letterSpacing: '0.3px'
+              }}
             >
               {lang === 'de' ? 'Jetzt mit Steam anmelden 🎮' : 'Sign in with Steam 🎮'}
             </button>
 
-            {/* Manual entry fallback */}
-            <div style={{ marginTop: '16px', borderTop: '1px solid rgba(255,255,255,0.08)', paddingTop: '16px' }}>
-              <div style={{ fontSize: '11px', color: 'rgba(255,255,255,0.4)', fontWeight: 'bold', textTransform: 'uppercase', marginBottom: '8px', textAlign: 'center' }}>
-                Oder manuell mit SteamID verbinden
+            {/* Manual Entry Fallback */}
+            <div style={{ marginTop: '20px', borderTop: '1px solid rgba(255,255,255,0.08)', paddingTop: '20px', width: '100%' }}>
+              <div style={{ fontSize: '10px', color: 'rgba(255,255,255,0.4)', fontWeight: 'bold', textTransform: 'uppercase', marginBottom: '10px', textAlign: 'center', letterSpacing: '0.8px' }}>
+                {lang === 'de' ? 'ODER MANUELL VERBINDEN' : 'OR CONNECT MANUALLY'}
               </div>
               <form onSubmit={handleSaveSteamId} className="onboarding-form">
                 <div className="input-group">
                   <input 
                     type="text" 
-                    placeholder={lang === 'de' ? 'SteamID64 eingeben (z.B. 7656119...)' : 'Enter SteamID64 (e.g. 7656119...)'} 
+                    placeholder={lang === 'de' ? 'SteamID64 oder Profil-URL' : 'SteamID64 or Profile URL'} 
                     value={steamIdLocal}
                     onChange={(e) => setSteamIdLocal(e.target.value)}
                     required
-                    style={{ paddingLeft: '16px' }}
+                    style={{ 
+                      paddingLeft: '16px', 
+                      height: '48px', 
+                      borderRadius: '12px',
+                      background: 'rgba(255,255,255,0.03)',
+                      border: '1px solid rgba(255,255,255,0.08)',
+                      color: '#fff'
+                    }}
                   />
                 </div>
-                <button type="submit" className="onboarding-btn secondary-btn" disabled={loading} style={{ marginTop: '8px' }}>
+                <button 
+                  type="submit" 
+                  className="onboarding-btn secondary-btn" 
+                  disabled={loading} 
+                  style={{ 
+                    marginTop: '8px', 
+                    height: '44px', 
+                    borderRadius: '12px',
+                    border: '1px solid rgba(255,255,255,0.06)'
+                  }}
+                >
                   {loading ? <span className="spinner"></span> : (lang === 'de' ? 'Manuell laden' : 'Load Manually')}
                 </button>
               </form>
@@ -240,7 +354,9 @@ export default function Onboarding({ user, setSteamIdInput, currency, setCurrenc
 
             <button 
               onClick={handleSkipMock} 
-              style={{ background: 'none', border: 'none', color: '#8e8e93', fontSize: '0.8rem', cursor: 'pointer', marginTop: '12px' }}
+              style={{ background: 'none', border: 'none', color: 'rgba(255,255,255,0.4)', fontSize: '11px', cursor: 'pointer', marginTop: '12px', transition: 'color 0.2s' }}
+              onMouseEnter={(e) => e.target.style.color = '#fff'}
+              onMouseLeave={(e) => e.target.style.color = 'rgba(255,255,255,0.4)'}
             >
               {lang === 'de' ? 'Ohne Steam fortfahren (Mock Data)' : 'Continue without Steam (Mock Data)'}
             </button>
@@ -251,21 +367,46 @@ export default function Onboarding({ user, setSteamIdInput, currency, setCurrenc
   };
 
   return (
-    <div className="onboarding-overlay">
-      <div className="onboarding-container" style={{ position: 'relative' }}>
+    <div className="onboarding-overlay" style={{ position: 'relative', overflow: 'hidden', background: '#000' }}>
+      {/* Background Glow */}
+      <div 
+        className="onboarding-chromatic-blob" 
+        style={{ 
+          background: getGlowColor(),
+          top: '50%',
+          left: '50%',
+          transform: 'translate(-50%, -50%)',
+        }} 
+      />
+
+      <div className="onboarding-container" style={{ position: 'relative', zIndex: 2, background: 'rgba(10, 10, 10, 0.65)', border: '1px solid rgba(255, 255, 255, 0.08)', borderRadius: '28px' }}>
         
         {step < 2 && (
           <button 
             className="skip-btn" 
             onClick={() => setStep(2)}
-            style={{ position: 'absolute', top: '24px', right: '24px', background: 'transparent', border: 'none', color: '#8e8e93', fontSize: '0.9rem', cursor: 'pointer' }}
+            style={{ 
+              position: 'absolute', 
+              top: '24px', 
+              right: '24px', 
+              background: 'transparent', 
+              border: 'none', 
+              color: 'rgba(255,255,255,0.4)', 
+              fontSize: '13px', 
+              cursor: 'pointer',
+              transition: 'color 0.2s'
+            }}
+            onMouseEnter={(e) => e.target.style.color = '#fff'}
+            onMouseLeave={(e) => e.target.style.color = 'rgba(255,255,255,0.4)'}
           >
             {lang === 'de' ? 'Überspringen' : 'Skip'}
           </button>
         )}
 
         <div className="onboarding-header" style={{ marginBottom: step === 2 ? '0' : '24px', display: step === 3 ? 'none' : 'block' }}>
-          <h1 className="onboarding-title">SkinStock</h1>
+          <h1 className="onboarding-title" style={{ background: 'linear-gradient(to bottom, #ffffff 0%, #a1a1a1 100%)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
+            SkinStock
+          </h1>
         </div>
 
         {renderStepContent()}
