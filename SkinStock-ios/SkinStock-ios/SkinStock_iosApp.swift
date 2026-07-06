@@ -33,41 +33,61 @@ struct SkinStock_iosApp: App {
     @StateObject private var achievementService = AchievementService()
     @StateObject private var notificationService = NotificationService()
     
+    // Splash screen state
+    @State private var isShowingSplash = true
+    
     var body: some Scene {
         WindowGroup {
-            Group {
-                switch appState.status {
-                case .onboarding:
-                    OnboardingView(
-                        authManager: authManager,
-                        steamService: steamService
-                    )
-                    .environmentObject(appState)
-                    .environmentObject(userSettings)
-                    
-                case .steamLogin:
-                    SteamLoginView(steamService: steamService)
-                    .environmentObject(appState)
-                    
-                case .mainApp:
-                    MainNavigationContainer()
-                        .environmentObject(appState)
-                        .environmentObject(authManager)
-                        .environmentObject(steamService)
-                        .environmentObject(userSettings)
-                        .environmentObject(priceService)
-                        .environmentObject(priceHistoryStore)
-                        .environmentObject(inventoryService)
-                        .environmentObject(inventoryViewModel)
-                        .environmentObject(watchlistService)
-                        .environmentObject(achievementService)
-                        .environmentObject(notificationService)
-                        .onAppear {
-                            notificationService.requestPermission()
+            ZStack {
+                if isShowingSplash {
+                    SplashView()
+                        .transition(.opacity)
+                        .zIndex(1)
+                } else {
+                    Group {
+                        switch appState.status {
+                        case .onboarding:
+                            OnboardingView(
+                                authManager: authManager,
+                                steamService: steamService
+                            )
+                            .environmentObject(appState)
+                            .environmentObject(userSettings)
+                            
+                        case .steamLogin:
+                            SteamLoginView(steamService: steamService)
+                            .environmentObject(appState)
+                            
+                        case .mainApp:
+                            MainNavigationContainer()
+                                .environmentObject(appState)
+                                .environmentObject(authManager)
+                                .environmentObject(steamService)
+                                .environmentObject(userSettings)
+                                .environmentObject(priceService)
+                                .environmentObject(priceHistoryStore)
+                                .environmentObject(inventoryService)
+                                .environmentObject(inventoryViewModel)
+                                .environmentObject(watchlistService)
+                                .environmentObject(achievementService)
+                                .environmentObject(notificationService)
+                                .onAppear {
+                                    notificationService.requestPermission()
+                                }
                         }
+                    }
+                    .transition(.opacity)
                 }
             }
             .preferredColorScheme(userSettings.selectedTheme.colorScheme)
+            .onAppear {
+                // Auto dismiss splash screen with animation
+                DispatchQueue.main.asyncAfter(deadline: .now() + 1.8) {
+                    withAnimation(.easeOut(duration: 0.45)) {
+                        isShowingSplash = false
+                    }
+                }
+            }
         }
     }
 }

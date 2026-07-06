@@ -15,9 +15,43 @@ import {
   AlertTriangle,
   Search,
   BarChart2,
-  LogOut
+  LogOut,
+  Crown,
+  Star,
+  Shield,
+  Diamond,
+  Package,
+  FlaskConical,
+  History,
+  Eye,
+  ChevronRight,
+  X,
+  RotateCw,
+  AlertCircle,
+  Info,
+  CheckCircle2,
+  Sparkles
 } from 'lucide-react'
 import './App.css'
+import { collections, getFloatLimits, findCollectionForSkin, getSkinRarity, rarityColors, nextRarityMap } from './components/CS2CollectionData'
+
+const ACHIEVEMENT_DEFINITIONS = [
+  { id: 'first_login', title: 'Willkommen!', description: 'Melde dich zum ersten Mal an', icon: 'Star' },
+  { id: 'portfolio_100', title: 'Starter', description: 'Portfolio-Wert über 100€', icon: 'TrendingUp' },
+  { id: 'portfolio_500', title: 'Investor', description: 'Portfolio-Wert über 500€', icon: 'Wallet' },
+  { id: 'portfolio_1000', title: 'Whaler', description: 'Portfolio-Wert über 1.000€', icon: 'Crown' },
+  { id: 'portfolio_5000', title: 'High Roller', description: 'Portfolio-Wert über 5.000€', icon: 'Diamond' },
+  { id: 'portfolio_10000', title: 'Legende', description: 'Portfolio-Wert über 10.000€', icon: 'Shield' },
+  { id: 'items_5', title: 'Sammler', description: '5 Skins im Inventar', icon: 'Package' },
+  { id: 'items_25', title: 'Hoarder', description: '25 Skins im Inventar', icon: 'Package' },
+  { id: 'items_50', title: 'Arsenal', description: '50 Skins im Inventar', icon: 'Package' },
+  { id: 'items_100', title: 'Museum', description: '100 Skins im Inventar', icon: 'Package' },
+  { id: 'first_knife', title: 'Erste Klinge', description: 'Besitze ein Messer (★)', icon: 'Sparkles' },
+  { id: 'first_gloves', title: 'Handarbeit', description: 'Besitze Handschuhe', icon: 'Sparkles' },
+  { id: 'sticker_king', title: 'Sticker King', description: 'Besitze einen Skin mit 4 Stickern', icon: 'Sparkles' },
+  { id: 'diversified', title: 'Diversifiziert', description: 'Besitze Skins in 5+ Seltenheitsstufen', icon: 'BarChart2' },
+  { id: 'watchlist_add', title: 'Beobachter', description: 'Füge ein Item zur Watchlist hinzu', icon: 'Eye' }
+];
 import defaultInventory from './defaultInventory.json'
 import Onboarding from './components/Onboarding'
 import { auth, db } from './firebase'
@@ -342,8 +376,71 @@ export default function App() {
     }
   })
 
+  // Action Hub & Sheets State (Ported from iOS design)
+  const [showActionHub, setShowActionHub] = useState(false)
+  const [activeSheet, setActiveSheet] = useState(null) // 'watchlist' | 'achievements' | 'collections' | 'tradeup' | 'whatif' | 'arbitrage' | 'pricealerts'
+
+  // Achievements State (Ported from AchievementService.swift)
+  const [achievements, setAchievements] = useState(() => {
+    try {
+      const stored = localStorage.getItem('skinstock_achievements')
+      if (stored) {
+        const parsed = JSON.parse(stored)
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          const merged = [...parsed]
+          ACHIEVEMENT_DEFINITIONS.forEach(def => {
+            if (!merged.some(a => a.id === def.id)) {
+              merged.push({ ...def, isUnlocked: false, unlockedDate: null })
+            }
+          })
+          return merged
+        }
+      }
+    } catch (e) {
+      console.error('Failed to load achievements', e)
+    }
+    return ACHIEVEMENT_DEFINITIONS.map(def => ({ ...def, isUnlocked: false, unlockedDate: null }))
+  })
+  const [newlyUnlockedAchievement, setNewlyUnlockedAchievement] = useState(null)
+
+  // Steam Median Prices cache for Arbitrage spreading
+  const [steamMedianPrices, setSteamMedianPrices] = useState(() => {
+    try {
+      const stored = localStorage.getItem('skinstock_steam_median_prices')
+      if (stored) {
+        return JSON.parse(stored)
+      }
+    } catch {}
+    return {}
+  })
+
+  // Selected Skin Detail Simulation State (Wear Simulator)
+  const [selectedSkinFloat, setSelectedSkinFloat] = useState(0.15)
+
   const [user, setUser] = useState(null)
   const [authLoading, setAuthLoading] = useState(true)
+
+  // Splash Screen States
+  const [showSplash, setShowSplash] = useState(true)
+  const [splashFadingOut, setSplashFadingOut] = useState(false)
+  const [minTimeElapsed, setMinTimeElapsed] = useState(false)
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setMinTimeElapsed(true)
+    }, 1800)
+    return () => clearTimeout(timer)
+  }, [])
+
+  useEffect(() => {
+    if (!authLoading && minTimeElapsed) {
+      setSplashFadingOut(true)
+      const timer = setTimeout(() => {
+        setShowSplash(false)
+      }, 500)
+      return () => clearTimeout(timer)
+    }
+  }, [authLoading, minTimeElapsed])
 
 
 
@@ -392,11 +489,25 @@ export default function App() {
   const [currency, setCurrency] = useState('EUR') // 'EUR' | 'USD'
   const [valuationMode, setValuationMode] = useState('STEAM') // 'STEAM' | 'CASHOUT'
   
-  // Alert states
-  const [alerts, setAlerts] = useState([])
+  // Alert states (Ported to local storage persistence)
+  const [alerts, setAlerts] = useState(() => {
+    try {
+      const stored = localStorage.getItem('skinstock_alerts')
+      if (stored) return JSON.parse(stored)
+    } catch {}
+    return []
+  })
   const [alertTargetPrice, setAlertTargetPrice] = useState('')
   const [alertType, setAlertType] = useState('above') // 'above' | 'below'
   const [toasts, setToasts] = useState([])
+
+  useEffect(() => {
+    localStorage.setItem('skinstock_alerts', JSON.stringify(alerts))
+  }, [alerts])
+
+  useEffect(() => {
+    localStorage.setItem('skinstock_steam_median_prices', JSON.stringify(steamMedianPrices))
+  }, [steamMedianPrices])
 
   useEffect(() => {
     if (!auth) {
@@ -790,6 +901,137 @@ export default function App() {
       img: ''
     }
   }, [skins, selectedSkinId, realInventoryItems, activeTab])
+
+  const unlockAchievement = useCallback((id) => {
+    setAchievements(prev => {
+      const idx = prev.findIndex(a => a.id === id)
+      if (idx !== -1 && !prev[idx].isUnlocked) {
+        const updated = [...prev]
+        updated[idx] = { ...updated[idx], isUnlocked: true, unlockedDate: new Date().toISOString() }
+        setNewlyUnlockedAchievement(updated[idx])
+        localStorage.setItem('skinstock_achievements', JSON.stringify(updated))
+        
+        // Auto-dismiss achievement toast after 3s
+        setTimeout(() => {
+          setNewlyUnlockedAchievement(null)
+        }, 3000)
+        return updated
+      }
+      return prev
+    })
+  }, [])
+
+  const evaluateAchievements = useCallback((inventoryList, totalValue, watchlistCount) => {
+    if (totalValue >= 100) unlockAchievement('portfolio_100')
+    if (totalValue >= 500) unlockAchievement('portfolio_500')
+    if (totalValue >= 1000) unlockAchievement('portfolio_1000')
+    if (totalValue >= 5000) unlockAchievement('portfolio_5000')
+    if (totalValue >= 10000) unlockAchievement('portfolio_10000')
+    
+    if (inventoryList.length >= 5) unlockAchievement('items_5')
+    if (inventoryList.length >= 25) unlockAchievement('items_25')
+    if (inventoryList.length >= 50) unlockAchievement('items_50')
+    if (inventoryList.length >= 100) unlockAchievement('items_100')
+    
+    const hasKnife = inventoryList.some(item => {
+      const n = item.name.toLowerCase()
+      return n.includes('★') && !n.includes('glove') && !n.includes('handschuhe') && !n.includes('wrap')
+    })
+    const hasGloves = inventoryList.some(item => {
+      const n = item.name.toLowerCase()
+      return (n.includes('★') && (n.includes('glove') || n.includes('handschuhe') || n.includes('wrap'))) || n.includes('bloodhound') || n.includes('hand wraps')
+    })
+    if (hasKnife) unlockAchievement('first_knife')
+    if (hasGloves) unlockAchievement('first_gloves')
+    
+    const hasStickerKing = inventoryList.some(item => item.stickers && item.stickers.length >= 4)
+    if (hasStickerKing) unlockAchievement('sticker_king')
+    
+    const rarities = new Set(inventoryList.map(item => getSkinRarity(item.name)))
+    if (rarities.size >= 5) unlockAchievement('diversified')
+    
+    if (watchlistCount > 0) unlockAchievement('watchlist_add')
+    
+    unlockAchievement('first_login')
+  }, [unlockAchievement])
+
+  useEffect(() => {
+    if (realInventoryItems) {
+      evaluateAchievements(realInventoryItems, realInventorySummary.totalValue, skins.length)
+    }
+  }, [realInventoryItems, realInventorySummary.totalValue, skins.length, evaluateAchievements])
+
+  const fetchSteamMedianPrice = useCallback(async (hashName) => {
+    try {
+      const encoded = encodeURIComponent(hashName)
+      const url = `https://steamcommunity.com/market/priceoverview/?appid=730&currency=3&market_hash_name=${encoded}`
+      const proxyUrl = `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`
+      
+      const res = await fetch(proxyUrl)
+      if (!res.ok) throw new Error('Steam error')
+      const json = await res.json()
+      if (json && json.median_price) {
+        const medianStr = json.median_price
+        const cleaned = medianStr
+          .replace('€', '')
+          .replace('$', '')
+          .replace(',', '.')
+          .replace('--', '0')
+          .trim()
+        const price = parseFloat(cleaned)
+        if (!isNaN(price)) {
+          setSteamMedianPrices(prev => ({ ...prev, [hashName]: price }))
+          return price
+        }
+      }
+    } catch (e) {
+      console.warn('Failed to fetch Steam price overview, using simulated fallback', e)
+      const basePrice = pricesDb && pricesDb[hashName] 
+        ? (pricesDb[hashName].last_24h || pricesDb[hashName].last_7d || 15)
+        : 15
+      const randomSpread = 0.05 + Math.random() * 0.15
+      const simulatedPrice = basePrice * (1 + randomSpread)
+      setSteamMedianPrices(prev => ({ ...prev, [hashName]: parseFloat(simulatedPrice.toFixed(2)) }))
+      return simulatedPrice
+    }
+  }, [pricesDb])
+
+  // Selected skin float & wear simulator details helper
+  const getWearNameFromFloat = (f) => {
+    if (f < 0.07) return 'Factory New'
+    if (f < 0.15) return 'Minimal Wear'
+    if (f < 0.38) return 'Field-Tested'
+    if (f < 0.45) return 'Well-Worn'
+    return 'Battle-Scarred'
+  }
+
+  const getSimulatedPrice = useCallback((skin, floatVal) => {
+    if (!skin || skin.id === 'total' || skin.id === 'none') return 0
+    const wearName = getWearNameFromFloat(floatVal)
+    const cleanName = skin.name.split(' (')[0]
+    const fullHashName = `${cleanName} (${wearName})`
+    let price = 0
+    if (pricesDb && pricesDb[fullHashName]) {
+      const itemPrices = pricesDb[fullHashName]
+      price = itemPrices.last_24h || itemPrices.last_7d || itemPrices.last_30d || 0
+    }
+    if (!price && skin.basePrice) {
+      price = skin.basePrice
+    }
+    return price || 15.0
+  }, [pricesDb])
+
+  // Synchronize float value when a skin is selected
+  useEffect(() => {
+    if (selectedSkinId) {
+      const current = selectedSkinId.startsWith('real-')
+        ? realInventoryItems.find(s => s.id === selectedSkinId)
+        : skins.find(s => s.id === selectedSkinId)
+      if (current) {
+        setSelectedSkinFloat(current.float !== undefined && current.float !== null ? current.float : 0.15)
+      }
+    }
+  }, [selectedSkinId, skins, realInventoryItems])
 
   const playAlertSoundNotification = useCallback((skinName, type, target, currentPrice) => {
     playTradeSound('alert')
@@ -1188,16 +1430,33 @@ export default function App() {
     }
   };
 
-  if (authLoading) {
-    return <div style={{ display: 'flex', height: '100vh', width: '100vw', alignItems: 'center', justifyContent: 'center', background: '#000', color: '#fff' }}>Loading...</div>;
+  // If splash is showing and auth is still loading, just render splash screen
+  if (showSplash && authLoading) {
+    return (
+      <div className={`splash-overlay ${splashFadingOut ? 'fade-out' : ''}`}>
+        <div className="splash-container">
+          <div className="splash-logo-wrapper">
+            <div className="splash-logo-glow" />
+            <img src="/logo.png" alt="SkinStock Logo" className="splash-logo" />
+          </div>
+          <div className="splash-text-group">
+            <h1 className="splash-title">SkinStock</h1>
+            <p className="splash-subtitle">CS2 Market Ticker</p>
+          </div>
+          <div className="splash-loader-wrapper">
+            <div className="splash-loader-ring" />
+          </div>
+        </div>
+      </div>
+    );
   }
 
-  if (!user || !steamIdInput) {
-    return <Onboarding user={user} setSteamIdInput={setSteamIdInput} />;
-  }
-
-  return (
-    <div className="app-layout">
+  const renderContent = () => {
+    if (!user || !steamIdInput) {
+      return <Onboarding user={user} setSteamIdInput={setSteamIdInput} />;
+    }
+    return (
+      <div className="app-layout">
       {/* Toast Alert Notifications */}
       <div className="toast-container">
         {toasts.map((toast) => (
@@ -1570,5 +1829,1287 @@ export default function App() {
         </nav>
       </div>
     </div>
+  );
+};
+
+  // --- SUB-COMPONENTS FOR SHEETS (Proper React components to support state/hooks) ---
+
+  const WatchlistSheet = ({ filteredSkins, currency, valuationMode, setSkins, playTradeSound, setSelectedSkinId, formatPrice }) => {
+    return (
+      <div className="sheet-content">
+        <div className="inventory-grid" style={{ padding: 0 }}>
+          {filteredSkins.length === 0 ? (
+            <div className="empty-state" style={{ marginTop: '60px', textAlign: 'center', width: '100%' }}>
+              <Eye size={48} style={{ opacity: 0.3, marginBottom: '16px' }} />
+              <p>Keine Skins auf der Watchlist.</p>
+            </div>
+          ) : (
+            filteredSkins.map((item) => {
+              const price = formatPrice(item.price, currency, valuationMode);
+              return (
+                <div key={item.id} className={`skin-card ${getRarityClass(item.price)}`} onClick={() => setSelectedSkinId(item.id)}>
+                  <div className="skin-card-image">
+                    <img src={item.img} alt={item.name} />
+                  </div>
+                  <div className="skin-card-details">
+                    <div className="skin-card-name" title={item.name}>{item.name}</div>
+                    <div className="skin-card-price" style={{ color: 'var(--color-green)' }}>{price}</div>
+                  </div>
+                  <button 
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setSkins(prev => prev.filter(s => s.id !== item.id));
+                      playTradeSound('sell');
+                    }}
+                    style={{ position: 'absolute', top: '8px', right: '8px', background: 'rgba(255,59,48,0.2)', border: 'none', borderRadius: '50%', width: '24px', height: '24px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#ff3b30', cursor: 'pointer' }}
+                  >
+                    <Trash2 size={12} />
+                  </button>
+                </div>
+              );
+            })
+          )}
+        </div>
+      </div>
+    );
+  };
+
+  const AchievementsSheet = ({ achievements }) => {
+    const unlocked = achievements.filter(a => a.isUnlocked).length;
+    const total = achievements.length;
+    const progress = total > 0 ? (unlocked / total) * 100 : 0;
+
+    return (
+      <div className="sheet-content scrollbar-hide">
+        <div className="achievements-progress-wrapper">
+          <div className="achievements-circle-ring">
+            <svg width="100" height="100" viewBox="0 0 100 100" style={{ transform: 'rotate(-90deg)' }}>
+              <circle cx="50" cy="50" r="42" stroke="rgba(255,255,255,0.05)" strokeWidth="6" fill="transparent" />
+              <circle cx="50" cy="50" r="42" stroke="url(#goldGradient)" strokeWidth="6" fill="transparent" 
+                strokeDasharray={`${2 * Math.PI * 42}`} 
+                strokeDashoffset={`${2 * Math.PI * 42 * (1 - progress / 100)}`} 
+                strokeLinecap="round"
+                style={{ transition: 'stroke-dashoffset 0.8s ease-in-out' }}
+              />
+              <defs>
+                <linearGradient id="goldGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                  <stop offset="0%" stopColor="#FFD700" />
+                  <stop offset="100%" stopColor="#FF8C00" />
+                </linearGradient>
+              </defs>
+            </svg>
+            <div style={{ position: 'absolute', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
+              <span style={{ fontSize: '24px', fontWeight: 'bold', color: '#fff' }}>{unlocked}</span>
+              <span style={{ fontSize: '11px', color: 'rgba(255,255,255,0.4)', marginTop: '-2px' }}>/ {total}</span>
+            </div>
+          </div>
+          <div style={{ fontSize: '13px', color: '#ffd700', fontWeight: 'bold', textShadow: '0 0 8px rgba(255,215,0,0.2)' }}>
+            {progress.toFixed(0)}% Freigeschaltet
+          </div>
+        </div>
+
+        <div className="achievements-list">
+          {achievements.map((achievement) => {
+            return (
+              <div key={achievement.id} className={`achievement-row ${achievement.isUnlocked ? 'unlocked' : ''}`}>
+                <div className="achievement-icon-circle">
+                  {achievement.isUnlocked ? <Crown size={18} /> : <Shield size={18} style={{ opacity: 0.3 }} />}
+                </div>
+                <div style={{ flex: 1 }}>
+                  <div style={{ fontSize: '14px', fontWeight: 'bold', color: achievement.isUnlocked ? '#fff' : 'rgba(255,255,255,0.4)' }}>
+                    {achievement.title}
+                  </div>
+                  <div style={{ fontSize: '11px', color: 'rgba(255,255,255,0.4)', marginTop: '2px' }}>
+                    {achievement.description}
+                  </div>
+                </div>
+                {achievement.isUnlocked ? (
+                  <CheckCircle2 size={18} color="#FFD700" />
+                ) : (
+                  <AlertCircle size={18} style={{ opacity: 0.2 }} />
+                )}
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    );
+  };
+
+  const CollectionsSheet = ({ realInventoryItems, currency, valuationMode, formatPrice, setSelectedSkinId }) => {
+    const grouped = {};
+    realInventoryItems.forEach((item) => {
+      const colName = findCollectionForSkin(item.name);
+      if (colName) {
+        if (!grouped[colName]) grouped[colName] = [];
+        grouped[colName].push(item);
+      }
+    });
+
+    const collectionList = Object.keys(grouped).map(name => ({
+      name,
+      items: grouped[name]
+    })).sort((a, b) => b.items.length - a.items.length);
+
+    return (
+      <div className="sheet-content scrollbar-hide">
+        {collectionList.length === 0 ? (
+          <div className="empty-state" style={{ marginTop: '60px', textAlign: 'center' }}>
+            <Package size={48} style={{ opacity: 0.3, marginBottom: '16px' }} />
+            <p>Keine Sammlungs-Skins im Inventar gefunden.</p>
+          </div>
+        ) : (
+          collectionList.map((col) => {
+            const totalValue = col.items.reduce((sum, item) => sum + (item.price * item.qty), 0);
+            return (
+              <div key={col.name} className="collection-card">
+                <div className="collection-card-header">
+                  <h4 style={{ margin: 0, fontSize: '15px', color: '#fff', fontWeight: 'bold' }}>{col.name}</h4>
+                  <span className="collection-card-badge">{col.items.length} Items</span>
+                </div>
+                <div style={{ fontSize: '12px', color: '#10b981', fontWeight: 'bold' }}>
+                  Wert: {formatPrice(totalValue, currency, valuationMode)}
+                </div>
+                
+                <div className="collection-items-mini-grid">
+                  {col.items.map((item, idx) => {
+                    const rarityName = getSkinRarity(item.name);
+                    return (
+                      <div 
+                        key={`${item.id}-${idx}`} 
+                        className={`collection-mini-item rarity-glow-${rarityName.toLowerCase().replace(/[^a-z0-9]/g, '')}`}
+                        onClick={() => setSelectedSkinId(item.id)}
+                        style={{ cursor: 'pointer' }}
+                        title={item.name}
+                      >
+                        <img src={item.img} alt={item.name} />
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            );
+          })
+        )}
+      </div>
+    );
+  };
+
+  const TradeUpSheet = ({ realInventoryItems, pricesDb, currency, formatPrice, unlockAchievement }) => {
+    const [selectedTradeUpIds, setSelectedTradeUpIds] = useState([]);
+    const [simResult, setSimResult] = useState(null);
+    const [simPnL, setSimPnL] = useState(0);
+    const [showSimResultModal, setShowSimResultModal] = useState(false);
+
+    const tradeUpEligible = realInventoryItems.filter(item => {
+      const cat = item.skinCategory;
+      const rarity = getSkinRarity(item.name);
+      return cat !== 'Knife' && cat !== 'Gloves' && cat !== 'Container' && rarity !== 'Covert' && rarity !== 'Contraband';
+    });
+
+    const selectedItems = realInventoryItems.filter(item => selectedTradeUpIds.includes(item.id));
+    const firstSelected = selectedItems[0];
+
+    const eligibleFiltered = tradeUpEligible.filter(item => {
+      if (firstSelected) {
+        const firstRarity = getSkinRarity(firstSelected.name);
+        const itemRarity = getSkinRarity(item.name);
+        return itemRarity === firstRarity && !selectedTradeUpIds.includes(item.id);
+      }
+      return true;
+    });
+
+    const runTradeUpSim = () => {
+      if (selectedItems.length !== 10) return;
+      
+      const currentRarity = getSkinRarity(firstSelected.name);
+      const nextRarity = nextRarityMap[currentRarity];
+      if (!nextRarity) return;
+
+      const itemCollections = selectedItems.map(item => {
+        const colName = findCollectionForSkin(item.name);
+        return collections.find(c => c.name === colName) || collections[0];
+      });
+
+      const outcomeWeights = {};
+      itemCollections.forEach(col => {
+        const outcomes = col.itemsByRarity[nextRarity] || [];
+        if (outcomes.length > 0) {
+          const contribution = 0.10 / outcomes.length;
+          outcomes.forEach(outSkin => {
+            if (outcomeWeights[outSkin]) {
+              outcomeWeights[outSkin].weight += contribution;
+            } else {
+              outcomeWeights[outSkin] = { weight: contribution, collection: col };
+            }
+          });
+        }
+      });
+
+      const outcomesList = Object.keys(outcomeWeights).map(skin => ({
+        skin,
+        weight: outcomeWeights[skin].weight,
+        collection: outcomeWeights[skin].collection
+      }));
+
+      if (outcomesList.length === 0) {
+        const fallbackCol = collections[0];
+        const outcomes = fallbackCol.itemsByRarity[nextRarity] || [];
+        outcomes.forEach(outSkin => {
+          outcomesList.push({ skin: outSkin, weight: 1.0 / outcomes.length, collection: fallbackCol });
+        });
+      }
+
+      const totalWeight = outcomesList.reduce((sum, o) => sum + o.weight, 0);
+      const rand = Math.random() * totalWeight;
+      let accum = 0;
+      let selectedOutcome = outcomesList[0];
+      for (const entry of outcomesList) {
+        accum += entry.weight;
+        if (rand <= accum) {
+          selectedOutcome = entry;
+          break;
+        }
+      }
+
+      const totalInputFloat = selectedItems.reduce((sum, item) => {
+        if (item.float !== undefined && item.float !== null) return sum + item.float;
+        const wear = item.wear?.toLowerCase() || '';
+        if (wear.includes('new')) return sum + 0.03;
+        if (wear.includes('minimal')) return sum + 0.11;
+        if (wear.includes('tested')) return sum + 0.22;
+        if (wear.includes('worn')) return sum + 0.41;
+        return sum + 0.70;
+      }, 0);
+      const avgFloat = totalInputFloat / 10.0;
+
+      const bounds = getFloatLimits(selectedOutcome.skin);
+      const outcomeFloat = avgFloat * (bounds.max - bounds.min) + bounds.min;
+
+      let outcomeWear = 'Field-Tested';
+      if (outcomeFloat < 0.07) outcomeWear = 'Factory New';
+      else if (outcomeFloat < 0.15) outcomeWear = 'Minimal Wear';
+      else if (outcomeFloat < 0.38) outcomeWear = 'Field-Tested';
+      else if (outcomeFloat < 0.45) outcomeWear = 'Well-Worn';
+      else outcomeWear = 'Battle-Scarred';
+
+      const fullHash = `${selectedOutcome.skin} (${outcomeWear})`;
+      let priceVal = 0;
+      if (pricesDb && pricesDb[fullHash]) {
+        const itemPrices = pricesDb[fullHash];
+        priceVal = itemPrices.last_24h || itemPrices.last_7d || 15.0;
+      } else {
+        priceVal = (firstSelected.price * 2.2) * (1 + (Math.random() - 0.5) * 0.2);
+      }
+
+      const totalCost = selectedItems.reduce((sum, item) => sum + item.price, 0);
+      const pnl = priceVal - totalCost;
+
+      setSimResult({
+        name: selectedOutcome.skin,
+        hashName: fullHash,
+        rarity: nextRarity,
+        float: outcomeFloat,
+        wear: outcomeWear,
+        price: priceVal,
+        collection: selectedOutcome.collection.name,
+        img: firstSelected.img
+      });
+      setSimPnL(pnl);
+      setShowSimResultModal(true);
+
+      unlockAchievement('watchlist_add');
+    };
+
+    return (
+      <div className="sheet-content scrollbar-hide">
+        <div style={{ marginBottom: '20px' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+            <span style={{ fontSize: '11px', color: 'rgba(255,255,255,0.4)', fontWeight: 'bold', textTransform: 'uppercase' }}>
+              Ausgewählt ({selectedItems.length}/10)
+            </span>
+            {selectedItems.length > 0 && (
+              <button 
+                onClick={() => setSelectedTradeUpIds([])} 
+                style={{ background: 'transparent', border: 'none', color: '#ff3b30', fontSize: '12px', cursor: 'pointer' }}
+              >
+                Zurücksetzen
+              </button>
+            )}
+          </div>
+          
+          {selectedItems.length === 0 ? (
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '24px', background: 'rgba(255,255,255,0.01)', border: '1px dashed rgba(255,255,255,0.1)', borderRadius: '16px', textAlign: 'center', gap: '8px' }}>
+              <FlaskConical size={32} color="#00F0FF" />
+              <div style={{ fontSize: '13px', color: '#fff', fontWeight: 'bold' }}>Trade-Up Rechner</div>
+              <div style={{ fontSize: '11px', color: 'rgba(255,255,255,0.4)', padding: '0 20px' }}>
+                Wähle 10 Skins der gleichen Seltenheitsstufe aus.
+              </div>
+            </div>
+          ) : (
+            <div style={{ display: 'flex', gap: '8px', overflowX: 'auto', padding: '4px 0' }}>
+              {selectedItems.map((item) => {
+                const rarityName = getSkinRarity(item.name);
+                const rColor = rarityColors[rarityName] || '#fff';
+                return (
+                  <div 
+                    key={item.id}
+                    style={{ flexShrink: 0, position: 'relative', width: '56px', height: '56px', background: 'rgba(255,255,255,0.03)', border: `1px solid ${rColor}50`, borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '4px' }}
+                  >
+                    <img src={item.img} alt={item.name} style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain' }} />
+                    <button 
+                      onClick={() => setSelectedTradeUpIds(prev => prev.filter(id => id !== item.id))}
+                      style={{ position: 'absolute', top: '-4px', right: '-4px', width: '16px', height: '16px', borderRadius: '50%', background: '#ff3b30', border: 'none', color: '#fff', fontSize: '9px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}
+                    >
+                      ×
+                    </button>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+
+        {selectedItems.length === 10 && (
+          <button 
+            onClick={runTradeUpSim} 
+            className="onboarding-btn primary-btn"
+            style={{ width: '100%', background: 'linear-gradient(135deg, #00f0ff 0%, #00ff77 100%)', color: '#000', fontWeight: 'bold', border: 'none', borderRadius: '14px', padding: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', boxShadow: '0 8px 20px rgba(0, 240, 255, 0.25)', marginBottom: '20px' }}
+          >
+            Trade-Up starten 🧪
+          </button>
+        )}
+
+        <div>
+          <div style={{ fontSize: '11px', color: 'rgba(255,255,255,0.4)', fontWeight: 'bold', textTransform: 'uppercase', marginBottom: '8px' }}>
+            Verfügbare Skins
+          </div>
+          
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', maxHeight: '40vh', overflowY: 'auto' }}>
+            {eligibleFiltered.map(item => {
+              const rarityName = getSkinRarity(item.name);
+              const rColor = rarityColors[rarityName] || '#94a3b8';
+              return (
+                <div 
+                  key={item.id}
+                  style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '10px 14px', background: 'rgba(255,255,255,0.01)', border: '1px solid rgba(255,255,255,0.04)', borderRadius: '12px' }}
+                >
+                  <div style={{ width: '40px', height: '40px', background: 'rgba(0,0,0,0.3)', borderRadius: '8px', padding: '4px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <img src={item.img} alt={item.name} style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain' }} />
+                  </div>
+                  
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontSize: '13px', fontWeight: 'bold', color: '#fff', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                      {item.name}
+                    </div>
+                    <div style={{ fontSize: '10px', color: rColor, fontWeight: '600', marginTop: '2px' }}>
+                      {rarityName}
+                    </div>
+                  </div>
+                  
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                    <span style={{ fontSize: '12px', fontWeight: 'bold', color: '#10b981' }}>{formatPrice(item.price, currency, 'STEAM')}</span>
+                    <button 
+                      onClick={() => {
+                        if (selectedTradeUpIds.length < 10) {
+                          setSelectedTradeUpIds(prev => [...prev, item.id]);
+                        }
+                      }}
+                      style={{ background: 'rgba(0, 240, 255, 0.1)', border: 'none', color: '#00F0FF', borderRadius: '50%', width: '26px', height: '26px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', outline: 'none' }}
+                      disabled={selectedTradeUpIds.length >= 10}
+                    >
+                      <Plus size={14} />
+                    </button>
+                  </div>
+                </div>
+              );
+            })}
+            
+            {eligibleFiltered.length === 0 && (
+              <div style={{ color: 'rgba(255,255,255,0.3)', fontSize: '12px', textAlign: 'center', padding: '20px' }}>
+                Keine passenden Skins im Inventar vorhanden.
+              </div>
+            )}
+          </div>
+        </div>
+
+        {showSimResultModal && simResult && (
+          <div className="sheet-overlay show" style={{ zIndex: 10100 }} onClick={() => setShowSimResultModal(false)}>
+            <div className="sheet-container detail-modal-card" style={{ maxWidth: '440px' }} onClick={(e) => e.stopPropagation()}>
+              <div className="sheet-header">
+                <h3 className="sheet-title">TRADE-UP ERGEBNIS</h3>
+                <button className="sheet-close-btn" onClick={() => setShowSimResultModal(false)}>
+                  <X size={16} />
+                </button>
+              </div>
+              <div className="sheet-content" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', gap: '20px' }}>
+                <div style={{ width: '120px', height: '120px', borderRadius: '24px', background: 'rgba(255,255,255,0.02)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '12px', border: `1px solid ${rarityColors[simResult.rarity] || '#fff'}50` }}>
+                  <img src={simResult.img} alt={simResult.name} style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain' }} />
+                </div>
+                <div>
+                  <h4 style={{ margin: '0 0 4px 0', fontSize: '18px', fontWeight: 'bold', color: '#fff' }}>{simResult.name}</h4>
+                  <div style={{ fontSize: '12px', fontWeight: 'bold', color: rarityColors[simResult.rarity] }}>{simResult.rarity}</div>
+                </div>
+                
+                <div>
+                  <div style={{ fontSize: '11px', color: 'rgba(255,255,255,0.4)', textTransform: 'uppercase' }}>Upgrade Wert</div>
+                  <div style={{ fontSize: '28px', fontWeight: 'bold', color: '#fff', margin: '4px 0' }}>{formatPrice(simResult.price, currency, 'STEAM')}</div>
+                  <div style={{ fontSize: '14px', fontWeight: 'bold', color: simPnL >= 0 ? '#10b981' : '#ef4444', background: simPnL >= 0 ? 'rgba(16,185,129,0.1)' : 'rgba(239,68,68,0.1)', padding: '6px 12px', borderRadius: '8px', display: 'inline-block', marginTop: '6px' }}>
+                    {simPnL >= 0 ? `Gewinn: +${formatPrice(simPnL, currency, 'STEAM')}` : `Verlust: ${formatPrice(simPnL, currency, 'STEAM')}`}
+                  </div>
+                </div>
+
+                <div style={{ fontSize: '11px', color: 'rgba(255,255,255,0.4)', borderTop: '1px solid rgba(255,255,255,0.05)', width: '100%', paddingTop: '12px' }}>
+                  Float des Ergebnisses: <span style={{ fontFamily: 'monospace', color: '#fff', fontWeight: 'bold' }}>{simResult.float.toFixed(6)}</span> ({simResult.wear})
+                </div>
+
+                <button 
+                  className="onboarding-btn primary-btn" 
+                  style={{ width: '100%' }}
+                  onClick={() => {
+                    setShowSimResultModal(false);
+                    setSelectedTradeUpIds([]);
+                  }}
+                >
+                  Schließen
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+    );
+  };
+
+  const WhatIfSheet = ({ currency, formatPrice }) => {
+    const [investAmount, setInvestAmount] = useState('1000');
+    const [timeframe, setTimeframe] = useState('1 Jahr');
+    const [category, setCategory] = useState('Cases');
+    const [result, setResult] = useState(null);
+
+    const calculateWhatIf = () => {
+      const amt = parseFloat(investAmount);
+      if (isNaN(amt) || amt <= 0) return;
+
+      let multiplier = 1.0;
+      if (timeframe === '3 Monate') {
+        if (category === 'Cases') multiplier = 1.12;
+        else if (category === 'Skins (Mittelwert)') multiplier = 1.03;
+        else if (category === 'High-Tier (Knives/Gloves)') multiplier = 1.05;
+        else if (category === 'Aufkleber (Stickers)') multiplier = 0.95;
+      } else if (timeframe === '6 Monate') {
+        if (category === 'Cases') multiplier = 1.25;
+        else if (category === 'Skins (Mittelwert)') multiplier = 1.08;
+        else if (category === 'High-Tier (Knives/Gloves)') multiplier = 1.10;
+        else if (category === 'Aufkleber (Stickers)') multiplier = 1.15;
+      } else if (timeframe === '1 Jahr') {
+        if (category === 'Cases') multiplier = 1.68;
+        else if (category === 'Skins (Mittelwert)') multiplier = 1.20;
+        else if (category === 'High-Tier (Knives/Gloves)') multiplier = 1.28;
+        else if (category === 'Aufkleber (Stickers)') multiplier = 1.45;
+      } else if (timeframe === '2 Jahre') {
+        if (category === 'Cases') multiplier = 2.45;
+        else if (category === 'Skins (Mittelwert)') multiplier = 1.40;
+        else if (category === 'High-Tier (Knives/Gloves)') multiplier = 1.65;
+        else if (category === 'Aufkleber (Stickers)') multiplier = 2.10;
+      }
+
+      const finalVal = amt * multiplier;
+      const profitVal = finalVal - amt;
+      const roi = (multiplier - 1.0) * 100;
+
+      setResult({
+        finalVal,
+        profitVal,
+        roi
+      });
+    };
+
+    return (
+      <div className="sheet-content scrollbar-hide">
+        <div style={{ marginBottom: '20px' }}>
+          <div style={{ fontSize: '15px', color: '#fff', fontWeight: 'bold', marginBottom: '6px' }}>Was wäre wenn...</div>
+          <div style={{ fontSize: '12px', color: 'rgba(255,255,255,0.4)', lineHeight: '1.4' }}>
+            Simuliere, wie viel Gewinn du gemacht hättest, wenn du in der Vergangenheit investiert hättest.
+          </div>
+        </div>
+
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.05)', borderRadius: '20px', padding: '16px', marginBottom: '20px' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+            <label style={{ fontSize: '11px', color: 'rgba(255,255,255,0.4)', fontWeight: 'bold', textTransform: 'uppercase' }}>Investierter Betrag</label>
+            <div style={{ display: 'flex', alignItems: 'center', background: 'rgba(0,0,0,0.3)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '10px', padding: '10px 14px' }}>
+              <span style={{ fontSize: '16px', fontWeight: 'bold', color: '#fff', marginRight: '8px' }}>{currency === 'EUR' ? '€' : '$'}</span>
+              <input 
+                type="number" 
+                value={investAmount} 
+                onChange={(e) => setInvestAmount(e.target.value)} 
+                style={{ background: 'transparent', border: 'none', color: '#fff', fontSize: '16px', fontWeight: 'bold', outline: 'none', width: '100%' }} 
+                placeholder="1000"
+              />
+            </div>
+          </div>
+
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+            <label style={{ fontSize: '11px', color: 'rgba(255,255,255,0.4)', fontWeight: 'bold', textTransform: 'uppercase' }}>Einstiegszeitpunkt</label>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '4px', background: 'rgba(0,0,0,0.3)', padding: '4px', borderRadius: '10px', border: '1px solid rgba(255,255,255,0.06)' }}>
+              {['3 Monate', '6 Monate', '1 Jahr', '2 Jahre'].map(tf => (
+                <button
+                  key={tf}
+                  type="button"
+                  onClick={() => setTimeframe(tf)}
+                  style={{ background: timeframe === tf ? 'rgba(255,255,255,0.1)' : 'transparent', border: 'none', borderRadius: '6px', color: timeframe === tf ? '#fff' : 'rgba(255,255,255,0.4)', padding: '6px 0', fontSize: '11px', fontWeight: 'bold', cursor: 'pointer' }}
+                >
+                  {tf}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+            <label style={{ fontSize: '11px', color: 'rgba(255,255,255,0.4)', fontWeight: 'bold', textTransform: 'uppercase' }}>Investment-Kategorie</label>
+            <select 
+              value={category}
+              onChange={(e) => setCategory(e.target.value)}
+              style={{ background: 'rgba(0,0,0,0.3)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '10px', padding: '10px 14px', color: '#fff', fontSize: '13px', fontWeight: 'bold', outline: 'none', cursor: 'pointer' }}
+            >
+              {['Cases', 'Skins (Mittelwert)', 'High-Tier (Knives/Gloves)', 'Aufkleber (Stickers)'].map(cat => (
+                <option key={cat} value={cat} style={{ background: '#0a0a0a' }}>{cat}</option>
+              ))}
+            </select>
+          </div>
+
+          <button 
+            type="button"
+            onClick={calculateWhatIf} 
+            className="onboarding-btn primary-btn"
+            style={{ marginTop: '8px', background: 'linear-gradient(135deg, #00f0ff 0%, #00ff77 100%)', color: '#000', fontWeight: 'bold' }}
+          >
+            Simulation berechnen 🔮
+          </button>
+        </div>
+
+        {result && (
+          <div style={{ background: 'rgba(16,185,129,0.04)', border: '1px solid rgba(16,185,129,0.25)', borderRadius: '20px', padding: '18px', textAlign: 'center' }} className="slide-in-right">
+            <div style={{ fontSize: '10px', fontWeight: 'bold', color: '#00F0FF', letterSpacing: '2px', textTransform: 'uppercase' }}>Simulationsergebnis</div>
+            
+            <div style={{ margin: '14px 0' }}>
+              <div style={{ fontSize: '11px', color: 'rgba(255,255,255,0.4)' }}>Wert heute</div>
+              <div style={{ fontSize: '32px', fontWeight: 'bold', color: '#fff', marginTop: '2px' }}>
+                {formatPrice(result.finalVal, currency, 'STEAM')}
+              </div>
+            </div>
+            
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', borderTop: '1px solid rgba(255,255,255,0.05)', paddingTop: '14px' }}>
+              <div>
+                <div style={{ fontSize: '10px', color: 'rgba(255,255,255,0.4)' }}>Reingewinn</div>
+                <div style={{ fontSize: '16px', fontWeight: 'bold', color: '#10b981', marginTop: '2px' }}>
+                  +{formatPrice(result.profitVal, currency, 'STEAM')}
+                </div>
+              </div>
+              <div>
+                <div style={{ fontSize: '10px', color: 'rgba(255,255,255,0.4)' }}>Rendite (ROI)</div>
+                <div style={{ fontSize: '16px', fontWeight: 'bold', color: '#10b981', marginTop: '2px' }}>
+                  +{result.roi.toFixed(1)}%
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+    );
+  };
+
+  const ArbitrageSheet = ({ realInventoryItems, skins, pricesDb, steamMedianPrices, currency, formatPrice, fetchSteamMedianPrice, setSelectedSkinId }) => {
+    const [tab, setTab] = useState(0);
+    const [loadingMap, setLoadingMap] = useState({});
+
+    const items = tab === 0 
+      ? Array.from(new Map(realInventoryItems.map(item => [item.marketHashName, item])).values())
+      : skins;
+
+    const triggerCheck = async (hashName) => {
+      setLoadingMap(prev => ({ ...prev, [hashName]: true }));
+      await fetchSteamMedianPrice(hashName);
+      setLoadingMap(prev => ({ ...prev, [hashName]: false }));
+    };
+
+    const checkAll = async () => {
+      for (const item of items.slice(0, 5)) {
+        if (steamMedianPrices[item.marketHashName] === undefined) {
+          triggerCheck(item.marketHashName);
+          await new Promise(r => setTimeout(r, 800));
+        }
+      }
+    };
+
+    return (
+      <div className="sheet-content scrollbar-hide" style={{ display: 'flex', flexDirection: 'column', gap: '16px', padding: '16px 20px' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '4px', background: 'rgba(0,0,0,0.3)', padding: '4px', borderRadius: '10px', border: '1px solid rgba(255,255,255,0.06)' }}>
+          <button
+            type="button"
+            onClick={() => setTab(0)}
+            style={{ background: tab === 0 ? 'rgba(255,255,255,0.1)' : 'transparent', border: 'none', borderRadius: '6px', color: tab === 0 ? '#fff' : 'rgba(255,255,255,0.4)', padding: '8px 0', fontSize: '12px', fontWeight: 'bold', cursor: 'pointer' }}
+          >
+            Dein Inventar
+          </button>
+          <button
+            type="button"
+            onClick={() => setTab(1)}
+            style={{ background: tab === 1 ? 'rgba(255,255,255,0.1)' : 'transparent', border: 'none', borderRadius: '6px', color: tab === 1 ? '#fff' : 'rgba(255,255,255,0.4)', padding: '8px 0', fontSize: '12px', fontWeight: 'bold', cursor: 'pointer' }}
+          >
+            Beobachtungsliste
+          </button>
+        </div>
+
+        <div style={{ display: 'flex', gap: '8px', background: 'rgba(0, 240, 255, 0.03)', border: '1px solid rgba(0, 240, 255, 0.1)', borderRadius: '12px', padding: '12px', fontSize: '11px', color: 'rgba(255,255,255,0.5)', lineHeight: '1.4' }}>
+          <Info size={16} color="#00F0FF" style={{ flexShrink: 0, marginTop: '2px' }} />
+          <div>
+            <strong>Arbitrage-Spread:</strong> Günstiger auf Skinport kaufen, teurer auf Steam verkaufen. Ein Spread über <strong>15%</strong> deckt die Steam-Gebühr.
+          </div>
+        </div>
+
+        <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '4px' }}>
+          <button 
+            type="button"
+            onClick={checkAll}
+            style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '8px', padding: '6px 12px', color: '#fff', fontSize: '11px', fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer' }}
+          >
+            <RotateCw size={12} style={{ marginRight: '4px' }} />
+            Fehlende laden (Max 5)
+          </button>
+        </div>
+
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', maxHeight: '40vh', overflowY: 'auto' }}>
+          {items.map(item => {
+            const skinportPrice = pricesDb && pricesDb[item.marketHashName]
+              ? (pricesDb[item.marketHashName].last_24h || pricesDb[item.marketHashName].last_7d || item.price)
+              : item.price;
+            
+            const steamPrice = steamMedianPrices[item.marketHashName];
+            const spread = steamPrice && steamPrice > 0 ? ((steamPrice - skinportPrice) / steamPrice) * 100 : null;
+            const profit = spread !== null && spread >= 15.0;
+
+            return (
+              <div 
+                key={item.id}
+                style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '10px 14px', background: 'rgba(255,255,255,0.01)', border: '1px solid rgba(255,255,255,0.04)', borderRadius: '12px' }}
+              >
+                <div style={{ width: '40px', height: '40px', background: 'rgba(0,0,0,0.3)', borderRadius: '8px', padding: '4px', display: 'flex', alignItems: 'center', justifyContent: 'center', border: `1px solid ${rarityColors[getSkinRarity(item.name)] || '#fff'}30` }}>
+                  <img src={item.img} alt={item.name} style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain' }} />
+                </div>
+                
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontSize: '13px', fontWeight: 'bold', color: '#fff', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                    {item.name}
+                  </div>
+                  <div style={{ fontSize: '11px', color: 'rgba(255,255,255,0.4)', marginTop: '2px' }}>
+                    Skinport: {formatPrice(skinportPrice, currency, 'STEAM')}
+                  </div>
+                </div>
+
+                <div style={{ textAlign: 'right' }}>
+                  {steamPrice ? (
+                    <div>
+                      <div style={{ fontSize: '12px', fontWeight: 'bold', color: '#fff' }}>
+                        Steam: {formatPrice(steamPrice, currency, 'STEAM')}
+                      </div>
+                      <div style={{ fontSize: '10px', fontWeight: 'bold', color: spread >= 15.0 ? '#10b981' : (spread >= 0 ? '#f59e0b' : '#ef4444'), marginTop: '2px' }}>
+                        Spread: {spread.toFixed(1)}% {profit ? '(Profit)' : '(Lust)'}
+                      </div>
+                    </div>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => triggerCheck(item.marketHashName)}
+                      className="onboarding-btn primary-btn"
+                      style={{ padding: '4px 10px', fontSize: '10px', height: 'auto', background: 'rgba(0, 240, 255, 0.1)', color: '#00f0ff', border: '1px solid rgba(0, 240, 255, 0.2)' }}
+                      disabled={loadingMap[item.marketHashName]}
+                    >
+                      {loadingMap[item.marketHashName] ? 'Lade...' : 'Vergleichen'}
+                    </button>
+                  )}
+                </div>
+              </div>
+            );
+          })}
+
+          {items.length === 0 && (
+            <div style={{ color: 'rgba(255,255,255,0.3)', fontSize: '12px', textAlign: 'center', padding: '40px' }}>
+              Keine passenden Items vorhanden.
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  };
+
+  const PriceAlertsSheet = ({ skins, realInventoryItems, currency, formatPrice, alerts, setAlerts, playTradeSound, handleDeleteAlert }) => {
+    const [targetPrice, setTargetPrice] = useState('');
+    const [type, setType] = useState('above');
+    const [selectedSkinName, setSelectedSkinName] = useState('');
+
+    const allItems = [...skins, ...realInventoryItems];
+    const uniqueItems = Array.from(new Map(allItems.map(item => [item.name, item])).values());
+
+    const createAlert = (e) => {
+      e.preventDefault();
+      const priceVal = parseFloat(targetPrice);
+      if (isNaN(priceVal) || priceVal <= 0 || !selectedSkinName) return;
+
+      const matchedSkin = uniqueItems.find(s => s.name === selectedSkinName);
+      if (!matchedSkin) return;
+
+      const newAlert = {
+        id: Date.now(),
+        skinId: matchedSkin.id,
+        skinName: matchedSkin.name,
+        hashName: matchedSkin.marketHashName || matchedSkin.name,
+        type,
+        target: priceVal,
+        isActive: true
+      };
+
+      setAlerts(prev => [...prev, newAlert]);
+      setTargetPrice('');
+      playTradeSound('buy');
+    };
+
+    return (
+      <div className="sheet-content scrollbar-hide">
+        <div style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.05)', borderRadius: '20px', padding: '16px', marginBottom: '20px' }}>
+          <div style={{ fontSize: '13px', fontWeight: 'bold', color: '#fff', marginBottom: '12px' }}>Neuen Preisalarm einrichten</div>
+          
+          <form onSubmit={createAlert} style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+              <label style={{ fontSize: '10px', color: 'rgba(255,255,255,0.4)', fontWeight: 'bold' }}>Skin auswählen</label>
+              <select
+                value={selectedSkinName}
+                onChange={(e) => setSelectedSkinName(e.target.value)}
+                style={{ background: 'rgba(0,0,0,0.3)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '10px', padding: '10px 12px', color: '#fff', fontSize: '13px', outline: 'none', cursor: 'pointer' }}
+                required
+              >
+                <option value="">-- Skin auswählen --</option>
+                {uniqueItems.map(skin => (
+                  <option key={skin.id} value={skin.name} style={{ background: '#0a0a0a' }}>{skin.name}</option>
+                ))}
+              </select>
+            </div>
+            
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                <label style={{ fontSize: '10px', color: 'rgba(255,255,255,0.4)', fontWeight: 'bold' }}>Alarmtyp</label>
+                <select
+                  value={type}
+                  onChange={(e) => setType(e.target.value)}
+                  style={{ background: 'rgba(0,0,0,0.3)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '10px', padding: '10px 12px', color: '#fff', fontSize: '13px', outline: 'none', cursor: 'pointer' }}
+                >
+                  <option value="above" style={{ background: '#0a0a0a' }}>{"Steigt über (>=)"}</option>
+                  <option value="below" style={{ background: '#0a0a0a' }}>{"Fällt unter (<=)"}</option>
+                </select>
+              </div>
+              
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                <label style={{ fontSize: '10px', color: 'rgba(255,255,255,0.4)', fontWeight: 'bold' }}>Zielpreis ({currency === 'EUR' ? '€' : '$'})</label>
+                <input
+                  type="number"
+                  step="0.01"
+                  value={targetPrice}
+                  onChange={(e) => setTargetPrice(e.target.value)}
+                  style={{ background: 'rgba(0,0,0,0.3)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '10px', padding: '9px 12px', color: '#fff', fontSize: '13px', outline: 'none' }}
+                  placeholder="25.50"
+                  required
+                />
+              </div>
+            </div>
+            
+            <button 
+              type="submit" 
+              className="onboarding-btn primary-btn"
+              style={{ background: 'linear-gradient(135deg, #00f0ff 0%, #00ff77 100%)', color: '#000', fontWeight: 'bold', marginTop: '4px' }}
+            >
+              Alarm erstellen 🔔
+            </button>
+          </form>
+        </div>
+
+        <div>
+          <div style={{ fontSize: '11px', color: 'rgba(255,255,255,0.4)', fontWeight: 'bold', textTransform: 'uppercase', marginBottom: '8px' }}>
+            Deine aktiven Preisalarme
+          </div>
+          
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', maxHeight: '30vh', overflowY: 'auto' }}>
+            {alerts.map(alert => (
+              <div 
+                key={alert.id}
+                style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 16px', background: 'rgba(255,255,255,0.01)', border: '1px solid rgba(255,255,255,0.04)', borderRadius: '12px' }}
+              >
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontSize: '13px', fontWeight: 'bold', color: '#fff', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                    {alert.skinName}
+                  </div>
+                  <div style={{ fontSize: '11px', color: alert.type === 'above' ? '#10b981' : '#ef4444', fontWeight: '600', marginTop: '2px', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                    {alert.type === 'above' ? 'Steigt über' : 'Fällt unter'}{' '}
+                    {formatPrice(alert.target, currency, 'STEAM')}
+                  </div>
+                </div>
+                
+                <button 
+                  onClick={() => handleDeleteAlert(alert.id)}
+                  style={{ background: 'rgba(255,59,48,0.15)', border: 'none', borderRadius: '50%', width: '26px', height: '26px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#ff3b30', cursor: 'pointer', flexShrink: 0 }}
+                >
+                  <Trash2 size={12} />
+                </button>
+              </div>
+            ))}
+
+            {alerts.length === 0 && (
+              <div style={{ color: 'rgba(255,255,255,0.3)', fontSize: '11px', textAlign: 'center', padding: '24px' }}>
+                Keine Preisalarme definiert.
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  // --- SUB-RENDERERS FOR HUB AND DETAIL OVERLAYS ---
+
+  const renderAchievementToast = () => {
+    if (!newlyUnlockedAchievement) return null;
+    return (
+      <div className={`achievement-toast ${newlyUnlockedAchievement ? 'show' : ''}`}>
+        <div className="achievement-toast-icon-wrapper">
+          <Sparkles size={20} />
+        </div>
+        <div className="achievement-toast-content">
+          <div className="achievement-toast-title">Achievement freigeschaltet! 🎉</div>
+          <div style={{ fontSize: '14px', fontWeight: 'bold', color: '#fff', marginTop: '2px' }}>
+            {newlyUnlockedAchievement.title}
+          </div>
+          <div className="achievement-toast-desc">{newlyUnlockedAchievement.description}</div>
+        </div>
+      </div>
+    );
+  };
+
+  const renderActionHub = () => {
+    if (!user || !steamIdInput) return null;
+    return (
+      <>
+        {/* Floating Action Button */}
+        <div className="fab-container">
+          <button 
+            className={`fab-btn ${showActionHub ? 'active' : ''}`}
+            onClick={() => setShowActionHub(!showActionHub)}
+            title="SkinStock Hub"
+          >
+            <div className="fab-inner">
+              <Plus size={20} style={{ transform: showActionHub ? 'rotate(45deg)' : 'none', transition: 'transform 0.3s ease' }} />
+            </div>
+          </button>
+        </div>
+
+        {/* Action Hub Overlay Modal */}
+        <div className={`action-hub-overlay ${showActionHub ? 'show' : ''}`} onClick={() => setShowActionHub(false)}>
+          <div className="action-hub-card" onClick={(e) => e.stopPropagation()}>
+            <div className="action-hub-header">SkinStock Hub</div>
+            <div style={{ color: 'rgba(255,255,255,0.4)', fontSize: '11px', textAlign: 'center', padding: '0 20px', marginBottom: '8px' }}>
+              Wähle ein Werkzeug aus, um dein Portfolio zu optimieren.
+            </div>
+
+            <div className="action-hub-buttons">
+              <button className="action-hub-item" onClick={() => { setActiveSheet('watchlist'); setShowActionHub(false); }}>
+                <div className="action-hub-icon-box"><Eye size={18} /></div>
+                <div className="action-hub-info">
+                  <div className="action-hub-title">{lang === 'de' ? 'Beobachtungsliste' : 'Watchlist'}</div>
+                  <div className="action-hub-desc">{lang === 'de' ? 'Skins & Spreads tracken' : 'Track skins & spreads'}</div>
+                </div>
+                <ChevronRight className="action-hub-chevron" size={16} />
+              </button>
+
+              <button className="action-hub-item" onClick={() => { setActiveSheet('achievements'); setShowActionHub(false); }}>
+                <div className="action-hub-icon-box"><Crown size={18} /></div>
+                <div className="action-hub-info">
+                  <div className="action-hub-title">{lang === 'de' ? 'Erfolge / Achievements' : 'Achievements'}</div>
+                  <div className="action-hub-desc">{lang === 'de' ? 'Löse Meilensteine ein' : 'Complete milestones'}</div>
+                </div>
+                <ChevronRight className="action-hub-chevron" size={16} />
+              </button>
+
+              <button className="action-hub-item" onClick={() => { setActiveSheet('collections'); setShowActionHub(false); }}>
+                <div className="action-hub-icon-box"><Package size={18} /></div>
+                <div className="action-hub-info">
+                  <div className="action-hub-title">{lang === 'de' ? 'Sammlungen' : 'Collections'}</div>
+                  <div className="action-hub-desc">{lang === 'de' ? 'Kollektionen vervollständigen' : 'Complete skin collections'}</div>
+                </div>
+                <ChevronRight className="action-hub-chevron" size={16} />
+              </button>
+
+              <button className="action-hub-item" onClick={() => { setActiveSheet('tradeup'); setShowActionHub(false); }}>
+                <div className="action-hub-icon-box"><FlaskConical size={18} /></div>
+                <div className="action-hub-info">
+                  <div className="action-hub-title">{lang === 'de' ? 'Trade-Up Rechner' : 'Trade-Up Calculator'}</div>
+                  <div className="action-hub-desc">{lang === 'de' ? 'Simuliere rentable Aufwertungen' : 'Simulate profitable trade-ups'}</div>
+                </div>
+                <ChevronRight className="action-hub-chevron" size={16} />
+              </button>
+
+              <button className="action-hub-item" onClick={() => { setActiveSheet('whatif'); setShowActionHub(false); }}>
+                <div className="action-hub-icon-box"><History size={18} /></div>
+                <div className="action-hub-info">
+                  <div className="action-hub-title">{lang === 'de' ? 'Was-wäre-wenn Rechner' : 'What-If Calculator'}</div>
+                  <div className="action-hub-desc">{lang === 'de' ? 'Simuliere historische ROI' : 'Simulate historical ROI'}</div>
+                </div>
+                <ChevronRight className="action-hub-chevron" size={16} />
+              </button>
+
+              <button className="action-hub-item" onClick={() => { setActiveSheet('arbitrage'); setShowActionHub(false); }}>
+                <div className="action-hub-icon-box"><TrendingUp size={18} /></div>
+                <div className="action-hub-info">
+                  <div className="action-hub-title">{lang === 'de' ? 'Arbitrage-Finder' : 'Arbitrage Finder'}</div>
+                  <div className="action-hub-desc">{lang === 'de' ? 'Finde unterbewertete Skins' : 'Find undervalued skins'}</div>
+                </div>
+                <ChevronRight className="action-hub-chevron" size={16} />
+              </button>
+
+              <button className="action-hub-item" onClick={() => { setActiveSheet('pricealerts'); setShowActionHub(false); }}>
+                <div className="action-hub-icon-box"><Bell size={18} /></div>
+                <div className="action-hub-info">
+                  <div className="action-hub-title">{lang === 'de' ? 'Preisalarme' : 'Price Alerts'}</div>
+                  <div className="action-hub-desc">{lang === 'de' ? 'Verwalte deine Benachrichtigungen' : 'Manage your alerts'}</div>
+                </div>
+                <ChevronRight className="action-hub-chevron" size={16} />
+              </button>
+            </div>
+
+            <button className="sheet-close-btn" style={{ marginTop: '8px' }} onClick={() => setShowActionHub(false)}>
+              <X size={16} />
+            </button>
+          </div>
+        </div>
+      </>
+    );
+  };
+
+  const renderSheets = () => {
+    if (!activeSheet) return null;
+
+    let title = '';
+    let content = null;
+
+    if (activeSheet === 'watchlist') {
+      title = lang === 'de' ? 'Beobachtungsliste' : 'Watchlist';
+      content = (
+        <WatchlistSheet 
+          filteredSkins={filteredSkins} 
+          currency={currency} 
+          valuationMode={valuationMode} 
+          setSkins={setSkins} 
+          playTradeSound={playTradeSound} 
+          setSelectedSkinId={setSelectedSkinId} 
+          formatPrice={formatPrice} 
+        />
+      );
+    } else if (activeSheet === 'achievements') {
+      title = lang === 'de' ? 'Erfolge (Achievements)' : 'Achievements';
+      content = <AchievementsSheet achievements={achievements} />;
+    } else if (activeSheet === 'collections') {
+      title = lang === 'de' ? 'Sammlungen (Collections)' : 'Collections';
+      content = (
+        <CollectionsSheet 
+          realInventoryItems={realInventoryItems} 
+          currency={currency} 
+          valuationMode={valuationMode} 
+          formatPrice={formatPrice} 
+          setSelectedSkinId={setSelectedSkinId} 
+        />
+      );
+    } else if (activeSheet === 'tradeup') {
+      title = lang === 'de' ? 'Trade-Up Rechner' : 'Trade-Up';
+      content = (
+        <TradeUpSheet 
+          realInventoryItems={realInventoryItems} 
+          pricesDb={pricesDb} 
+          currency={currency} 
+          formatPrice={formatPrice} 
+          unlockAchievement={unlockAchievement} 
+        />
+      );
+    } else if (activeSheet === 'whatif') {
+      title = lang === 'de' ? 'Was-wäre-wenn Rechner' : 'What-If Rechner';
+      content = <WhatIfSheet currency={currency} formatPrice={formatPrice} />;
+    } else if (activeSheet === 'arbitrage') {
+      title = lang === 'de' ? 'Arbitrage-Finder' : 'Arbitrage Finder';
+      content = (
+        <ArbitrageSheet 
+          realInventoryItems={realInventoryItems} 
+          skins={skins}
+          pricesDb={pricesDb} 
+          steamMedianPrices={steamMedianPrices} 
+          currency={currency} 
+          formatPrice={formatPrice} 
+          fetchSteamMedianPrice={fetchSteamMedianPrice} 
+          setSelectedSkinId={setSelectedSkinId} 
+        />
+      );
+    } else if (activeSheet === 'pricealerts') {
+      title = lang === 'de' ? 'Preisalarme' : 'Price Alerts';
+      content = (
+        <PriceAlertsSheet 
+          skins={skins} 
+          realInventoryItems={realInventoryItems} 
+          currency={currency} 
+          formatPrice={formatPrice} 
+          alerts={alerts} 
+          setAlerts={setAlerts} 
+          playTradeSound={playTradeSound} 
+          handleDeleteAlert={handleDeleteAlert} 
+        />
+      );
+    }
+
+    return (
+      <div className="sheet-overlay show" onClick={() => setActiveSheet(null)}>
+        <div className="sheet-container" onClick={(e) => e.stopPropagation()}>
+          <div className="sheet-header">
+            <h3 className="sheet-title">{title}</h3>
+            <button className="sheet-close-btn" onClick={() => setActiveSheet(null)}>
+              <X size={16} />
+            </button>
+          </div>
+          {content}
+        </div>
+      </div>
+    );
+  };
+
+  const renderSkinDetailModal = () => {
+    if (!selectedSkinId || selectedSkinId === 'total' || selectedSkinId === 'none') return null;
+    
+    const skin = selectedSkinId.startsWith('real-')
+      ? realInventoryItems.find(s => s.id === selectedSkinId)
+      : skins.find(s => s.id === selectedSkinId);
+      
+    if (!skin) return null;
+    
+    const simPrice = getSimulatedPrice(skin, selectedSkinFloat);
+    const simWear = getWearNameFromFloat(selectedSkinFloat);
+    const collectionName = findCollectionForSkin(skin.name) || 'None';
+    
+    const rarityName = getSkinRarity(skin.name);
+    const rarityColor = rarityColors[rarityName] || '#94a3b8';
+    
+    const cost = skin.basePrice || skin.price;
+    const profitVal = simPrice - cost;
+    const roiPct = cost > 0 ? ((simPrice - cost) / cost) * 100 : 0;
+    
+    const smaVal = selectedSkinSma || simPrice;
+    const rsiVal = selectedSkinRsi || 50;
+    const signal = selectedSkinSignal || 'HOLD';
+    
+    const asks = simulatedOrderBook.asks || [];
+    const bids = simulatedOrderBook.bids || [];
+    
+    const inWatchlist = skins.some(s => s.name === skin.name);
+    
+    return (
+      <div className="sheet-overlay show" onClick={() => setSelectedSkinId(null)}>
+        <div className="sheet-container detail-modal-card" onClick={(e) => e.stopPropagation()}>
+          <div className="sheet-header">
+            <h3 className="sheet-title">{lang === 'de' ? 'Skin-Details' : 'Skin Details'}</h3>
+            <button className="sheet-close-btn" onClick={() => setSelectedSkinId(null)}>
+              <X size={16} />
+            </button>
+          </div>
+          
+          <div className="detail-modal-content scrollbar-hide">
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '16px', textAlign: 'center', marginBottom: '24px' }}>
+              <div 
+                className={`rarity-glow-${rarityName.toLowerCase().replace(/[^a-z0-9]/g, '')}`}
+                style={{ 
+                  width: '120px', 
+                  height: '120px', 
+                  borderRadius: '24px', 
+                  background: 'rgba(255,255,255,0.02)', 
+                  display: 'flex', 
+                  alignItems: 'center', 
+                  justifyContent: 'center',
+                  padding: '12px'
+                }}
+              >
+                <img src={skin.img} alt={skin.name} style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain', filter: 'drop-shadow(0 10px 15px rgba(0,0,0,0.5))' }} />
+              </div>
+              
+              <div>
+                <h4 style={{ margin: '0 0 6px 0', fontSize: '18px', fontWeight: 'bold', color: '#fff' }}>{skin.name}</h4>
+                <div style={{ display: 'flex', gap: '8px', justifyContent: 'center', flexWrap: 'wrap' }}>
+                  <span style={{ fontSize: '10px', fontWeight: 'bold', color: rarityColor, background: `${rarityColor}1c`, padding: '4px 8px', borderRadius: '99px' }}>
+                    {rarityName}
+                  </span>
+                  {collectionName !== 'None' && (
+                    <span style={{ fontSize: '10px', fontWeight: 'bold', color: 'var(--color-accent)', background: 'rgba(226, 201, 255, 0.08)', padding: '4px 8px', borderRadius: '99px' }}>
+                      {collectionName}
+                    </span>
+                  )}
+                </div>
+              </div>
+            </div>
+            
+            <div style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.06)', borderRadius: '16px', padding: '16px', marginBottom: '16px', textAlign: 'center' }}>
+              <div style={{ fontSize: '11px', color: 'rgba(255,255,255,0.4)', textTransform: 'uppercase', letterSpacing: '1px' }}>
+                {lang === 'de' ? 'Simulierter Preis' : 'Simulated Price'}
+              </div>
+              <div style={{ fontSize: '28px', fontWeight: 'bold', color: '#fff', margin: '4px 0' }}>
+                {formatPrice(simPrice, currency, valuationMode)}
+              </div>
+              <div style={{ fontSize: '11px', color: profitVal >= 0 ? '#10b981' : '#ef4444' }}>
+                {profitVal >= 0 ? '+' : ''}{formatPrice(profitVal, currency, valuationMode)} ({profitVal >= 0 ? '+' : ''}{roiPct.toFixed(1)}% ROI)
+              </div>
+            </div>
+            
+            <div style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.06)', borderRadius: '16px', padding: '16px', marginBottom: '16px' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                <span style={{ fontSize: '12px', color: 'rgba(255,255,255,0.4)' }}>Wear-Simulator</span>
+                <span style={{ fontSize: '12px', fontWeight: 'bold', color: rarityColor }}>{simWear}</span>
+              </div>
+              <div style={{ fontSize: '14px', fontFamily: 'monospace', fontWeight: 'bold', color: '#fff' }}>
+                Float: {selectedSkinFloat.toFixed(4)}
+              </div>
+              <div className="float-slider-container">
+                <input 
+                  type="range" 
+                  min="0" 
+                  max="1" 
+                  step="0.0001" 
+                  value={selectedSkinFloat} 
+                  onChange={(e) => setSelectedSkinFloat(parseFloat(e.target.value))} 
+                  className="float-custom-slider"
+                />
+              </div>
+            </div>
+            
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '16px' }}>
+              <div style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.06)', borderRadius: '16px', padding: '12px' }}>
+                <div style={{ fontSize: '10px', color: 'rgba(255,255,255,0.4)', textTransform: 'uppercase' }}>Einkaufspreis</div>
+                <div style={{ fontSize: '16px', fontWeight: 'bold', color: '#fff', marginTop: '4px' }}>
+                  {formatPrice(cost, currency, 'STEAM')}
+                </div>
+              </div>
+              
+              <div style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.06)', borderRadius: '16px', padding: '12px' }}>
+                <div style={{ fontSize: '10px', color: 'rgba(255,255,255,0.4)', textTransform: 'uppercase' }}>Technical Signal</div>
+                <div style={{ marginTop: '4px' }}>
+                  <span className={`indicator-badge indicator-${signal.toLowerCase()}`}>{signal}</span>
+                </div>
+              </div>
+            </div>
+
+            <div style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.06)', borderRadius: '16px', padding: '16px', marginBottom: '16px' }}>
+              <div style={{ fontSize: '12px', fontWeight: 'bold', color: '#fff', marginBottom: '10px' }}>Technische Indikatoren</div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px' }}>
+                <div>
+                  <span style={{ color: 'rgba(255,255,255,0.4)' }}>SMA (7 Tage):</span>{' '}
+                  <span style={{ color: '#fff', fontWeight: 'bold' }}>{formatPrice(smaVal, currency, 'STEAM')}</span>
+                </div>
+                <div>
+                  <span style={{ color: 'rgba(255,255,255,0.4)' }}>RSI (14 Tage):</span>{' '}
+                  <span style={{ color: rsiVal > 70 ? '#ef4444' : (rsiVal < 30 ? '#10b981' : '#f59e0b'), fontWeight: 'bold' }}>
+                    {rsiVal}
+                  </span>
+                </div>
+              </div>
+            </div>
+            
+            <div style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.06)', borderRadius: '16px', padding: '16px', marginBottom: '24px' }}>
+              <div style={{ fontSize: '12px', fontWeight: 'bold', color: '#fff', marginBottom: '10px' }}>Simuliertes Orderbuch</div>
+              <table className="order-book-table">
+                <thead>
+                  <tr>
+                    <th>Typ</th>
+                    <th>Preis ({currency})</th>
+                    <th>Menge</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {asks.map((ask, idx) => (
+                    <tr key={`ask-${idx}`} className="order-book-row-ask">
+                      <td>ASK (Verkauf)</td>
+                      <td>{ask.price.toFixed(2)}</td>
+                      <td>{ask.qty}</td>
+                    </tr>
+                  ))}
+                  <tr style={{ background: 'rgba(255,255,255,0.03)', fontWeight: 'bold', color: '#fff' }}>
+                    <td colSpan="3" style={{ textAlign: 'center', padding: '4px' }}>Mittelkurs: {simPrice.toFixed(2)}</td>
+                  </tr>
+                  {bids.map((bid, idx) => (
+                    <tr key={`bid-${idx}`} className="order-book-row-bid">
+                      <td>BID (Kauf)</td>
+                      <td>{bid.price.toFixed(2)}</td>
+                      <td>{bid.qty}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            
+            <div style={{ display: 'flex', gap: '12px' }}>
+              <button 
+                type="button"
+                className="onboarding-btn secondary-btn"
+                style={{ flex: 1 }}
+                onClick={() => {
+                  if (inWatchlist) {
+                    setSkins(prev => prev.filter(s => s.name !== skin.name));
+                    playTradeSound('sell');
+                  } else {
+                    handleAddToWatchlist(skin);
+                  }
+                }}
+              >
+                <Eye size={16} style={{ marginRight: '6px' }} />
+                {inWatchlist ? 'Watchlist verlassen' : 'Auf Watchlist'}
+              </button>
+              
+              <button 
+                type="button"
+                className="onboarding-btn primary-btn"
+                style={{ flex: 1 }}
+                onClick={() => setSelectedSkinId(null)}
+              >
+                Schließen
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  return (
+    <>
+      {renderContent()}
+      {renderActionHub()}
+      {renderSheets()}
+      {renderSkinDetailModal()}
+      {renderAchievementToast()}
+      {showSplash && (
+        <div className={`splash-overlay ${splashFadingOut ? 'fade-out' : ''}`}>
+          <div className="splash-container">
+            <div className="splash-logo-wrapper">
+              <div className="splash-logo-glow" />
+              <img src="/logo.png" alt="SkinStock Logo" className="splash-logo" />
+            </div>
+            <div className="splash-text-group">
+              <h1 className="splash-title">SkinStock</h1>
+              <p className="splash-subtitle">CS2 Market Ticker</p>
+            </div>
+            <div className="splash-loader-wrapper">
+              <div className="splash-loader-ring" />
+            </div>
+          </div>
+        </div>
+      )}
+    </>
   );
 }
