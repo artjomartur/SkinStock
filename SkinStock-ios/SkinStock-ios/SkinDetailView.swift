@@ -15,6 +15,21 @@ struct SkinDetailView: View {
         _floatValue = State(initialValue: item.float ?? 0.15)
     }
     
+    private var simulatedWear: String {
+        let f = floatValue
+        if f < 0.07 { return "Factory New" }
+        else if f < 0.15 { return "Minimal Wear" }
+        else if f < 0.38 { return "Field-Tested" }
+        else if f < 0.45 { return "Well-Worn" }
+        else { return "Battle-Scarred" }
+    }
+    
+    private var simulatedPrice: Double {
+        let reconstructedHashName = "\(item.name) (\(simulatedWear))"
+        let basePrice = priceService.priceMap[reconstructedHashName] ?? item.lastPrice
+        return basePrice
+    }
+    
     var body: some View {
         ZStack {
             // 1. Tiefschwarzer, tiefer Raum
@@ -112,10 +127,11 @@ struct SkinDetailView: View {
                         .offset(y: -10)
                     }
                     
-                    // Preis
+                    // Preis (Simuliert basierend auf Slider)
+                    let baseSimulatedPrice = simulatedPrice
                     let displayPrice = userSettings.showNetValue
-                        ? priceService.getNetPrice(for: item, marketplace: userSettings.preferredMarketplace)
-                        : priceService.getPrice(for: item)
+                        ? baseSimulatedPrice * (1.0 - userSettings.preferredMarketplace.feeRate)
+                        : baseSimulatedPrice
                     
                     VStack(spacing: 4) {
                         Text(userSettings.formattedPrice(displayPrice))
@@ -153,6 +169,101 @@ struct SkinDetailView: View {
                         .padding(.vertical, 6)
                         .background(Capsule().fill(Color.white.opacity(0.06)))
                     }
+                    
+                    // Float-Simulator Karte
+                    VStack(alignment: .leading, spacing: 12) {
+                        HStack {
+                            Text("Wear-Simulator")
+                                .font(.caption.bold())
+                                .foregroundStyle(.secondary)
+                            Spacer()
+                            Text(simulatedWear)
+                                .font(.caption.bold())
+                                .foregroundStyle(item.rarity.color)
+                        }
+                        
+                        Text(String(format: "Float: %.4f", floatValue))
+                            .font(.system(.subheadline, design: .monospaced))
+                            .fontWeight(.bold)
+                            .foregroundColor(.primary)
+                        
+                        LiquidFloatSlider(value: $floatValue)
+                            .padding(.vertical, 4)
+                    }
+                    .padding(20)
+                    .background(RoundedRectangle(cornerRadius: 20).fill(Color.white.opacity(0.04)))
+                    .overlay(RoundedRectangle(cornerRadius: 20).stroke(Color.white.opacity(0.08), lineWidth: 0.5))
+                    .padding(.horizontal, 20)
+                    
+                    // Einkaufspreis-Karte
+                    VStack(alignment: .leading, spacing: 14) {
+                        Text("Einkaufspreis")
+                            .font(.caption.bold())
+                            .foregroundStyle(.secondary)
+                            .tracking(1)
+                        
+                        HStack {
+                            Text(userSettings.selectedCurrency.symbol)
+                                .font(.headline)
+                                .foregroundColor(.primary)
+                            
+                            TextField("Kaufpreis eingeben", text: Binding(
+                                get: {
+                                    if let priceUSD = userSettings.buyInPrice(for: item.assetid) {
+                                        let currentRate = userSettings.convertPrice(1.0)
+                                        return String(format: "%.2f", priceUSD * currentRate)
+                                    }
+                                    return ""
+                                },
+                                set: { newValue in
+                                    if let input = Double(newValue.replacingOccurrences(of: ",", with: ".")) {
+                                        let currentRate = userSettings.convertPrice(1.0)
+                                        userSettings.setBuyInPrice(for: item.assetid, priceUSD: input / currentRate)
+                                    } else if newValue.isEmpty {
+                                        userSettings.setBuyInPrice(for: item.assetid, priceUSD: nil)
+                                    }
+                                }
+                            ))
+                            .keyboardType(.decimalPad)
+                            .font(.subheadline.bold())
+                            .foregroundColor(.primary)
+                            
+                            if userSettings.buyInPrice(for: item.assetid) != nil {
+                                Button {
+                                    userSettings.setBuyInPrice(for: item.assetid, priceUSD: nil)
+                                } label: {
+                                    Image(systemName: "xmark.circle.fill")
+                                        .foregroundStyle(.secondary)
+                                }
+                            }
+                        }
+                        .padding()
+                        .background(RoundedRectangle(cornerRadius: 12).fill(Color.primary.opacity(0.04)))
+                        
+                        // Rendite-Anzeige falls Kaufpreis gesetzt ist
+                        if let buyInUSD = userSettings.buyInPrice(for: item.assetid) {
+                            let diff = simulatedPrice - buyInUSD
+                            let roi = buyInUSD > 0 ? (diff / buyInUSD) * 100 : 0
+                            let isProfit = diff >= 0
+                            
+                            HStack {
+                                Text(isProfit ? "Gewinn:" : "Verlust:")
+                                    .font(.subheadline)
+                                    .foregroundColor(.secondary)
+                                
+                                Spacer()
+                                
+                                Text("\(isProfit ? "+" : "")\(userSettings.formattedPrice(diff)) (\(isProfit ? "+" : "")\(String(format: "%.1f", roi))%)")
+                                    .font(.subheadline.bold())
+                                    .foregroundColor(isProfit ? .green : .red)
+                            }
+                            .padding(.top, 4)
+                        }
+                    }
+                    .padding(20)
+                    .background(RoundedRectangle(cornerRadius: 20).fill(Color.white.opacity(0.04)))
+                    .overlay(RoundedRectangle(cornerRadius: 20).stroke(Color.white.opacity(0.08), lineWidth: 0.5))
+                    .padding(.horizontal, 20)
                     
                     // Chart & Picker
                     VStack(alignment: .leading, spacing: 12) {

@@ -100,6 +100,9 @@ struct AnalyticsView: View {
                         // Liquiditäts-Score
                         liquiditySection
                         
+                        // Investment-Rendite (ROI)
+                        investmentRoiSection
+                        
                         // Chart Section
                         VStack(alignment: .leading, spacing: 8) {
                             Text("Portfolio Aufteilung")
@@ -320,6 +323,97 @@ struct AnalyticsView: View {
                 userSettings.showAbsoluteValues.toggle()
             }
         }
+    }
+    
+    private var investmentRoiSection: some View {
+        let hasAnyBuyIn = inventoryService.inventory.contains { userSettings.buyInPrice(for: $0.assetid) != nil }
+        
+        return VStack(alignment: .leading, spacing: 12) {
+            Text("Investment-Rendite (ROI)")
+                .font(.headline)
+                .foregroundColor(.primary)
+            Text("Tatsächliche Performance basierend auf deinen Einkaufspreisen.")
+                .font(.subheadline)
+                .foregroundColor(.secondary)
+            
+            if !hasAnyBuyIn {
+                VStack(spacing: 8) {
+                    Image(systemName: "arrow.up.right.circle.fill")
+                        .font(.title2)
+                        .foregroundStyle(.secondary)
+                    Text("Trage in den Skin-Details deine Einkaufspreise ein, um deine reale Rendite zu berechnen.")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                        .multilineTextAlignment(.center)
+                }
+                .padding()
+                .frame(maxWidth: .infinity)
+                .background(RoundedRectangle(cornerRadius: 12).fill(Color.primary.opacity(0.02)))
+            } else {
+                let totalBuyIn = inventoryService.inventory.reduce(0.0) { sum, item in
+                    let itemPrice = priceService.getPrice(for: item, includeSticker: userSettings.includeStickerValue)
+                    let buyInPrice = userSettings.buyInPrice(for: item.assetid) ?? itemPrice
+                    return sum + buyInPrice
+                }
+                let currentVal = priceService.calculateTotalValue(inventory: inventoryService.inventory, includeSticker: userSettings.includeStickerValue)
+                let profit = currentVal - totalBuyIn
+                let roiPercent = totalBuyIn > 0 ? (profit / totalBuyIn) * 100 : 0
+                let isUp = profit >= 0
+                
+                let buyInCount = inventoryService.inventory.filter { userSettings.buyInPrice(for: $0.assetid) != nil }.count
+                let totalCount = inventoryService.inventory.count
+                
+                VStack(spacing: 12) {
+                    HStack {
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text("Einkaufswert")
+                                .font(.caption2)
+                                .foregroundColor(.secondary)
+                            Text(userSettings.formattedPrice(totalBuyIn))
+                                .font(.subheadline.bold())
+                        }
+                        Spacer()
+                        VStack(alignment: .trailing, spacing: 2) {
+                            Text("Marktwert")
+                                .font(.caption2)
+                                .foregroundColor(.secondary)
+                            Text(userSettings.formattedPrice(currentVal))
+                                .font(.subheadline.bold())
+                        }
+                    }
+                    
+                    Divider().background(Color.white.opacity(0.1))
+                    
+                    HStack {
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text("Reingewinn")
+                                .font(.caption2)
+                                .foregroundColor(.secondary)
+                            Text("\(isUp ? "+" : "")\(userSettings.formattedPrice(profit))")
+                                .font(.title3.bold())
+                                .foregroundColor(isUp ? .green : .red)
+                        }
+                        Spacer()
+                        VStack(alignment: .trailing, spacing: 2) {
+                            Text("Rendite (ROI)")
+                                .font(.caption2)
+                                .foregroundColor(.secondary)
+                            Text("\(isUp ? "+" : "")\(String(format: "%.1f", roiPercent))%")
+                                .font(.title3.bold())
+                                .foregroundColor(isUp ? .green : .red)
+                        }
+                    }
+                    
+                    Text("\(buyInCount) von \(totalCount) Skins mit Einkaufspreis erfasst")
+                        .font(.system(size: 9))
+                        .foregroundColor(.secondary)
+                        .padding(.top, 4)
+                }
+            }
+        }
+        .padding()
+        .background(RoundedRectangle(cornerRadius: 16).fill(Color.primary.opacity(0.05)))
+        .overlay(RoundedRectangle(cornerRadius: 16).stroke(Color.primary.opacity(0.1), lineWidth: 1))
     }
 }
 

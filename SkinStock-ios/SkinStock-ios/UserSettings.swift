@@ -64,6 +64,7 @@ class UserSettings: ObservableObject {
     @Published var targetValue: Double = 0.0
     @Published var targetName: String = ""
     @Published var includeStickerValue: Bool = false
+    @Published var buyInPrices: [String: Double] = [:]
     
     private var cancellables = Set<AnyCancellable>()
     
@@ -76,6 +77,11 @@ class UserSettings: ObservableObject {
         if let alertsData = UserDefaults.standard.data(forKey: "priceAlerts"),
            let decoded = try? JSONDecoder().decode([PriceAlert].self, from: alertsData) {
             self.priceAlerts = decoded
+        }
+        
+        if let buyInPricesData = UserDefaults.standard.data(forKey: "buyInPrices"),
+           let decoded = try? JSONDecoder().decode([String: Double].self, from: buyInPricesData) {
+            self.buyInPrices = decoded
         }
         
         if let savedString = UserDefaults.standard.string(forKey: "selectedCurrency"),
@@ -148,6 +154,31 @@ class UserSettings: ObservableObject {
                 UserDefaults.standard.set(newValue, forKey: "includeStickerValue")
             }
             .store(in: &cancellables)
+            
+        $buyInPrices
+            .dropFirst()
+            .sink { newValue in
+                if let encoded = try? JSONEncoder().encode(newValue) {
+                    UserDefaults.standard.set(encoded, forKey: "buyInPrices")
+                }
+            }
+            .store(in: &cancellables)
+    }
+    
+    func buyInPrice(for assetid: String) -> Double? {
+        return buyInPrices[assetid]
+    }
+    
+    func setBuyInPrice(for assetid: String, priceUSD: Double?) {
+        if let price = priceUSD {
+            buyInPrices[assetid] = price
+        } else {
+            buyInPrices.removeValue(forKey: assetid)
+        }
+        objectWillChange.send()
+        if let encoded = try? JSONEncoder().encode(buyInPrices) {
+            UserDefaults.standard.set(encoded, forKey: "buyInPrices")
+        }
     }
     
     // Umrechnungskurse von der Basis USD

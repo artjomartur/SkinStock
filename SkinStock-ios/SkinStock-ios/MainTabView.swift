@@ -30,6 +30,7 @@ struct MainTabView: View {
     @State private var showCollections: Bool = false
     @State private var showTradeUp: Bool = false
     @State private var showWhatIf: Bool = false
+    @State private var showArbitrage: Bool = false
     
     @EnvironmentObject var inventoryService: InventoryService
     @EnvironmentObject var steamService: SteamService
@@ -97,6 +98,13 @@ struct MainTabView: View {
                 .environmentObject(userSettings)
                 .environmentObject(priceService)
         }
+        .sheet(isPresented: $showArbitrage) {
+            ArbitrageView()
+                .environmentObject(userSettings)
+                .environmentObject(priceService)
+                .environmentObject(inventoryService)
+                .environmentObject(watchlistService)
+        }
         .onAppear {
             if let steamId = steamService.profile?.steamId64 {
                 Task {
@@ -153,6 +161,11 @@ struct MainTabView: View {
                     
                     actionHubButton(title: "Was-wäre-wenn Rechner", icon: "clock.arrow.circlepath", desc: "Simuliere historische ROI") {
                         showWhatIf = true
+                        showActionHub = false
+                    }
+                    
+                    actionHubButton(title: "Arbitrage-Finder", icon: "arrow.left.arrow.right", desc: "Finde unterbewertete Skins") {
+                        showArbitrage = true
                         showActionHub = false
                     }
                 }

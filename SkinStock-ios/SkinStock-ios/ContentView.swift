@@ -81,6 +81,44 @@ struct ContentView: View {
                                 }
                             }
                             
+                            // Real Investment Buy-in ROI
+                            let hasAnyBuyIn = inventoryService.inventory.contains { userSettings.buyInPrice(for: $0.assetid) != nil }
+                            if hasAnyBuyIn {
+                                let totalBuyIn = inventoryService.inventory.reduce(0.0) { sum, item in
+                                    let itemPrice = priceService.getPrice(for: item, includeSticker: userSettings.includeStickerValue)
+                                    let buyInPrice = userSettings.buyInPrice(for: item.assetid) ?? itemPrice
+                                    return sum + buyInPrice
+                                }
+                                let profit = displayValue - totalBuyIn
+                                let roiPercent = totalBuyIn > 0 ? (profit / totalBuyIn) * 100 : 0
+                                let isUp = profit >= 0
+                                
+                                HStack(spacing: 8) {
+                                    VStack(alignment: .leading, spacing: 2) {
+                                        Text("Kaufpreis")
+                                            .font(.system(size: 10))
+                                            .foregroundColor(.secondary)
+                                        Text(userSettings.formattedPrice(totalBuyIn))
+                                            .font(.caption2.bold())
+                                            .foregroundColor(.primary)
+                                    }
+                                    
+                                    Spacer()
+                                    
+                                    VStack(alignment: .trailing, spacing: 2) {
+                                        Text(isUp ? "Profit" : "Verlust")
+                                            .font(.system(size: 10))
+                                            .foregroundColor(.secondary)
+                                        Text("\(isUp ? "+" : "")\(userSettings.formattedPrice(profit)) (\(isUp ? "+" : "")\(String(format: "%.1f", roiPercent))%)")
+                                            .font(.caption2.bold())
+                                            .foregroundColor(isUp ? .green : .red)
+                                    }
+                                }
+                                .padding(8)
+                                .background(RoundedRectangle(cornerRadius: 10).fill(Color.primary.opacity(0.02)))
+                                .overlay(RoundedRectangle(cornerRadius: 10).stroke(Color.primary.opacity(0.05), lineWidth: 0.5))
+                            }
+                            
                             // Performance aus der echten Historie
                             let history = priceHistoryStore.getPortfolioHistory(inventory: inventoryService.inventory, priceService: priceService, timeframe: selectedTimeframe)
                             if history.count >= 2, let first = history.first, let last = history.last, first.price > 0 {

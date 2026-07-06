@@ -185,23 +185,103 @@ struct TradeUpCalculatorView: View {
     private func runSimulatedTradeUp() {
         guard selectedItems.count == 10, let first = selectedItems.first else { return }
         
-        // Finde ein mögliches Ergebnis der nächsthöheren Seltenheit
-        let nextRarity = first.rarity.nextTier ?? .covert
+        let currentRarity = first.rarity
+        guard let nextRarity = currentRarity.nextTier else { return }
         
-        // Suche aus dem gesamten Preis-Map nach Skins dieser Rarity und Kategorie
-        let possibleUpgrades = priceService.priceMap.filter { key, price in
-            // Einfache Zuordnung über Rarity-Keywords im Name
-            if nextRarity == .covert {
-                return price > 10.0 // Einfacher Filter
+        // 1. Finde für jedes der 10 Items die Kollektion
+        var itemCollections: [CollectionDefinition] = []
+        for item in selectedItems {
+            let colName = item.collectionName ?? ""
+            if let foundCol = CS2CollectionData.collections.first(where: { $0.name == colName }) {
+                itemCollections.append(foundCol)
+            } else {
+                // Fallback zu einer zufälligen Kollektion, damit die Simulation läuft
+                let randomCol = CS2CollectionData.collections.randomElement()!
+                itemCollections.append(randomCol)
             }
-            return price > 2.0
         }
         
-        let randomUpgrade = possibleUpgrades.randomElement() ?? (key: "AK-47 | Redline (Field-Tested)", value: 25.0)
+        // 2. Berechne alle möglichen Outcomes und ihre Gewichte
+        // Jedes der 10 Items trägt 10% Chance bei. Diese 10% teilen sich gleichmäßig auf die Outcomes der jeweiligen Kollektion auf.
+        var outcomeWeights: [String: (weight: Double, collection: CollectionDefinition)] = [:]
+        for col in itemCollections {
+            let outcomes = col.skins(for: nextRarity)
+            if !outcomes.isEmpty {
+                let singleItemContribution = 0.10 / Double(outcomes.count)
+                for outSkin in outcomes {
+                    if let existing = outcomeWeights[outSkin] {
+                        outcomeWeights[outSkin] = (existing.weight + singleItemContribution, col)
+                    } else {
+                        outcomeWeights[outSkin] = (singleItemContribution, col)
+                    }
+                }
+            }
+        }
+        
+        // Falls keine Kollektion valide Outcomes hat, breche ab
+        if outcomeWeights.isEmpty {
+            // Fallback zu einer Standard-Auswahl
+            let randomCol = CS2CollectionData.collections.randomElement()!
+            let outcomes = randomCol.skins(for: nextRarity)
+            for outSkin in outcomes {
+                outcomeWeights[outSkin] = (1.0 / Double(outcomes.count), randomCol)
+            }
+        }
+        
+        // 3. Wähle ein Outcome basierend auf den Gewichten (Roulette-Wheel-Selection)
+        let sortedOutcomes = outcomeWeights.map { (skin: $0.key, data: $0.value) }
+        let totalWeight = sortedOutcomes.reduce(0.0) { $0 + $1.data.weight }
+        let randomVal = Double.random(in: 0..<totalWeight)
+        
+        var selectedSkinName = sortedOutcomes.first?.skin ?? "AK-47 | Steel Delta"
+        var selectedCol = CS2CollectionData.collections.first!
+        
+        var cumulative = 0.0
+        for entry in sortedOutcomes {
+            cumulative += entry.data.weight
+            if randomVal <= cumulative {
+                selectedSkinName = entry.skin
+                selectedCol = entry.data.collection
+                break
+            }
+        }
+        
+        // 4. Berechne den Float-Wert des Ergebnisses
+        // Durchschnittlichen Input-Float berechnen
+        let totalInputFloat = selectedItems.reduce(0.0) { sum, item in
+            if let f = item.float {
+                return sum + f
+            } else {
+                // Realistischen Float schätzen basierend auf Wear
+                switch item.wear {
+                case "Factory New": return sum + 0.03
+                case "Minimal Wear": return sum + 0.11
+                case "Field-Tested": return sum + 0.22
+                case "Well-Worn": return sum + 0.41
+                case "Battle-Scarred": return sum + 0.70
+                default: return sum + 0.15
+                }
+            }
+        }
+        let avgInputFloat = totalInputFloat / 10.0
+        
+        // Float-Grenzen des Outcomes ermitteln
+        let bounds = CS2CollectionData.getFloatLimits(for: selectedSkinName)
+        let outcomeFloat = avgInputFloat * (bounds.max - bounds.min) + bounds.min
+        
+        // 5. Wear-Zustand des Outcomes bestimmen
+        let outcomeWear: String
+        if outcomeFloat < 0.07 { outcomeWear = "Factory New" }
+        else if outcomeFloat < 0.15 { outcomeWear = "Minimal Wear" }
+        else if outcomeFloat < 0.38 { outcomeWear = "Field-Tested" }
+        else if outcomeFloat < 0.45 { outcomeWear = "Well-Worn" }
+        else { outcomeWear = "Battle-Scarred" }
+        
+        // 6. Preis des Outcomes ermitteln
+        let fullHashName = "\(selectedSkinName) (\(outcomeWear))"
+        let outcomeValue = priceService.priceMap[fullHashName] ?? (priceService.priceMap.values.randomElement() ?? 15.0)
         
         let totalCost = selectedItems.reduce(0.0) { $0 + priceService.getPrice(for: $1) }
-        let outcomeValue = randomUpgrade.value
-        
         profitLoss = outcomeValue - totalCost
         
         simulatedResult = CS2Item(
@@ -209,11 +289,11 @@ struct TradeUpCalculatorView: View {
             assetid: "simulated",
             classid: "simulated",
             instanceid: "simulated",
-            name: randomUpgrade.key,
-            hashName: randomUpgrade.key,
-            float: 0.15,
+            name: selectedSkinName,
+            hashName: fullHashName,
+            float: outcomeFloat,
             phase: nil,
-            wear: "Field-Tested",
+            wear: outcomeWear,
             lastPrice: outcomeValue,
             currency: "EUR",
             skinCategory: "Rifle",
@@ -223,7 +303,7 @@ struct TradeUpCalculatorView: View {
             tradable: true,
             stickers: [],
             firstSeenDate: Date(),
-            collectionName: nil
+            collectionName: selectedCol.name
         )
         
         showResult = true
