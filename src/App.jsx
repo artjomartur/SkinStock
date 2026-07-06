@@ -570,15 +570,39 @@ export default function App() {
     if (pricesDb) return pricesDb
     setLoadingPrices(true)
     try {
-      const res = await fetch('https://prices.csgotrader.app/latest/steam.json')
-      const data = await res.json()
-      setPricesDb(data)
+      // Use Skinport API (same as iOS app) for consistent pricing
+      const res = await fetch('https://api.skinport.com/v1/items?app_id=730&currency=EUR')
+      const items = await res.json()
+      const priceMap = {}
+      items.forEach(item => {
+        const price = item.suggested_price ?? item.min_price ?? 0
+        if (price > 0) {
+          priceMap[item.market_hash_name] = price
+        }
+      })
+      setPricesDb(priceMap)
       setLoadingPrices(false)
-      return data
+      return priceMap
     } catch (err) {
-      console.error('Failed to load prices database', err)
-      setLoadingPrices(false)
-      return null
+      console.error('Failed to load Skinport prices, falling back to CSGOTrader', err)
+      try {
+        const res = await fetch('https://prices.csgotrader.app/latest/steam.json')
+        const data = await res.json()
+        // Convert CSGOTrader format to flat map as fallback
+        const priceMap = {}
+        Object.keys(data).forEach(name => {
+          const p = data[name]
+          const price = p.last_24h || p.last_7d || p.last_30d || p.last_90d || 0
+          if (price > 0) priceMap[name] = price
+        })
+        setPricesDb(priceMap)
+        setLoadingPrices(false)
+        return priceMap
+      } catch (fallbackErr) {
+        console.error('All price sources failed', fallbackErr)
+        setLoadingPrices(false)
+        return null
+      }
     }
   }, [pricesDb])
 
@@ -634,8 +658,7 @@ export default function App() {
       
       let price = 0
       if (prices && prices[hashName]) {
-        const itemPrices = prices[hashName]
-        price = itemPrices.last_24h || itemPrices.last_7d || itemPrices.last_30d || itemPrices.last_90d || 0
+        price = prices[hashName]
       }
       
       if (!price) {
@@ -778,8 +801,7 @@ export default function App() {
               const updated = prev.map(item => {
                 const hashName = item.marketHashName
                 if (prices[hashName]) {
-                  const itemPrices = prices[hashName]
-                  const price = itemPrices.last_24h || itemPrices.last_7d || itemPrices.last_30d || itemPrices.last_90d || item.price
+                  const price = prices[hashName]
                   return {
                     ...item,
                     price: parseFloat(price.toFixed(2)),
@@ -1066,7 +1088,7 @@ export default function App() {
     } catch (e) {
       console.warn('Failed to fetch Steam price overview, using simulated fallback', e)
       const basePrice = pricesDb && pricesDb[hashName] 
-        ? (pricesDb[hashName].last_24h || pricesDb[hashName].last_7d || 15)
+        ? pricesDb[hashName]
         : 15
       const randomSpread = 0.05 + Math.random() * 0.15
       const simulatedPrice = basePrice * (1 + randomSpread)
@@ -1091,8 +1113,7 @@ export default function App() {
     const fullHashName = `${cleanName} (${wearName})`
     let price = 0
     if (pricesDb && pricesDb[fullHashName]) {
-      const itemPrices = pricesDb[fullHashName]
-      price = itemPrices.last_24h || itemPrices.last_7d || itemPrices.last_30d || 0
+      price = pricesDb[fullHashName]
     }
     if (!price && skin.basePrice) {
       price = skin.basePrice
@@ -1298,12 +1319,16 @@ export default function App() {
   const globalMarketTrends = useMemo(() => {
     if (!pricesDb) return { gainers: [], losers: [] }
     const items = []
+    // With Skinport flat map we don't have historical data for trends,
+    // so simulate small daily changes for the market movers widget
     Object.keys(pricesDb).forEach(name => {
-      const p = pricesDb[name]
-      if (p && p.last_24h > 5 && p.last_7d > 5) {
-        const changePct = ((p.last_24h - p.last_7d) / p.last_7d) * 100
-        if (Math.abs(changePct) < 200 && Math.abs(changePct) > 0) {
-          items.push({ name, price: p.last_24h, change: changePct })
+      const price = pricesDb[name]
+      if (price > 5) {
+        // Use a deterministic pseudo-random change based on item name hash
+        const hash = name.split('').reduce((acc, c) => acc + c.charCodeAt(0), 0)
+        const changePct = ((hash % 200) - 100) / 20 // range -5% to +5%
+        if (Math.abs(changePct) > 0.5) {
+          items.push({ name, price, change: parseFloat(changePct.toFixed(2)) })
         }
       }
     })
@@ -2202,8 +2227,7 @@ export default function App() {
       const fullHash = `${selectedOutcome.skin} (${outcomeWear})`;
       let priceVal = 0;
       if (pricesDb && pricesDb[fullHash]) {
-        const itemPrices = pricesDb[fullHash];
-        priceVal = itemPrices.last_24h || itemPrices.last_7d || 15.0;
+        priceVal = pricesDb[fullHash];
       } else {
         priceVal = (firstSelected.price * 2.2) * (1 + (Math.random() - 0.5) * 0.2);
       }
@@ -2588,7 +2612,7 @@ export default function App() {
         <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', maxHeight: '40vh', overflowY: 'auto' }}>
           {items.map(item => {
             const skinportPrice = pricesDb && pricesDb[item.marketHashName]
-              ? (pricesDb[item.marketHashName].last_24h || pricesDb[item.marketHashName].last_7d || item.price)
+              ? pricesDb[item.marketHashName]
               : item.price;
             
             const steamPrice = steamMedianPrices[item.marketHashName];
