@@ -420,6 +420,13 @@ export default function App() {
   const [user, setUser] = useState(null)
   const [authLoading, setAuthLoading] = useState(true)
 
+  // Real Steam Inventory state
+  const [steamIdInput, setSteamIdInput] = useState(() => localStorage.getItem('skinstock_steam_id') || '')
+
+  // Display Modes
+  const [currency, setCurrency] = useState('EUR') // 'EUR' | 'USD'
+  const [valuationMode, setValuationMode] = useState('STEAM') // 'STEAM' | 'CASHOUT'
+
   // Splash Screen States
   const [showSplash, setShowSplash] = useState(true)
   const [splashFadingOut, setSplashFadingOut] = useState(false)
@@ -502,18 +509,12 @@ export default function App() {
   const [selectedSkinId, setSelectedSkinId] = useState(null)
   const [flashStates, setFlashStates] = useState({}) // skinId -> 'up' | 'down'
   
-  // Real Steam Inventory state
-  const [steamIdInput, setSteamIdInput] = useState(() => localStorage.getItem('skinstock_steam_id') || '')
   const [isFetchingInventory, setIsFetchingInventory] = useState(false)
   const [inventoryError, setInventoryError] = useState('')
   const [showManualImport, setShowManualImport] = useState(false)
   const [manualJson, setManualJson] = useState('')
   const [pricesDb, setPricesDb] = useState(null)
   const [, setLoadingPrices] = useState(false)
-  
-  // Display Modes
-  const [currency, setCurrency] = useState('EUR') // 'EUR' | 'USD'
-  const [valuationMode, setValuationMode] = useState('STEAM') // 'STEAM' | 'CASHOUT'
   
   // Alert states (Ported to local storage persistence)
   const [alerts, setAlerts] = useState(() => {
