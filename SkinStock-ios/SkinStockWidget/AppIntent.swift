@@ -8,11 +8,18 @@
 import WidgetKit
 import AppIntents
 
-struct ConfigurationAppIntent: WidgetConfigurationIntent {
-    static var title: LocalizedStringResource { "Configuration" }
-    static var description: IntentDescription { "This is an example widget." }
+@available(iOS 17.0, *)
+struct RefreshInventoryIntent: AppIntent {
+    static var title: LocalizedStringResource = "Refresh Inventory"
+    static var description = IntentDescription("Refreshes the CS2 inventory prices.")
 
-    // An example configurable parameter.
-    @Parameter(title: "Favorite Emoji", default: "😃")
-    var favoriteEmoji: String
+    func perform() async throws -> some IntentResult {
+        // In a real scenario with shared frameworks, we would call PriceService.shared.fetchPrices() here.
+        // For now, we simulate a network delay and trigger a timeline reload.
+        try? await Task.sleep(nanoseconds: 1_000_000_000)
+        
+        // Notify WidgetKit to reload the timeline
+        WidgetCenter.shared.reloadAllTimelines()
+        return .result()
+    }
 }

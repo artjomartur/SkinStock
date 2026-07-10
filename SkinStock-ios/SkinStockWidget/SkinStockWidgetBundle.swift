@@ -12,7 +12,5 @@ import SwiftUI
 struct SkinStockWidgetBundle: WidgetBundle {
     var body: some Widget {
         SkinStockWidget()
-        SkinStockWidgetControl()
-        SkinStockWidgetLiveActivity()
     }
 }

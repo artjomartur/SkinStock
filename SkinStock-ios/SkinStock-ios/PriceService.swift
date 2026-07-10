@@ -1,5 +1,8 @@
 import Foundation
 import Combine
+#if canImport(WidgetKit)
+import WidgetKit
+#endif
 
 /// Marktplatz-Gebührenstruktur für den Netto-Liquidationswert
 enum Marketplace: String, CaseIterable, Identifiable, Codable {
@@ -109,6 +112,23 @@ class PriceService: ObservableObject {
     
     func calculateTotalValue(inventory: [CS2Item], includeSticker: Bool = false) -> Double {
         return inventory.reduce(0) { $0 + getPrice(for: $1, includeSticker: includeSticker) }
+    }
+    
+    func syncWidgetData(totalValue: Double, history: [Double]) {
+        if let userDefaults = UserDefaults(suiteName: "group.com.artjombecker.skinstock") {
+            userDefaults.set(totalValue, forKey: "widgetTotalValue")
+            userDefaults.set(history, forKey: "widgetHistory")
+        }
+        // Notify the widget to update its timeline
+        #if canImport(WidgetKit)
+        WidgetCenter.shared.reloadAllTimelines()
+        #endif
+        
+        // Update Live Activity if running
+        let trend = (history.last ?? 0) - (history.first ?? 0)
+        if #available(iOS 16.1, *) {
+            LiveActivityService.shared.updateActivity(totalValue: totalValue, trend: trend)
+        }
     }
     
     /// Berechnet den Netto-Liquidationswert nach Abzug der Plattform-Gebühren

@@ -7,12 +7,55 @@
 
 import SwiftUI
 import FirebaseCore
+import FirebaseMessaging
+import FirebaseFirestore
+import UserNotifications
 
-class AppDelegate: NSObject, UIApplicationDelegate {
+class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCenterDelegate, MessagingDelegate {
   func application(_ application: UIApplication,
                    didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey : Any]? = nil) -> Bool {
     FirebaseApp.configure()
+    
+    // Push Notifications registrieren
+    UNUserNotificationCenter.current().delegate = self
+    let authOptions: UNAuthorizationOptions = [.alert, .badge, .sound]
+    UNUserNotificationCenter.current().requestAuthorization(options: authOptions) { granted, error in
+        if granted {
+            print("Push Notifications erlaubt!")
+        }
+    }
+    application.registerForRemoteNotifications()
+    
+    // Firebase Messaging Delegate
+    Messaging.messaging().delegate = self
+    
     return true
+  }
+  
+  func application(_ application: UIApplication, didRegisterForRemoteNotificationsWithDeviceToken deviceToken: Data) {
+      Messaging.messaging().apnsToken = deviceToken
+  }
+  
+  func messaging(_ messaging: Messaging, didReceiveRegistrationToken fcmToken: String?) {
+      print("Firebase registration token: \(String(describing: fcmToken))")
+      guard let token = fcmToken else { return }
+      
+      // Save the token to Firestore for the current user or a generic device pool
+      let db = Firestore.firestore()
+      // Note: If you have user authentication, use the user's UID here
+      // For now, we store it under a generic "users" collection with a device ID
+      if let deviceID = UIDevice.current.identifierForVendor?.uuidString {
+          db.collection("users").document(deviceID).setData([
+              "fcmToken": token,
+              "lastUpdated": FieldValue.serverTimestamp()
+          ], merge: true) { error in
+              if let error = error {
+                  print("Error saving FCM token: \(error)")
+              } else {
+                  print("Successfully saved FCM token to Firestore")
+              }
+          }
+      }
   }
 }
 

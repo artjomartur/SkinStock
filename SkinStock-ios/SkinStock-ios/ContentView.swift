@@ -245,6 +245,12 @@ struct ContentView: View {
                     priceHistoryStore.recordAllPrices(priceMap: priceService.priceMap)
                     // Preisalarme prüfen
                     priceService.checkCustomPriceAlerts(userSettings: userSettings, notificationService: notificationService)
+                    
+                    // Widget synchronisieren
+                    let totalVal = priceService.calculateTotalValue(inventory: inventoryService.inventory, includeSticker: userSettings.includeStickerValue)
+                    let historyPoints = priceHistoryStore.getPortfolioHistory(inventory: inventoryService.inventory, priceService: priceService, timeframe: .day)
+                    let historyArray = historyPoints.map { $0.price }
+                    priceService.syncWidgetData(totalValue: totalVal, history: historyArray)
                 }
             }
         }

@@ -10,13 +10,45 @@
 		11B547540C47A2EDCBB75F94 /* GoogleService-Info.plist in Resources */ = {isa = PBXBuildFile; fileRef = 51577A28B20FAE6138CA634E /* GoogleService-Info.plist */; };
 		6EC2108B431AA62129016776 /* GoogleSignInSwift in Frameworks */ = {isa = PBXBuildFile; productRef = A4698A7C25457490D773DE9D /* GoogleSignInSwift */; };
 		9F94F16CB077687FD7DFE499 /* FirebaseAuth in Frameworks */ = {isa = PBXBuildFile; productRef = D8A58D7265A430079E14A0DD /* FirebaseAuth */; };
+		A9B9D1DA3000006A002208F1 /* WidgetKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = A9B9D1D93000006A002208F1 /* WidgetKit.framework */; };
+		A9B9D1DC3000006A002208F1 /* SwiftUI.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = A9B9D1DB3000006A002208F1 /* SwiftUI.framework */; };
+		A9B9D1ED3000006B002208F1 /* SkinStockWidgetExtension.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = A9B9D1D73000006A002208F1 /* SkinStockWidgetExtension.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		E7E8F8E0B0F96791AB323CBD /* FirebaseCore in Frameworks */ = {isa = PBXBuildFile; productRef = C6FE6247645135EA2EA3D2D9 /* FirebaseCore */; };
 		F424165B137B25E9E2F1FF10 /* GoogleSignIn in Frameworks */ = {isa = PBXBuildFile; productRef = BBC87576793E6ECC133A8634 /* GoogleSignIn */; };
+		F5C9057D11ED58CB46327FE3 /* FirebaseMessaging in Frameworks */ = {isa = PBXBuildFile; productRef = 903A12E7FDE9DEF6ECA6D1EE /* FirebaseMessaging */; };
 /* End PBXBuildFile section */
+
+/* Begin PBXContainerItemProxy section */
+		A9B9D1EB3000006B002208F1 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = A92CF1062FF6D42C004EA020 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = A9B9D1D63000006A002208F1;
+			remoteInfo = SkinStockWidgetExtension;
+		};
+/* End PBXContainerItemProxy section */
+
+/* Begin PBXCopyFilesBuildPhase section */
+		A9B9D1EE3000006B002208F1 /* Embed Foundation Extensions */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "";
+			dstSubfolderSpec = 13;
+			files = (
+				A9B9D1ED3000006B002208F1 /* SkinStockWidgetExtension.appex in Embed Foundation Extensions */,
+			);
+			name = "Embed Foundation Extensions";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
 		51577A28B20FAE6138CA634E /* GoogleService-Info.plist */ = {isa = PBXFileReference; explicitFileType = text.plist; name = "GoogleService-Info.plist"; path = "SkinStock-ios/GoogleService-Info.plist"; sourceTree = "<group>"; };
 		A92CF10E2FF6D42C004EA020 /* SkinStock-ios.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "SkinStock-ios.app"; sourceTree = BUILT_PRODUCTS_DIR; };
+		A9B9D1D73000006A002208F1 /* SkinStockWidgetExtension.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = SkinStockWidgetExtension.appex; sourceTree = BUILT_PRODUCTS_DIR; };
+		A9B9D1D93000006A002208F1 /* WidgetKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = WidgetKit.framework; path = System/Library/Frameworks/WidgetKit.framework; sourceTree = SDKROOT; };
+		A9B9D1DB3000006A002208F1 /* SwiftUI.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = SwiftUI.framework; path = System/Library/Frameworks/SwiftUI.framework; sourceTree = SDKROOT; };
+		A9B9D1F4300000AA002208F1 /* SkinStockWidgetExtension.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = SkinStockWidgetExtension.entitlements; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
@@ -27,6 +59,13 @@
 			);
 			target = A92CF10D2FF6D42C004EA020 /* SkinStock-ios */;
 		};
+		A9B9D1F23000006B002208F1 /* Exceptions for "SkinStockWidget" folder in "SkinStockWidgetExtension" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Info.plist,
+			);
+			target = A9B9D1D63000006A002208F1 /* SkinStockWidgetExtension */;
+		};
 /* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
@@ -36,6 +75,14 @@
 				A92CF1372FF6E1B4004EA020 /* Exceptions for "SkinStock-ios" folder in "SkinStock-ios" target */,
 			);
 			path = "SkinStock-ios";
+			sourceTree = "<group>";
+		};
+		A9B9D1DD3000006A002208F1 /* SkinStockWidget */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				A9B9D1F23000006B002208F1 /* Exceptions for "SkinStockWidget" folder in "SkinStockWidgetExtension" target */,
+			);
+			path = SkinStockWidget;
 			sourceTree = "<group>";
 		};
 /* End PBXFileSystemSynchronizedRootGroup section */
@@ -49,6 +96,16 @@
 				9F94F16CB077687FD7DFE499 /* FirebaseAuth in Frameworks */,
 				F424165B137B25E9E2F1FF10 /* GoogleSignIn in Frameworks */,
 				6EC2108B431AA62129016776 /* GoogleSignInSwift in Frameworks */,
+				F5C9057D11ED58CB46327FE3 /* FirebaseMessaging in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		A9B9D1D43000006A002208F1 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				A9B9D1DC3000006A002208F1 /* SwiftUI.framework in Frameworks */,
+				A9B9D1DA3000006A002208F1 /* WidgetKit.framework in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -58,7 +115,10 @@
 		A92CF1052FF6D42C004EA020 = {
 			isa = PBXGroup;
 			children = (
+				A9B9D1F4300000AA002208F1 /* SkinStockWidgetExtension.entitlements */,
 				A92CF1102FF6D42C004EA020 /* SkinStock-ios */,
+				A9B9D1DD3000006A002208F1 /* SkinStockWidget */,
+				A9B9D1D83000006A002208F1 /* Frameworks */,
 				A92CF10F2FF6D42C004EA020 /* Products */,
 				51577A28B20FAE6138CA634E /* GoogleService-Info.plist */,
 			);
@@ -68,8 +128,18 @@
 			isa = PBXGroup;
 			children = (
 				A92CF10E2FF6D42C004EA020 /* SkinStock-ios.app */,
+				A9B9D1D73000006A002208F1 /* SkinStockWidgetExtension.appex */,
 			);
 			name = Products;
+			sourceTree = "<group>";
+		};
+		A9B9D1D83000006A002208F1 /* Frameworks */ = {
+			isa = PBXGroup;
+			children = (
+				A9B9D1D93000006A002208F1 /* WidgetKit.framework */,
+				A9B9D1DB3000006A002208F1 /* SwiftUI.framework */,
+			);
+			name = Frameworks;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -82,10 +152,12 @@
 				A92CF10A2FF6D42C004EA020 /* Sources */,
 				A92CF10B2FF6D42C004EA020 /* Frameworks */,
 				A92CF10C2FF6D42C004EA020 /* Resources */,
+				A9B9D1EE3000006B002208F1 /* Embed Foundation Extensions */,
 			);
 			buildRules = (
 			);
 			dependencies = (
+				A9B9D1EC3000006B002208F1 /* PBXTargetDependency */,
 			);
 			fileSystemSynchronizedGroups = (
 				A92CF1102FF6D42C004EA020 /* SkinStock-ios */,
@@ -96,10 +168,33 @@
 				D8A58D7265A430079E14A0DD /* FirebaseAuth */,
 				BBC87576793E6ECC133A8634 /* GoogleSignIn */,
 				A4698A7C25457490D773DE9D /* GoogleSignInSwift */,
+				903A12E7FDE9DEF6ECA6D1EE /* FirebaseMessaging */,
 			);
 			productName = "SkinStock-ios";
 			productReference = A92CF10E2FF6D42C004EA020 /* SkinStock-ios.app */;
 			productType = "com.apple.product-type.application";
+		};
+		A9B9D1D63000006A002208F1 /* SkinStockWidgetExtension */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = A9B9D1F13000006B002208F1 /* Build configuration list for PBXNativeTarget "SkinStockWidgetExtension" */;
+			buildPhases = (
+				A9B9D1D33000006A002208F1 /* Sources */,
+				A9B9D1D43000006A002208F1 /* Frameworks */,
+				A9B9D1D53000006A002208F1 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			fileSystemSynchronizedGroups = (
+				A9B9D1DD3000006A002208F1 /* SkinStockWidget */,
+			);
+			name = SkinStockWidgetExtension;
+			packageProductDependencies = (
+			);
+			productName = SkinStockWidgetExtension;
+			productReference = A9B9D1D73000006A002208F1 /* SkinStockWidgetExtension.appex */;
+			productType = "com.apple.product-type.app-extension";
 		};
 /* End PBXNativeTarget section */
 
@@ -112,6 +207,9 @@
 				LastUpgradeCheck = 2650;
 				TargetAttributes = {
 					A92CF10D2FF6D42C004EA020 = {
+						CreatedOnToolsVersion = 26.5;
+					};
+					A9B9D1D63000006A002208F1 = {
 						CreatedOnToolsVersion = 26.5;
 					};
 				};
@@ -135,6 +233,7 @@
 			projectRoot = "";
 			targets = (
 				A92CF10D2FF6D42C004EA020 /* SkinStock-ios */,
+				A9B9D1D63000006A002208F1 /* SkinStockWidgetExtension */,
 			);
 		};
 /* End PBXProject section */
@@ -148,6 +247,13 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		A9B9D1D53000006A002208F1 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXResourcesBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
@@ -158,7 +264,22 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		A9B9D1D33000006A002208F1 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		A9B9D1EC3000006B002208F1 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = A9B9D1D63000006A002208F1 /* SkinStockWidgetExtension */;
+			targetProxy = A9B9D1EB3000006B002208F1 /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
 
 /* Begin XCBuildConfiguration section */
 		A92CF1172FF6D42F004EA020 /* Debug */ = {
@@ -287,6 +408,7 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = "SkinStock-ios/SkinStock-ios.entitlements";
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = DTG7YH3WB6;
@@ -321,6 +443,7 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = "SkinStock-ios/SkinStock-ios.entitlements";
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = DTG7YH3WB6;
@@ -350,6 +473,68 @@
 			};
 			name = Release;
 		};
+		A9B9D1EF3000006B002208F1 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				ASSETCATALOG_COMPILER_WIDGET_BACKGROUND_COLOR_NAME = WidgetBackground;
+				CODE_SIGN_ENTITLEMENTS = SkinStockWidgetExtension.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = DTG7YH3WB6;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = SkinStockWidget/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = SkinStockWidget;
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = "ArtjomBecker.SkinStock-ios.SkinStockWidget";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		A9B9D1F03000006B002208F1 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				ASSETCATALOG_COMPILER_WIDGET_BACKGROUND_COLOR_NAME = WidgetBackground;
+				CODE_SIGN_ENTITLEMENTS = SkinStockWidgetExtension.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = DTG7YH3WB6;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = SkinStockWidget/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = SkinStockWidget;
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = "ArtjomBecker.SkinStock-ios.SkinStockWidget";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
@@ -367,6 +552,15 @@
 			buildConfigurations = (
 				A92CF11A2FF6D42F004EA020 /* Debug */,
 				A92CF11B2FF6D42F004EA020 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		A9B9D1F13000006B002208F1 /* Build configuration list for PBXNativeTarget "SkinStockWidgetExtension" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				A9B9D1EF3000006B002208F1 /* Debug */,
+				A9B9D1F03000006B002208F1 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
@@ -393,6 +587,11 @@
 /* End XCRemoteSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
+		903A12E7FDE9DEF6ECA6D1EE /* FirebaseMessaging */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 5648BE483643E09FC8E0001C /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
+			productName = FirebaseMessaging;
+		};
 		A4698A7C25457490D773DE9D /* GoogleSignInSwift */ = {
 			isa = XCSwiftPackageProductDependency;
 			package = F952E75A15EEF9C144F1FE64 /* XCRemoteSwiftPackageReference "GoogleSignIn-iOS" */;
