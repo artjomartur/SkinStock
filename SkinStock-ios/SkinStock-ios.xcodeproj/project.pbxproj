@@ -13,6 +13,7 @@
 		A9B9D1DA3000006A002208F1 /* WidgetKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = A9B9D1D93000006A002208F1 /* WidgetKit.framework */; };
 		A9B9D1DC3000006A002208F1 /* SwiftUI.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = A9B9D1DB3000006A002208F1 /* SwiftUI.framework */; };
 		A9B9D1ED3000006B002208F1 /* SkinStockWidgetExtension.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = A9B9D1D73000006A002208F1 /* SkinStockWidgetExtension.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+		D187953F02858F5E51F59F2E /* FirebaseFirestore in Frameworks */ = {isa = PBXBuildFile; productRef = 623DD95BABFE24C338F31BCC /* FirebaseFirestore */; };
 		E7E8F8E0B0F96791AB323CBD /* FirebaseCore in Frameworks */ = {isa = PBXBuildFile; productRef = C6FE6247645135EA2EA3D2D9 /* FirebaseCore */; };
 		F424165B137B25E9E2F1FF10 /* GoogleSignIn in Frameworks */ = {isa = PBXBuildFile; productRef = BBC87576793E6ECC133A8634 /* GoogleSignIn */; };
 		F5C9057D11ED58CB46327FE3 /* FirebaseMessaging in Frameworks */ = {isa = PBXBuildFile; productRef = 903A12E7FDE9DEF6ECA6D1EE /* FirebaseMessaging */; };
@@ -52,14 +53,21 @@
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
-		A92CF1372FF6E1B4004EA020 /* Exceptions for "SkinStock-ios" folder in "SkinStock-ios" target */ = {
+		A91A6E6C303E227600D03CFE /* PBXFileSystemSynchronizedBuildFileExceptionSet */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Shared/SkinStockWidgetAttributes.swift,
+			);
+			target = A9B9D1D63000006A002208F1 /* SkinStockWidgetExtension */;
+		};
+		A92CF1372FF6E1B4004EA020 /* PBXFileSystemSynchronizedBuildFileExceptionSet */ = {
 			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
 			membershipExceptions = (
 				Info.plist,
 			);
 			target = A92CF10D2FF6D42C004EA020 /* SkinStock-ios */;
 		};
-		A9B9D1F23000006B002208F1 /* Exceptions for "SkinStockWidget" folder in "SkinStockWidgetExtension" target */ = {
+		A9B9D1F23000006B002208F1 /* PBXFileSystemSynchronizedBuildFileExceptionSet */ = {
 			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
 			membershipExceptions = (
 				Info.plist,
@@ -69,18 +77,11 @@
 /* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
-		A92CF1102FF6D42C004EA020 /* SkinStock-ios */ = {
-			isa = PBXFileSystemSynchronizedRootGroup;
-			exceptions = (
-				A92CF1372FF6E1B4004EA020 /* Exceptions for "SkinStock-ios" folder in "SkinStock-ios" target */,
-			);
-			path = "SkinStock-ios";
-			sourceTree = "<group>";
-		};
+		A92CF1102FF6D42C004EA020 /* SkinStock-ios */ = {isa = PBXFileSystemSynchronizedRootGroup; exceptions = (A92CF1372FF6E1B4004EA020 /* PBXFileSystemSynchronizedBuildFileExceptionSet */, A91A6E6C303E227600D03CFE /* PBXFileSystemSynchronizedBuildFileExceptionSet */, ); path = "SkinStock-ios"; sourceTree = "<group>"; };
 		A9B9D1DD3000006A002208F1 /* SkinStockWidget */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
 			exceptions = (
-				A9B9D1F23000006B002208F1 /* Exceptions for "SkinStockWidget" folder in "SkinStockWidgetExtension" target */,
+				A9B9D1F23000006B002208F1 /* PBXFileSystemSynchronizedBuildFileExceptionSet */,
 			);
 			path = SkinStockWidget;
 			sourceTree = "<group>";
@@ -97,6 +98,7 @@
 				F424165B137B25E9E2F1FF10 /* GoogleSignIn in Frameworks */,
 				6EC2108B431AA62129016776 /* GoogleSignInSwift in Frameworks */,
 				F5C9057D11ED58CB46327FE3 /* FirebaseMessaging in Frameworks */,
+				D187953F02858F5E51F59F2E /* FirebaseFirestore in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -169,6 +171,7 @@
 				BBC87576793E6ECC133A8634 /* GoogleSignIn */,
 				A4698A7C25457490D773DE9D /* GoogleSignInSwift */,
 				903A12E7FDE9DEF6ECA6D1EE /* FirebaseMessaging */,
+				623DD95BABFE24C338F31BCC /* FirebaseFirestore */,
 			);
 			productName = "SkinStock-ios";
 			productReference = A92CF10E2FF6D42C004EA020 /* SkinStock-ios.app */;
@@ -587,6 +590,11 @@
 /* End XCRemoteSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
+		623DD95BABFE24C338F31BCC /* FirebaseFirestore */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 5648BE483643E09FC8E0001C /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
+			productName = FirebaseFirestore;
+		};
 		903A12E7FDE9DEF6ECA6D1EE /* FirebaseMessaging */ = {
 			isa = XCSwiftPackageProductDependency;
 			package = 5648BE483643E09FC8E0001C /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
