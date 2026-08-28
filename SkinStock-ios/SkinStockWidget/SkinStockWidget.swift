@@ -70,8 +70,11 @@ struct SkinStockWidgetEntryView : View {
             ZStack {
                 AccessoryWidgetBackground()
                 VStack {
-                    Image(systemName: "case.fill")
-                        .font(.caption2)
+                    Image("Logo")
+                        .resizable()
+                        .scaledToFit()
+                        .frame(width: 14, height: 14)
+                        .clipShape(RoundedRectangle(cornerRadius: 3))
                     Text(shortFormattedPrice(entry.totalValue))
                         .font(.system(size: 10, weight: .bold))
                 }
@@ -79,7 +82,11 @@ struct SkinStockWidgetEntryView : View {
         case .accessoryRectangular:
             VStack(alignment: .leading) {
                 HStack {
-                    Image(systemName: "case.fill")
+                    Image("Logo")
+                        .resizable()
+                        .scaledToFit()
+                        .frame(width: 18, height: 18)
+                        .clipShape(RoundedRectangle(cornerRadius: 4))
                     Text("SkinStock")
                         .font(.headline)
                 }
@@ -113,14 +120,11 @@ struct SkinStockWidgetEntryView : View {
                 VStack(alignment: .leading, spacing: 0) {
                     // Header
                     HStack(spacing: 6) {
-                        ZStack {
-                            Circle()
-                                .fill(LinearGradient(colors: [.orange, .red], startPoint: .topLeading, endPoint: .bottomTrailing))
-                                .frame(width: 24, height: 24)
-                            Image(systemName: "case.fill")
-                                .font(.system(size: 10, weight: .bold))
-                                .foregroundColor(.white)
-                        }
+                        Image("Logo")
+                            .resizable()
+                            .scaledToFit()
+                            .frame(width: 24, height: 24)
+                            .clipShape(RoundedRectangle(cornerRadius: 6))
                         
                         Text("SkinStock")
                             .font(.system(size: 14, weight: .bold, design: .rounded))

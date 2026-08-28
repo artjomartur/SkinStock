@@ -87,7 +87,10 @@ struct InventoryView: View {
                     }
                 }
             }
-            .background(Color(uiColor: .systemBackground).edgesIgnoringSafeArea(.all))
+            .background(Color.black.edgesIgnoringSafeArea(.all))
+            .toolbarBackground(Color.black, for: .navigationBar)
+            .toolbarBackground(.visible, for: .navigationBar)
+            .toolbarColorScheme(.dark, for: .navigationBar)
             .onReceive(inventoryService.$inventory) { newInventory in
                 viewModel.updateData(inventory: newInventory, priceService: priceService)
             }
@@ -153,7 +156,6 @@ struct InventoryGridItemView: View {
                 RoundedRectangle(cornerRadius: 14)
                     .stroke(item.rarity.color.opacity(0.3), lineWidth: 0.5)
             )
-            .oledGlow(color: item.rarity.color, intensity: 0.5)
             
             VStack(alignment: .leading, spacing: 4) {
                 Text(item.name)
@@ -185,14 +187,6 @@ struct InventoryGridItemView: View {
                             .clipShape(RoundedRectangle(cornerRadius: 4))
                             .foregroundColor(.secondary)
                     }
-                }
-                
-                // Mini Trendline (echte Daten)
-                let history = priceHistoryStore.getHistory(for: item.hashName, timeframe: .week)
-                if history.count >= 2 {
-                    TrendlineView(data: history, showAxes: false, lineWidth: 1.5, showIndicator: false)
-                        .frame(height: 20)
-                        .padding(.top, 2)
                 }
             }
         }
