@@ -49,8 +49,13 @@ class InventoryService: ObservableObject {
         self.error = nil
         
         do {
-            let steamURL = URL(string: "https://steamcommunity.com/inventory/\(steamId)/730/2?l=english&count=5000")!
-            let (data, response) = try await URLSession.shared.data(from: steamURL)
+            let steamURL = URL(string: "https://steamcommunity.com/inventory/\(steamId)/730/2?l=english&count=2000")!
+            var request = URLRequest(url: steamURL)
+            request.setValue("Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1", forHTTPHeaderField: "User-Agent")
+            request.setValue("application/json", forHTTPHeaderField: "Accept")
+            request.setValue("https://steamcommunity.com/", forHTTPHeaderField: "Referer")
+            
+            let (data, response) = try await URLSession.shared.data(for: request)
             
             guard let httpResponse = response as? HTTPURLResponse else {
                 throw URLError(.badServerResponse)
@@ -62,12 +67,24 @@ class InventoryService: ObservableObject {
             if httpResponse.statusCode == 429 {
                 throw NSError(domain: "Inventory", code: 429, userInfo: [NSLocalizedDescriptionKey: "Steam Rate-Limit erreicht. Versuch es später."])
             }
+            if httpResponse.statusCode != 200 {
+                let preview = String(data: data, encoding: .utf8)?.prefix(100) ?? ""
+                throw NSError(domain: "Inventory", code: httpResponse.statusCode, userInfo: [NSLocalizedDescriptionKey: "Steam Server Fehler: Code \(httpResponse.statusCode). Info: \(preview)"])
+            }
             
-            let items = try parseInventory(data: data)
-            
-            self.inventory = items
-            self.saveInventoryToCache()
-            self.saveFirstSeenDates()
+            do {
+                let items = try parseInventory(data: data)
+                self.inventory = items
+                self.saveInventoryToCache()
+                self.saveFirstSeenDates()
+            } catch {
+                if let str = String(data: data, encoding: .utf8) {
+                    let preview = String(str.prefix(100))
+                    throw NSError(domain: "Inventory", code: 1, userInfo: [NSLocalizedDescriptionKey: "Ungültiges Format. Antwort-Vorschau: \(preview)"])
+                } else {
+                    throw error
+                }
+            }
             
         } catch {
             self.error = error.localizedDescription
