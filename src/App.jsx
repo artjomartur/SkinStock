@@ -737,7 +737,7 @@ export default function App() {
     try {
       const prices = await fetchPricesDb()
       const steamUrl = `https://steamcommunity.com/inventory/${resolvedId}/730/2?l=german&count=1000`
-      const proxyUrl = `https://api.allorigins.win/raw?url=${encodeURIComponent(steamUrl)}`
+      const proxyUrl = `https://corsproxy.io/?url=${encodeURIComponent(steamUrl)}`
       
       const res = await fetch(proxyUrl)
       if (!res.ok) {
@@ -1092,7 +1092,7 @@ export default function App() {
     try {
       const encoded = encodeURIComponent(hashName)
       const url = `https://steamcommunity.com/market/priceoverview/?appid=730&currency=3&market_hash_name=${encoded}`
-      const proxyUrl = `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`
+      const proxyUrl = `https://corsproxy.io/?url=${encodeURIComponent(url)}`
       
       const res = await fetch(proxyUrl)
       if (!res.ok) throw new Error('Steam error')
