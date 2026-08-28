@@ -109,6 +109,7 @@ struct MainTabView: View {
             if let steamId = steamService.profile?.steamId64 {
                 Task {
                     await inventoryService.fetchInventory(for: steamId)
+                    try? await priceService.fetchPrices()
                     // Evaluate achievements after load
                     let totalVal = priceService.calculateTotalValue(inventory: inventoryService.inventory)
                     achievementService.evaluate(inventory: inventoryService.inventory, totalValue: totalVal, watchlistCount: watchlistService.items.count)

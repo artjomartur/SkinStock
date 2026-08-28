@@ -258,9 +258,12 @@ struct ContentView: View {
         }
         .onAppear {
             // Trigger price fetch and record to history
-            if !inventoryService.inventory.isEmpty {
-                Task {
+            Task {
+                if priceService.priceMap.isEmpty {
                     try? await priceService.fetchPrices()
+                }
+                
+                if !inventoryService.inventory.isEmpty {
                     // Preise in die Historie schreiben
                     priceHistoryStore.recordAllPrices(priceMap: priceService.priceMap)
                     // Preisalarme prüfen

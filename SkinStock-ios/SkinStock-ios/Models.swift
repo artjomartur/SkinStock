@@ -109,7 +109,8 @@ struct CS2Item: Identifiable, Hashable, Codable {
     }
     
     var isTradeLocked: Bool {
-        guard let expiry = tradeLockExpiry else { return false }
+        if tradable { return false }
+        guard let expiry = tradeLockExpiry else { return true }
         return Date() < expiry
     }
     
