@@ -22,6 +22,26 @@ struct ContentView: View {
                 VStack(alignment: .leading, spacing: 20) {
                     Spacer().frame(height: 10)
                     
+                    if let error = inventoryService.error {
+                        VStack(alignment: .leading, spacing: 4) {
+                            HStack {
+                                Image(systemName: "exclamationmark.triangle.fill")
+                                Text("Inventar Fehler")
+                            }
+                            .font(.subheadline.bold())
+                            .foregroundColor(.white)
+                            
+                            Text(error)
+                                .font(.caption)
+                                .foregroundColor(.white.opacity(0.8))
+                        }
+                        .padding()
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .background(Color.red.opacity(0.8))
+                        .cornerRadius(12)
+                        .padding(.horizontal)
+                    }
+                    
                     // Glass Portfolio Card
                     VStack(alignment: .leading, spacing: 16) {
                         VStack(alignment: .leading, spacing: 4) {

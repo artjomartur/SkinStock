@@ -1,14 +1,15 @@
 /* eslint-disable no-use-before-define */
 /* eslint-disable no-unused-vars */
 import { useState, useEffect, useMemo, useRef, useCallback } from 'react'
+import { Capacitor } from '@capacitor/core'
 import { createChart, AreaSeries, LineSeries } from 'lightweight-charts'
 
 const lang = typeof navigator !== 'undefined' && navigator.language && navigator.language.startsWith('de') ? 'de' : 'en';
-import { 
-  TrendingUp, 
-  TrendingDown, 
-  Wallet, 
-  Bell, 
+import {
+  TrendingUp,
+  TrendingDown,
+  Wallet,
+  Bell,
   Activity,
   Plus,
   Trash2,
@@ -341,7 +342,7 @@ function SkinChart({ data, currentPrice, isPositive }) {
       if (smaSeriesRef.current) {
         const areaData = data.map(d => ({ time: d.time, value: d.close }))
         areaData[areaData.length - 1].value = currentPrice // update last point in memory
-        
+
         const windowSize = Math.min(7, Math.floor(data.length / 3) || 1)
         if (areaData.length >= windowSize) {
           let sum = 0
@@ -413,7 +414,7 @@ export default function App() {
       if (stored) {
         return JSON.parse(stored)
       }
-    } catch {}
+    } catch { }
     return {}
   })
 
@@ -511,14 +512,14 @@ export default function App() {
 
   const [selectedSkinId, setSelectedSkinId] = useState(null)
   const [flashStates, setFlashStates] = useState({}) // skinId -> 'up' | 'down'
-  
+
   const [isFetchingInventory, setIsFetchingInventory] = useState(false)
   const [inventoryError, setInventoryError] = useState('')
   const [showManualImport, setShowManualImport] = useState(false)
   const [manualJson, setManualJson] = useState('')
   const [pricesDb, setPricesDb] = useState(null)
   const [, setLoadingPrices] = useState(false)
-  
+
   // Live Price Fetching via Skinport & Notifications
   useEffect(() => {
     async function loadLivePrices() {
@@ -536,7 +537,7 @@ export default function App() {
     if (!showSplash) {
       loadLivePrices();
       NotificationService.scheduleDailySummary(
-        "SkinStock Update", 
+        "SkinStock Update",
         "Zeit für einen Blick in dein Portfolio. Die Live-Preise wurden aktualisiert!"
       );
     }
@@ -547,7 +548,7 @@ export default function App() {
     try {
       const stored = localStorage.getItem('skinstock_alerts')
       if (stored) return JSON.parse(stored)
-    } catch {}
+    } catch { }
     return []
   })
   const [alertTargetPrice, setAlertTargetPrice] = useState('')
@@ -681,19 +682,19 @@ export default function App() {
       const isTradable = desc.tradable === 1
 
       const count = itemCounts[hashName] || 1
-      
+
       let price = 0
       if (prices && prices[hashName]) {
         price = prices[hashName]
       }
-      
+
       if (!price) {
         const matchedInitial = INITIAL_SKINS.find(s => s.name === desc.name || hashName.includes(s.name))
         price = matchedInitial ? matchedInitial.price : (Math.random() * 45 + 5)
       }
 
       const wearTag = desc.tags?.find(t => t.category === 'Exterior')?.localized_tag_name || ''
-      
+
       parsedItems.push({
         id: `real-${desc.classid}-${desc.instanceid}`,
         name: desc.name,
@@ -737,20 +738,22 @@ export default function App() {
     try {
       const prices = await fetchPricesDb()
       const steamUrl = `https://steamcommunity.com/inventory/${resolvedId}/730/2?l=german&count=1000`
-      const proxyUrl = `https://corsproxy.io/?url=${encodeURIComponent(steamUrl)}`
-      
-      const res = await fetch(proxyUrl)
+      const fetchUrl = Capacitor.isNativePlatform()
+        ? steamUrl
+        : `https://api.allorigins.win/raw?url=${encodeURIComponent(steamUrl)}`
+
+      const res = await fetch(fetchUrl)
       if (!res.ok) {
         throw new Error('Fehler beim Abrufen vom Steam-Server. Möglicherweise ist das Limit überschritten.')
       }
-      
+
       const data = await res.json()
       const parsedItems = parseSteamInventoryData(data, prices)
-      
+
       setRealInventoryItems(parsedItems)
       localStorage.setItem('skinstock_steam_id', resolvedId)
       localStorage.setItem('skinstock_real_inventory', JSON.stringify(parsedItems))
-      
+
       if (parsedItems.length > 0) {
         setSelectedSkinId(parsedItems[0].id)
       }
@@ -771,14 +774,14 @@ export default function App() {
       const prices = await fetchPricesDb()
       const data = JSON.parse(manualJson)
       const parsedItems = parseSteamInventoryData(data, prices)
-      
+
       setRealInventoryItems(parsedItems)
       localStorage.setItem('skinstock_real_inventory', JSON.stringify(parsedItems))
-      
+
       if (parsedItems.length > 0) {
         setSelectedSkinId(parsedItems[0].id)
       }
-      
+
       setShowManualImport(false)
       setManualJson('')
       playTradeSound('buy')
@@ -936,7 +939,7 @@ export default function App() {
           img: ''
         }
       }
-      
+
       let totalPrice = 0
       let totalPrevPrice = 0
       items.forEach(s => {
@@ -985,7 +988,7 @@ export default function App() {
         updated[idx] = { ...updated[idx], isUnlocked: true, unlockedDate: new Date().toISOString() }
         setNewlyUnlockedAchievement(updated[idx])
         localStorage.setItem('skinstock_achievements', JSON.stringify(updated))
-        
+
         // Auto-dismiss achievement toast after 3s
         setTimeout(() => {
           setNewlyUnlockedAchievement(null)
@@ -1001,7 +1004,7 @@ export default function App() {
     let totalInvested = 0
     let marketableValue = 0
     let nonMarketableCount = 0
-    
+
     let distKnives = 0;
     let distGloves = 0;
     let distCases = 0;
@@ -1016,7 +1019,7 @@ export default function App() {
       } else {
         nonMarketableCount += item.qty
       }
-      
+
       const n = item.name.toLowerCase();
       if (n.includes('★') && !n.includes('glove') && !n.includes('handschuhe') && !n.includes('wrap')) {
         distKnives += itemVal;
@@ -1054,12 +1057,12 @@ export default function App() {
     if (totalValue >= 1000) unlockAchievement('portfolio_1000')
     if (totalValue >= 5000) unlockAchievement('portfolio_5000')
     if (totalValue >= 10000) unlockAchievement('portfolio_10000')
-    
+
     if (inventoryList.length >= 5) unlockAchievement('items_5')
     if (inventoryList.length >= 25) unlockAchievement('items_25')
     if (inventoryList.length >= 50) unlockAchievement('items_50')
     if (inventoryList.length >= 100) unlockAchievement('items_100')
-    
+
     const hasKnife = inventoryList.some(item => {
       const n = item.name.toLowerCase()
       return n.includes('★') && !n.includes('glove') && !n.includes('handschuhe') && !n.includes('wrap')
@@ -1070,15 +1073,15 @@ export default function App() {
     })
     if (hasKnife) unlockAchievement('first_knife')
     if (hasGloves) unlockAchievement('first_gloves')
-    
+
     const hasStickerKing = inventoryList.some(item => item.stickers && item.stickers.length >= 4)
     if (hasStickerKing) unlockAchievement('sticker_king')
-    
+
     const rarities = new Set(inventoryList.map(item => getSkinRarity(item.name)))
     if (rarities.size >= 5) unlockAchievement('diversified')
-    
+
     if (watchlistCount > 0) unlockAchievement('watchlist_add')
-    
+
     unlockAchievement('first_login')
   }, [unlockAchievement])
 
@@ -1092,9 +1095,11 @@ export default function App() {
     try {
       const encoded = encodeURIComponent(hashName)
       const url = `https://steamcommunity.com/market/priceoverview/?appid=730&currency=3&market_hash_name=${encoded}`
-      const proxyUrl = `https://corsproxy.io/?url=${encodeURIComponent(url)}`
-      
-      const res = await fetch(proxyUrl)
+      const fetchUrl = Capacitor.isNativePlatform()
+        ? url
+        : `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`
+
+      const res = await fetch(fetchUrl)
       if (!res.ok) throw new Error('Steam error')
       const json = await res.json()
       if (json && json.median_price) {
@@ -1113,7 +1118,7 @@ export default function App() {
       }
     } catch (e) {
       console.warn('Failed to fetch Steam price overview, using simulated fallback', e)
-      const basePrice = pricesDb && pricesDb[hashName] 
+      const basePrice = pricesDb && pricesDb[hashName]
         ? pricesDb[hashName]
         : 15
       const randomSpread = 0.05 + Math.random() * 0.15
@@ -1162,12 +1167,12 @@ export default function App() {
   const playAlertSoundNotification = useCallback((skinName, type, target, currentPrice) => {
     playTradeSound('alert')
     const id = Date.now() + Math.random()
-    const msg = type === 'above' 
+    const msg = type === 'above'
       ? `Stieg über €${target.toFixed(2)} (Aktuell: €${currentPrice.toFixed(2)})`
       : `Fiel unter €${target.toFixed(2)} (Aktuell: €${currentPrice.toFixed(2)})`
-    
+
     setToasts((prev) => [...prev, { id, skinName, msg }])
-    
+
     setTimeout(() => {
       setToasts((prev) => prev.filter((t) => t.id !== id))
     }, 4000)
@@ -1209,7 +1214,7 @@ export default function App() {
           // 48% chance down, 52% chance up (natural upward bias)
           const changePercent = (Math.random() - 0.48) * 0.7
           const newPrice = parseFloat((skin.price * (1 + changePercent / 100)).toFixed(2))
-          
+
           let flash = null
           if (newPrice > skin.price) {
             flash = 'up'
@@ -1242,7 +1247,7 @@ export default function App() {
         const updated = prevItems.map((skin) => {
           const changePercent = (Math.random() - 0.48) * 0.7
           const newPrice = parseFloat((skin.price * (1 + changePercent / 100)).toFixed(2))
-          
+
           let flash = null
           if (newPrice > skin.price) {
             flash = 'up'
@@ -1371,19 +1376,19 @@ export default function App() {
     const bids = []
     const asks = []
     const price = selectedSkin.price
-    
+
     for (let i = 1; i <= 5; i++) {
       const askDiff = 0.001 * i * price
       const askPrice = price + askDiff
       const askQty = Math.floor(((price * i * 7) % 19) + 1)
       asks.push({ price: parseFloat(askPrice.toFixed(2)), qty: askQty })
-      
+
       const bidDiff = 0.001 * i * price
       const bidPrice = price - bidDiff
       const bidQty = Math.floor(((price * i * 13) % 23) + 1)
       bids.push({ price: parseFloat(bidPrice.toFixed(2)), qty: bidQty })
     }
-    
+
     asks.reverse()
     return { bids, asks }
   }, [selectedSkin])
@@ -1424,7 +1429,7 @@ export default function App() {
     if (realInventoryItems.length === 0) return 0
     let totalValue = 0
     let weightedVolSum = 0
-    
+
     realInventoryItems.forEach(item => {
       const hist = historicalDataMap[item.id] || []
       if (hist.length > 0) {
@@ -1438,7 +1443,7 @@ export default function App() {
         totalValue += itemVal
       }
     })
-    
+
     return totalValue > 0 ? parseFloat((weightedVolSum / totalValue).toFixed(2)) : 0
   }, [realInventoryItems, historicalDataMap])
 
@@ -1446,7 +1451,7 @@ export default function App() {
     if (realInventoryItems.length === 0) return { score: 0, label: 'N/A' }
     let totalValue = 0
     let weightedRiskSum = 0
-    
+
     realInventoryItems.forEach(item => {
       const itemVal = (item.price || 0) * item.qty
       const n = item.name.toLowerCase()
@@ -1458,17 +1463,17 @@ export default function App() {
       } else if (n.includes('case') || n.includes('kiste') || n.includes('container') || n.includes('capsule')) {
         itemRisk = 8
       }
-      
+
       weightedRiskSum += itemRisk * itemVal
       totalValue += itemVal
     })
-    
+
     if (totalValue === 0) return { score: 0, label: 'N/A' }
     const score = parseFloat((weightedRiskSum / totalValue).toFixed(1))
     let label = lang === 'de' ? 'Ausgewogen' : 'Balanced'
     if (score < 4.5) label = lang === 'de' ? 'Konservativ' : 'Conservative'
     else if (score > 6.5) label = lang === 'de' ? 'Spekulativ' : 'Speculative'
-    
+
     return { score, label }
   }, [realInventoryItems])
 
@@ -1476,7 +1481,7 @@ export default function App() {
     let win = 0
     let breakEven = 0
     let loss = 0
-    
+
     realInventoryItems.forEach(item => {
       const netPrice = (item.price || 0) * 0.85
       if (item.price > item.basePrice && netPrice < item.basePrice) {
@@ -1487,7 +1492,7 @@ export default function App() {
         loss += item.qty
       }
     })
-    
+
     return { win, breakEven, loss }
   }, [realInventoryItems])
 
@@ -1534,9 +1539,9 @@ export default function App() {
   const renderContent = () => {
     if (!steamIdInput) {
       return (
-        <Onboarding 
-          user={user} 
-          setSteamIdInput={setSteamIdInput} 
+        <Onboarding
+          user={user}
+          setSteamIdInput={setSteamIdInput}
           currency={currency}
           setCurrency={setCurrency}
           valuationMode={valuationMode}
@@ -1546,349 +1551,350 @@ export default function App() {
     }
     return (
       <div className="app-layout">
-      {/* Toast Alert Notifications */}
-      <div className="toast-container">
-        {toasts.map((toast) => (
-          <div key={toast.id} className="toast">
-            <Bell className="toast-icon" size={18} />
-            <div className="toast-content">
-              <div className="toast-title">{toast.skinName}</div>
-              <div className="toast-msg">{toast.msg}</div>
+        {/* Toast Alert Notifications */}
+        <div className="toast-container">
+          {toasts.map((toast) => (
+            <div key={toast.id} className="toast">
+              <Bell className="toast-icon" size={18} />
+              <div className="toast-content">
+                <div className="toast-title">{toast.skinName}</div>
+                <div className="toast-msg">{toast.msg}</div>
+              </div>
             </div>
-          </div>
-        ))}
-      </div>
-
-      <aside className="app-sidebar glass-panel">
-        <div className="sidebar-logo">
-          <Activity className="logo-icon" size={24} />
-          <span className="logo-text">SkinStock</span>
+          ))}
         </div>
-        
-        <nav className="sidebar-nav">
-          <button 
-            className={`sidebar-nav-btn ${activeTab === 'dashboard' ? 'active' : ''}`}
-            onClick={() => setActiveTab('dashboard')}
-          >
-            <BarChart2 size={20} />
-            <span>{lang === 'de' ? 'Übersicht' : 'Overview'}</span>
-          </button>
-          <button 
-            className={`sidebar-nav-btn ${activeTab === 'analytics' ? 'active' : ''}`}
-            onClick={() => setActiveTab('analytics')}
-          >
-            <Activity size={20} />
-            <span>{lang === 'de' ? 'Analysen' : 'Analytics'}</span>
-          </button>
-          <button 
-            className={`sidebar-nav-btn ${activeTab === 'inventory' ? 'active' : ''}`}
-            onClick={() => setActiveTab('inventory')}
-          >
-            <Wallet size={20} />
-            <span>{lang === 'de' ? 'Inventar' : 'Inventory'}</span>
-          </button>
-          <button 
-            className={`sidebar-nav-btn ${activeTab === 'settings' ? 'active' : ''}`}
-            onClick={() => setActiveTab('settings')}
-          >
-            <LogOut size={20} />
-            <span>{lang === 'de' ? 'Einstellungen' : 'Settings'}</span>
-          </button>
-        </nav>
 
-        <div className="sidebar-footer">
-          {realInventoryItems.length > 0 ? (
-            <div className="sidebar-balance">
-              <span className="balance-label">{lang === 'de' ? 'Inventarwert' : 'Inventory Value'}</span>
-              <span className="balance-amount">{formatPrice(realInventorySummary.totalValue, currency, valuationMode)}</span>
-            </div>
-          ) : (
-            <div className="sidebar-status-tag">
-              {lang === 'de' ? 'Nicht verbunden' : 'Not Connected'}
-            </div>
-          )}
-        </div>
-      </aside>
-
-      <div className="app-main-wrapper">
-        <header className="app-header">
-          <div className="logo-group">
+        <aside className="app-sidebar glass-panel">
+          <div className="sidebar-logo">
             <Activity className="logo-icon" size={24} />
-            <h1 className="logo-text">SkinStock</h1>
+            <span className="logo-text">SkinStock</span>
           </div>
-          <div className="balance-card">
+
+          <nav className="sidebar-nav">
+            <button
+              className={`sidebar-nav-btn ${activeTab === 'dashboard' ? 'active' : ''}`}
+              onClick={() => setActiveTab('dashboard')}
+            >
+              <BarChart2 size={20} />
+              <span>{lang === 'de' ? 'Übersicht' : 'Overview'}</span>
+            </button>
+            <button
+              className={`sidebar-nav-btn ${activeTab === 'analytics' ? 'active' : ''}`}
+              onClick={() => setActiveTab('analytics')}
+            >
+              <Activity size={20} />
+              <span>{lang === 'de' ? 'Analysen' : 'Analytics'}</span>
+            </button>
+            <button
+              className={`sidebar-nav-btn ${activeTab === 'inventory' ? 'active' : ''}`}
+              onClick={() => setActiveTab('inventory')}
+            >
+              <Wallet size={20} />
+              <span>{lang === 'de' ? 'Inventar' : 'Inventory'}</span>
+            </button>
+            <button
+              className={`sidebar-nav-btn ${activeTab === 'settings' ? 'active' : ''}`}
+              onClick={() => setActiveTab('settings')}
+            >
+              <LogOut size={20} />
+              <span>{lang === 'de' ? 'Einstellungen' : 'Settings'}</span>
+            </button>
+          </nav>
+
+          <div className="sidebar-footer">
             {realInventoryItems.length > 0 ? (
-              <>
+              <div className="sidebar-balance">
                 <span className="balance-label">{lang === 'de' ? 'Inventarwert' : 'Inventory Value'}</span>
                 <span className="balance-amount">{formatPrice(realInventorySummary.totalValue, currency, valuationMode)}</span>
-              </>
+              </div>
             ) : (
-              <>
-                <span className="balance-label">{lang === 'de' ? 'Status' : 'Status'}</span>
-                <span className="balance-amount" style={{ color: 'var(--color-red)', textShadow: 'none', fontSize: '13px', fontWeight: '600' }}>
-                  {lang === 'de' ? 'Nicht verbunden' : 'Not Connected'}
-                </span>
-              </>
+              <div className="sidebar-status-tag">
+                {lang === 'de' ? 'Nicht verbunden' : 'Not Connected'}
+              </div>
             )}
           </div>
-          <div className="header-actions" style={{ display: 'flex', gap: '8px', marginLeft: 'auto' }}>
-            <button 
-              className="mode-toggle-btn"
-              onClick={() => setCurrency(c => c === 'EUR' ? 'USD' : 'EUR')}
-            >
-              {currency}
-            </button>
-            <button 
-              className={`mode-toggle-btn ${valuationMode === 'CASHOUT' ? 'active-cashout' : ''}`}
-              onClick={() => setValuationMode(m => m === 'STEAM' ? 'CASHOUT' : 'STEAM')}
-            >
-              {valuationMode === 'STEAM' ? 'Steam' : 'Cashout'}
-            </button>
-          </div>
-        </header>
+        </aside>
 
-        <main className="app-content scrollbar-hide">
-          {activeTab === 'dashboard' && (
-            <div className="dashboard-view layout-split">
-              <div className="layout-main">
-                <div className="chart-card">
-                  <div className="chart-header-tr">
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                      <div>
-                        <h3 className="chart-title-tr">{lang === 'de' ? 'Gesamtportfolio' : 'Total Portfolio'}</h3>
-                        <div className="chart-price-tr">{formatPrice(realInventorySummary.totalValue, currency, valuationMode)}</div>
-                        <div className={`chart-change-tr ${realInventorySummary.pnlPct >= 0 ? 'price-up' : 'price-down'}`}>
-                          {realInventorySummary.pnlPct >= 0 ? '+' : ''}{realInventorySummary.pnlPct.toFixed(2)}% {lang === 'de' ? 'Heute' : 'Today'}
+        <div className="app-main-wrapper">
+          <header className="app-header">
+            <div className="logo-group">
+              <Activity className="logo-icon" size={24} />
+              <h1 className="logo-text">SkinStock</h1>
+            </div>
+            <div className="balance-card">
+              {realInventoryItems.length > 0 ? (
+                <>
+                  <span className="balance-label">{lang === 'de' ? 'Inventarwert' : 'Inventory Value'}</span>
+                  <span className="balance-amount">{formatPrice(realInventorySummary.totalValue, currency, valuationMode)}</span>
+                </>
+              ) : (
+                <>
+                  <span className="balance-label">{lang === 'de' ? 'Status' : 'Status'}</span>
+                  <span className="balance-amount" style={{ color: 'var(--color-red)', textShadow: 'none', fontSize: '13px', fontWeight: '600' }}>
+                    {lang === 'de' ? 'Nicht verbunden' : 'Not Connected'}
+                  </span>
+                </>
+              )}
+            </div>
+            <div className="header-actions" style={{ display: 'flex', gap: '8px', marginLeft: 'auto' }}>
+              <button
+                className="mode-toggle-btn"
+                onClick={() => setCurrency(c => c === 'EUR' ? 'USD' : 'EUR')}
+              >
+                {currency}
+              </button>
+              <button
+                className={`mode-toggle-btn ${valuationMode === 'CASHOUT' ? 'active-cashout' : ''}`}
+                onClick={() => setValuationMode(m => m === 'STEAM' ? 'CASHOUT' : 'STEAM')}
+              >
+                {valuationMode === 'STEAM' ? 'Steam' : 'Cashout'}
+              </button>
+            </div>
+          </header>
+
+          <main className="app-content scrollbar-hide">
+            {activeTab === 'dashboard' && (
+              <div className="dashboard-view layout-split">
+                <div className="layout-main">
+                  <div className="chart-card">
+                    <div className="chart-header-tr">
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                        <div>
+                          <h3 className="chart-title-tr">{lang === 'de' ? 'Gesamtportfolio' : 'Total Portfolio'}</h3>
+                          <div className="chart-price-tr">{formatPrice(realInventorySummary.totalValue, currency, valuationMode)}</div>
+                          <div className={`chart-change-tr ${realInventorySummary.pnlPct >= 0 ? 'price-up' : 'price-down'}`}>
+                            {realInventorySummary.pnlPct >= 0 ? '+' : ''}{realInventorySummary.pnlPct.toFixed(2)}% {lang === 'de' ? 'Heute' : 'Today'}
+                          </div>
+                        </div>
+                        <div className="timeframe-nav" style={{ display: 'flex', gap: '4px', background: 'rgba(255,255,255,0.05)', padding: '2px', borderRadius: '6px' }}>
+                          {['1W', '1M', '3M', '1Y'].map(tf => (
+                            <button
+                              key={tf}
+                              className={`timeframe-btn ${chartTimeframe === tf ? 'active' : ''}`}
+                              onClick={() => setChartTimeframe(tf)}
+                              style={{
+                                background: chartTimeframe === tf ? 'rgba(255,255,255,0.1)' : 'transparent',
+                                color: chartTimeframe === tf ? '#fff' : '#94a3b8',
+                                border: 'none',
+                                padding: '4px 8px',
+                                fontSize: '12px',
+                                borderRadius: '4px',
+                                cursor: 'pointer',
+                                fontWeight: chartTimeframe === tf ? '600' : '400'
+                              }}
+                            >
+                              {tf}
+                            </button>
+                          ))}
                         </div>
                       </div>
-                      <div className="timeframe-nav" style={{ display: 'flex', gap: '4px', background: 'rgba(255,255,255,0.05)', padding: '2px', borderRadius: '6px' }}>
-                        {['1W', '1M', '3M', '1Y'].map(tf => (
-                          <button 
-                            key={tf} 
-                            className={`timeframe-btn ${chartTimeframe === tf ? 'active' : ''}`}
-                            onClick={() => setChartTimeframe(tf)}
-                            style={{
-                              background: chartTimeframe === tf ? 'rgba(255,255,255,0.1)' : 'transparent',
-                              color: chartTimeframe === tf ? '#fff' : '#94a3b8',
-                              border: 'none',
-                              padding: '4px 8px',
-                              fontSize: '12px',
-                              borderRadius: '4px',
-                              cursor: 'pointer',
-                              fontWeight: chartTimeframe === tf ? '600' : '400'
-                            }}
-                          >
-                            {tf}
-                          </button>
-                        ))}
+                    </div>
+                    <div className="chart-body-container">
+                      <SkinChart
+                        data={historicalDataMap['total_portfolio'] || []}
+                        currentPrice={realInventorySummary.totalValue}
+                        isPositive={realInventorySummary.pnlPct >= 0}
+                      />
+                    </div>
+                  </div>
+
+                  {realInventoryItems.length > 0 && (
+                    <div className="dashboard-widgets" style={{ display: 'flex', gap: '16px', marginTop: '16px', flexWrap: 'wrap' }}>
+                      <div style={{ flex: '1 1 300px', background: 'rgba(255,255,255,0.05)', borderRadius: '12px', padding: '16px' }}>
+                        <h4 style={{ margin: '0 0 16px 0', fontSize: '14px', color: '#fff' }}>
+                          {lang === 'de' ? 'Kategorien' : 'Categories'}
+                        </h4>
+                        <DiversificationChart data={[
+                          { name: lang === 'de' ? 'Messer' : 'Knives', val: realInventorySummary.distribution.knives, color: '#ff3b30', pct: realInventorySummary.totalValue ? (realInventorySummary.distribution.knives / realInventorySummary.totalValue) * 100 : 0 },
+                          { name: lang === 'de' ? 'Handschuhe' : 'Gloves', val: realInventorySummary.distribution.gloves, color: '#ff9500', pct: realInventorySummary.totalValue ? (realInventorySummary.distribution.gloves / realInventorySummary.totalValue) * 100 : 0 },
+                          { name: lang === 'de' ? 'Kisten' : 'Cases', val: realInventorySummary.distribution.cases, color: '#ffcc00', pct: realInventorySummary.totalValue ? (realInventorySummary.distribution.cases / realInventorySummary.totalValue) * 100 : 0 },
+                          { name: lang === 'de' ? 'Waffen' : 'Weapons', val: realInventorySummary.distribution.weapons, color: '#00d182', pct: realInventorySummary.totalValue ? (realInventorySummary.distribution.weapons / realInventorySummary.totalValue) * 100 : 0 }
+                        ]} />
                       </div>
                     </div>
-                  </div>
-                  <div className="chart-body-container">
-                    <SkinChart 
-                      data={historicalDataMap['total_portfolio'] || []} 
-                      currentPrice={realInventorySummary.totalValue} 
-                      isPositive={realInventorySummary.pnlPct >= 0}
-                    />
-                  </div>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {activeTab === 'analytics' && (
+              <div className="analytics-view" style={{ padding: '0 16px', paddingBottom: '120px' }}>
+                <div className="section-header" style={{ marginTop: '16px' }}>
+                  <h2 className="section-title">{lang === 'de' ? 'Erweiterte Analysen' : 'Advanced Analytics'}</h2>
                 </div>
 
-                {realInventoryItems.length > 0 && (
-                  <div className="dashboard-widgets" style={{ display: 'flex', gap: '16px', marginTop: '16px', flexWrap: 'wrap' }}>
-                    <div style={{ flex: '1 1 300px', background: 'rgba(255,255,255,0.05)', borderRadius: '12px', padding: '16px' }}>
-                      <h4 style={{ margin: '0 0 16px 0', fontSize: '14px', color: '#fff' }}>
-                        {lang === 'de' ? 'Kategorien' : 'Categories'}
-                      </h4>
-                      <DiversificationChart data={[
-                        { name: lang === 'de' ? 'Messer' : 'Knives', val: realInventorySummary.distribution.knives, color: '#ff3b30', pct: realInventorySummary.totalValue ? (realInventorySummary.distribution.knives / realInventorySummary.totalValue) * 100 : 0 },
-                        { name: lang === 'de' ? 'Handschuhe' : 'Gloves', val: realInventorySummary.distribution.gloves, color: '#ff9500', pct: realInventorySummary.totalValue ? (realInventorySummary.distribution.gloves / realInventorySummary.totalValue) * 100 : 0 },
-                        { name: lang === 'de' ? 'Kisten' : 'Cases', val: realInventorySummary.distribution.cases, color: '#ffcc00', pct: realInventorySummary.totalValue ? (realInventorySummary.distribution.cases / realInventorySummary.totalValue) * 100 : 0 },
-                        { name: lang === 'de' ? 'Waffen' : 'Weapons', val: realInventorySummary.distribution.weapons, color: '#00d182', pct: realInventorySummary.totalValue ? (realInventorySummary.distribution.weapons / realInventorySummary.totalValue) * 100 : 0 }
-                      ]} />
+                <div className="dashboard-widgets" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: '16px', marginBottom: '24px' }}>
+                  <div className="portfolio-summary" style={{ padding: '20px', marginBottom: '0' }}>
+                    <div className="stat-label-tr">{lang === 'de' ? 'Risikoprofil' : 'Risk Profile'}</div>
+                    <div className="stat-value-tr" style={{ fontSize: '24px', color: riskScore.score > 6.5 ? 'var(--color-red)' : riskScore.score < 4.5 ? 'var(--color-green)' : 'var(--color-amber)' }}>
+                      {riskScore.label}
                     </div>
+                    <div className="stat-change-tr" style={{ color: 'var(--text-secondary)' }}>Score: {riskScore.score}/10</div>
                   </div>
-                )}
-              </div>
-            </div>
-          )}
 
-          {activeTab === 'analytics' && (
-            <div className="analytics-view" style={{ padding: '0 16px', paddingBottom: '120px' }}>
-              <div className="section-header" style={{ marginTop: '16px' }}>
-                <h2 className="section-title">{lang === 'de' ? 'Erweiterte Analysen' : 'Advanced Analytics'}</h2>
-              </div>
-              
-              <div className="dashboard-widgets" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: '16px', marginBottom: '24px' }}>
-                <div className="portfolio-summary" style={{ padding: '20px', marginBottom: '0' }}>
-                  <div className="stat-label-tr">{lang === 'de' ? 'Risikoprofil' : 'Risk Profile'}</div>
-                  <div className="stat-value-tr" style={{ fontSize: '24px', color: riskScore.score > 6.5 ? 'var(--color-red)' : riskScore.score < 4.5 ? 'var(--color-green)' : 'var(--color-amber)' }}>
-                    {riskScore.label}
-                  </div>
-                  <div className="stat-change-tr" style={{ color: 'var(--text-secondary)' }}>Score: {riskScore.score}/10</div>
-                </div>
-                
-                <div className="portfolio-summary" style={{ padding: '20px', marginBottom: '0' }}>
-                  <div className="stat-label-tr">{lang === 'de' ? 'Ø Volatilität' : 'Avg Volatility'}</div>
-                  <div className="stat-value-tr" style={{ fontSize: '24px' }}>
-                    {averageVolatility}%
-                  </div>
-                  <div className="stat-change-tr" style={{ color: 'var(--text-secondary)' }}>{lang === 'de' ? 'Historische Schwankung' : 'Historical fluctuation'}</div>
-                </div>
-              </div>
-
-              <div className="portfolio-summary" style={{ alignItems: 'stretch' }}>
-                <h3 style={{ margin: '0 0 16px 0', fontSize: '15px' }}>{lang === 'de' ? 'Gewinn- & Verlustverteilung' : 'Profit & Loss Distribution'}</h3>
-                <div style={{ display: 'flex', width: '100%', height: '12px', borderRadius: '6px', overflow: 'hidden', background: 'rgba(255,255,255,0.05)' }}>
-                  <div style={{ width: `${(profitDistribution.win / (profitDistribution.win + profitDistribution.loss + profitDistribution.breakEven || 1)) * 100}%`, background: 'var(--color-green)' }} />
-                  <div style={{ width: `${(profitDistribution.breakEven / (profitDistribution.win + profitDistribution.loss + profitDistribution.breakEven || 1)) * 100}%`, background: 'var(--color-amber)' }} />
-                  <div style={{ width: `${(profitDistribution.loss / (profitDistribution.win + profitDistribution.loss + profitDistribution.breakEven || 1)) * 100}%`, background: 'var(--color-red)' }} />
-                </div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '12px', fontSize: '12px', color: 'var(--text-secondary)' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}><div style={{ width: '8px', height: '8px', borderRadius: '50%', background: 'var(--color-green)' }}/> Profit</div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}><div style={{ width: '8px', height: '8px', borderRadius: '50%', background: 'var(--color-amber)' }}/> Break-even</div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}><div style={{ width: '8px', height: '8px', borderRadius: '50%', background: 'var(--color-red)' }}/> Loss</div>
-                </div>
-              </div>
-
-              <div className="dashboard-widgets" style={{ display: 'flex', gap: '16px', flexWrap: 'wrap' }}>
-                <div className="portfolio-summary" style={{ flex: '1 1 300px', alignItems: 'stretch' }}>
-                  <h3 style={{ margin: '0 0 16px 0', fontSize: '15px' }}>{lang === 'de' ? 'Top Performer (Inventar)' : 'Top Performers (Inv)'}</h3>
-                  {performers.best.map((item, idx) => (
-                    <div key={idx} style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '12px', fontSize: '13px' }}>
-                      <div style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '180px' }}>{item.name}</div>
-                      <div className="price-up">+{item.change.toFixed(1)}%</div>
+                  <div className="portfolio-summary" style={{ padding: '20px', marginBottom: '0' }}>
+                    <div className="stat-label-tr">{lang === 'de' ? 'Ø Volatilität' : 'Avg Volatility'}</div>
+                    <div className="stat-value-tr" style={{ fontSize: '24px' }}>
+                      {averageVolatility}%
                     </div>
-                  ))}
-                  {performers.best.length === 0 && <div style={{ color: 'var(--text-secondary)', fontSize: '13px' }}>-</div>}
+                    <div className="stat-change-tr" style={{ color: 'var(--text-secondary)' }}>{lang === 'de' ? 'Historische Schwankung' : 'Historical fluctuation'}</div>
+                  </div>
                 </div>
 
-                <div className="portfolio-summary" style={{ flex: '1 1 300px', alignItems: 'stretch' }}>
-                  <h3 style={{ margin: '0 0 16px 0', fontSize: '15px' }}>{lang === 'de' ? 'Flops (Inventar)' : 'Underperformers (Inv)'}</h3>
-                  {performers.worst.map((item, idx) => (
-                    <div key={idx} style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '12px', fontSize: '13px' }}>
-                      <div style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '180px' }}>{item.name}</div>
-                      <div className="price-down">{item.change.toFixed(1)}%</div>
-                    </div>
-                  ))}
-                  {performers.worst.length === 0 && <div style={{ color: 'var(--text-secondary)', fontSize: '13px' }}>-</div>}
+                <div className="portfolio-summary" style={{ alignItems: 'stretch' }}>
+                  <h3 style={{ margin: '0 0 16px 0', fontSize: '15px' }}>{lang === 'de' ? 'Gewinn- & Verlustverteilung' : 'Profit & Loss Distribution'}</h3>
+                  <div style={{ display: 'flex', width: '100%', height: '12px', borderRadius: '6px', overflow: 'hidden', background: 'rgba(255,255,255,0.05)' }}>
+                    <div style={{ width: `${(profitDistribution.win / (profitDistribution.win + profitDistribution.loss + profitDistribution.breakEven || 1)) * 100}%`, background: 'var(--color-green)' }} />
+                    <div style={{ width: `${(profitDistribution.breakEven / (profitDistribution.win + profitDistribution.loss + profitDistribution.breakEven || 1)) * 100}%`, background: 'var(--color-amber)' }} />
+                    <div style={{ width: `${(profitDistribution.loss / (profitDistribution.win + profitDistribution.loss + profitDistribution.breakEven || 1)) * 100}%`, background: 'var(--color-red)' }} />
+                  </div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '12px', fontSize: '12px', color: 'var(--text-secondary)' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}><div style={{ width: '8px', height: '8px', borderRadius: '50%', background: 'var(--color-green)' }} /> Profit</div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}><div style={{ width: '8px', height: '8px', borderRadius: '50%', background: 'var(--color-amber)' }} /> Break-even</div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}><div style={{ width: '8px', height: '8px', borderRadius: '50%', background: 'var(--color-red)' }} /> Loss</div>
+                  </div>
                 </div>
-              </div>
 
-              <div className="portfolio-summary" style={{ alignItems: 'stretch' }}>
-                <h3 style={{ margin: '0 0 16px 0', fontSize: '15px' }}>{lang === 'de' ? 'Globale Markttrends' : 'Global Market Trends'}</h3>
-                <div style={{ display: 'flex', gap: '24px', flexDirection: 'column' }}>
-                  <div>
-                    <div style={{ color: 'var(--text-secondary)', fontSize: '12px', marginBottom: '8px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Trending Up 🚀</div>
-                    {globalMarketTrends.gainers.map((item, idx) => (
-                      <div key={`g-${idx}`} style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px', fontSize: '13px', background: 'rgba(52, 211, 153, 0.05)', padding: '8px 12px', borderRadius: '8px' }}>
-                        <div style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '200px' }}>{item.name}</div>
+                <div className="dashboard-widgets" style={{ display: 'flex', gap: '16px', flexWrap: 'wrap' }}>
+                  <div className="portfolio-summary" style={{ flex: '1 1 300px', alignItems: 'stretch' }}>
+                    <h3 style={{ margin: '0 0 16px 0', fontSize: '15px' }}>{lang === 'de' ? 'Top Performer (Inventar)' : 'Top Performers (Inv)'}</h3>
+                    {performers.best.map((item, idx) => (
+                      <div key={idx} style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '12px', fontSize: '13px' }}>
+                        <div style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '180px' }}>{item.name}</div>
                         <div className="price-up">+{item.change.toFixed(1)}%</div>
                       </div>
                     ))}
+                    {performers.best.length === 0 && <div style={{ color: 'var(--text-secondary)', fontSize: '13px' }}>-</div>}
                   </div>
-                  <div>
-                    <div style={{ color: 'var(--text-secondary)', fontSize: '12px', marginBottom: '8px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Trending Down 📉</div>
-                    {globalMarketTrends.losers.map((item, idx) => (
-                      <div key={`l-${idx}`} style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px', fontSize: '13px', background: 'rgba(255, 69, 58, 0.05)', padding: '8px 12px', borderRadius: '8px' }}>
-                        <div style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '200px' }}>{item.name}</div>
+
+                  <div className="portfolio-summary" style={{ flex: '1 1 300px', alignItems: 'stretch' }}>
+                    <h3 style={{ margin: '0 0 16px 0', fontSize: '15px' }}>{lang === 'de' ? 'Flops (Inventar)' : 'Underperformers (Inv)'}</h3>
+                    {performers.worst.map((item, idx) => (
+                      <div key={idx} style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '12px', fontSize: '13px' }}>
+                        <div style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '180px' }}>{item.name}</div>
                         <div className="price-down">{item.change.toFixed(1)}%</div>
                       </div>
                     ))}
+                    {performers.worst.length === 0 && <div style={{ color: 'var(--text-secondary)', fontSize: '13px' }}>-</div>}
+                  </div>
+                </div>
+
+                <div className="portfolio-summary" style={{ alignItems: 'stretch' }}>
+                  <h3 style={{ margin: '0 0 16px 0', fontSize: '15px' }}>{lang === 'de' ? 'Globale Markttrends' : 'Global Market Trends'}</h3>
+                  <div style={{ display: 'flex', gap: '24px', flexDirection: 'column' }}>
+                    <div>
+                      <div style={{ color: 'var(--text-secondary)', fontSize: '12px', marginBottom: '8px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Trending Up 🚀</div>
+                      {globalMarketTrends.gainers.map((item, idx) => (
+                        <div key={`g-${idx}`} style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px', fontSize: '13px', background: 'rgba(52, 211, 153, 0.05)', padding: '8px 12px', borderRadius: '8px' }}>
+                          <div style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '200px' }}>{item.name}</div>
+                          <div className="price-up">+{item.change.toFixed(1)}%</div>
+                        </div>
+                      ))}
+                    </div>
+                    <div>
+                      <div style={{ color: 'var(--text-secondary)', fontSize: '12px', marginBottom: '8px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Trending Down 📉</div>
+                      {globalMarketTrends.losers.map((item, idx) => (
+                        <div key={`l-${idx}`} style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px', fontSize: '13px', background: 'rgba(255, 69, 58, 0.05)', padding: '8px 12px', borderRadius: '8px' }}>
+                          <div style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '200px' }}>{item.name}</div>
+                          <div className="price-down">{item.change.toFixed(1)}%</div>
+                        </div>
+                      ))}
+                    </div>
                   </div>
                 </div>
               </div>
-            </div>
-          )}
+            )}
 
-          {activeTab === 'inventory' && (
-            <div className="inventory-view">
-              <div className="inventory-header">
-                <div className="search-bar">
-                  <Search size={16} />
-                  <input
-                    type="text"
-                    placeholder={lang === 'de' ? 'Skins suchen...' : 'Search skins...'}
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                  />
+            {activeTab === 'inventory' && (
+              <div className="inventory-view">
+                <div className="inventory-header">
+                  <div className="search-bar">
+                    <Search size={16} />
+                    <input
+                      type="text"
+                      placeholder={lang === 'de' ? 'Skins suchen...' : 'Search skins...'}
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                    />
+                  </div>
+                </div>
+                <div className="inventory-grid">
+                  {filteredPortfolio.length === 0 ? (
+                    <div className="empty-state">
+                      <Activity size={48} style={{ opacity: 0.3, marginBottom: '16px' }} />
+                      <p>{lang === 'de' ? 'Keine Skins gefunden.' : 'No skins found.'}</p>
+                    </div>
+                  ) : (
+                    filteredPortfolio.map((item) => {
+                      const price = formatPrice(item.price, currency, valuationMode);
+                      return (
+                        <div key={item.id} className={`skin-card ${getRarityClass(item.price)}`} onClick={() => setSelectedSkinId(item.id)}>
+                          <div className="skin-card-image">
+                            <img src={item.img} alt={item.name} />
+                            {item.qty > 1 && <div className="skin-card-qty">x{item.qty}</div>}
+                          </div>
+                          <div className="skin-card-details">
+                            <div className="skin-card-name" title={item.name}>{item.name}</div>
+                            <div className="skin-card-price">{price}</div>
+                          </div>
+                        </div>
+                      );
+                    })
+                  )}
                 </div>
               </div>
-              <div className="inventory-grid">
-                {filteredPortfolio.length === 0 ? (
-                  <div className="empty-state">
-                    <Activity size={48} style={{ opacity: 0.3, marginBottom: '16px' }} />
-                    <p>{lang === 'de' ? 'Keine Skins gefunden.' : 'No skins found.'}</p>
-                  </div>
-                ) : (
-                  filteredPortfolio.map((item) => {
-                    const price = formatPrice(item.price, currency, valuationMode);
-                    return (
-                      <div key={item.id} className={`skin-card ${getRarityClass(item.price)}`} onClick={() => setSelectedSkinId(item.id)}>
-                        <div className="skin-card-image">
-                          <img src={item.img} alt={item.name} />
-                          {item.qty > 1 && <div className="skin-card-qty">x{item.qty}</div>}
-                        </div>
-                        <div className="skin-card-details">
-                          <div className="skin-card-name" title={item.name}>{item.name}</div>
-                          <div className="skin-card-price">{price}</div>
-                        </div>
-                      </div>
-                    );
-                  })
-                )}
-              </div>
-            </div>
-          )}
+            )}
 
-          {activeTab === 'settings' && (
-            <SettingsView 
-              lang={lang}
-              realInventoryItems={realInventoryItems}
-              handleDisconnectInventory={handleDisconnectInventory}
-              handleImportInventory={handleImportInventory}
-              steamIdInput={steamIdInput}
-              setSteamIdInput={setSteamIdInput}
-              isFetchingInventory={isFetchingInventory}
-              user={user}
-              handleLogout={handleLogout}
-            />
-          )}
-        </main>
+            {activeTab === 'settings' && (
+              <SettingsView
+                lang={lang}
+                realInventoryItems={realInventoryItems}
+                handleDisconnectInventory={handleDisconnectInventory}
+                handleImportInventory={handleImportInventory}
+                steamIdInput={steamIdInput}
+                setSteamIdInput={setSteamIdInput}
+                isFetchingInventory={isFetchingInventory}
+                user={user}
+                handleLogout={handleLogout}
+                inventoryError={inventoryError}
+              />
+            )}
+          </main>
 
-        <nav className="tab-bar">
-          <button 
-            className={`tab-btn ${activeTab === 'dashboard' ? 'tab-btn--active' : ''}`}
-            onClick={() => setActiveTab('dashboard')}
-          >
-            <BarChart2 size={24} />
-            <span className="tab-label">{lang === 'de' ? 'Übersicht' : 'Overview'}</span>
-          </button>
-          <button 
-            className={`tab-btn ${activeTab === 'analytics' ? 'tab-btn--active' : ''}`}
-            onClick={() => setActiveTab('analytics')}
-          >
-            <Activity size={24} />
-            <span className="tab-label">{lang === 'de' ? 'Analysen' : 'Analytics'}</span>
-          </button>
-          <button 
-            className={`tab-btn ${activeTab === 'inventory' ? 'tab-btn--active' : ''}`}
-            onClick={() => setActiveTab('inventory')}
-          >
-            <Wallet size={24} />
-            <span className="tab-label">{lang === 'de' ? 'Inventar' : 'Inventory'}</span>
-          </button>
-          <button 
-            className={`tab-btn ${activeTab === 'settings' ? 'tab-btn--active' : ''}`}
-            onClick={() => setActiveTab('settings')}
-          >
-            <LogOut size={24} />
-            <span className="tab-label">{lang === 'de' ? 'Einstellungen' : 'Settings'}</span>
-          </button>
-        </nav>
+          <nav className="tab-bar">
+            <button
+              className={`tab-btn ${activeTab === 'dashboard' ? 'tab-btn--active' : ''}`}
+              onClick={() => setActiveTab('dashboard')}
+            >
+              <BarChart2 size={24} />
+              <span className="tab-label">{lang === 'de' ? 'Übersicht' : 'Overview'}</span>
+            </button>
+            <button
+              className={`tab-btn ${activeTab === 'analytics' ? 'tab-btn--active' : ''}`}
+              onClick={() => setActiveTab('analytics')}
+            >
+              <Activity size={24} />
+              <span className="tab-label">{lang === 'de' ? 'Analysen' : 'Analytics'}</span>
+            </button>
+            <button
+              className={`tab-btn ${activeTab === 'inventory' ? 'tab-btn--active' : ''}`}
+              onClick={() => setActiveTab('inventory')}
+            >
+              <Wallet size={24} />
+              <span className="tab-label">{lang === 'de' ? 'Inventar' : 'Inventory'}</span>
+            </button>
+            <button
+              className={`tab-btn ${activeTab === 'settings' ? 'tab-btn--active' : ''}`}
+              onClick={() => setActiveTab('settings')}
+            >
+              <LogOut size={24} />
+              <span className="tab-label">{lang === 'de' ? 'Einstellungen' : 'Settings'}</span>
+            </button>
+          </nav>
+        </div>
       </div>
-    </div>
-  );
-};
+    );
+  };
 
   // --- SUB-COMPONENTS FOR SHEETS (Proper React components to support state/hooks) ---
 
@@ -1913,7 +1919,7 @@ export default function App() {
                     <div className="skin-card-name" title={item.name}>{item.name}</div>
                     <div className="skin-card-price" style={{ color: 'var(--color-green)' }}>{price}</div>
                   </div>
-                  <button 
+                  <button
                     onClick={(e) => {
                       e.stopPropagation();
                       setSkins(prev => prev.filter(s => s.id !== item.id));
@@ -1943,9 +1949,9 @@ export default function App() {
           <div className="achievements-circle-ring">
             <svg width="100" height="100" viewBox="0 0 100 100" style={{ transform: 'rotate(-90deg)' }}>
               <circle cx="50" cy="50" r="42" stroke="rgba(255,255,255,0.05)" strokeWidth="6" fill="transparent" />
-              <circle cx="50" cy="50" r="42" stroke="url(#goldGradient)" strokeWidth="6" fill="transparent" 
-                strokeDasharray={`${2 * Math.PI * 42}`} 
-                strokeDashoffset={`${2 * Math.PI * 42 * (1 - progress / 100)}`} 
+              <circle cx="50" cy="50" r="42" stroke="url(#goldGradient)" strokeWidth="6" fill="transparent"
+                strokeDasharray={`${2 * Math.PI * 42}`}
+                strokeDashoffset={`${2 * Math.PI * 42 * (1 - progress / 100)}`}
                 strokeLinecap="round"
                 style={{ transition: 'stroke-dashoffset 0.8s ease-in-out' }}
               />
@@ -2028,13 +2034,13 @@ export default function App() {
                 <div style={{ fontSize: '12px', color: '#10b981', fontWeight: 'bold' }}>
                   Wert: {formatPrice(totalValue, currency, valuationMode)}
                 </div>
-                
+
                 <div className="collection-items-mini-grid">
                   {col.items.map((item, idx) => {
                     const rarityName = getSkinRarity(item.name);
                     return (
-                      <div 
-                        key={`${item.id}-${idx}`} 
+                      <div
+                        key={`${item.id}-${idx}`}
                         className={`collection-mini-item rarity-glow-${rarityName.toLowerCase().replace(/[^a-z0-9]/g, '')}`}
                         onClick={() => setSelectedSkinId(item.id)}
                         style={{ cursor: 'pointer' }}
@@ -2079,7 +2085,7 @@ export default function App() {
 
     const runTradeUpSim = () => {
       if (selectedItems.length !== 10) return;
-      
+
       const currentRarity = getSkinRarity(firstSelected.name);
       const nextRarity = nextRarityMap[currentRarity];
       if (!nextRarity) return;
@@ -2186,15 +2192,15 @@ export default function App() {
               Ausgewählt ({selectedItems.length}/10)
             </span>
             {selectedItems.length > 0 && (
-              <button 
-                onClick={() => setSelectedTradeUpIds([])} 
+              <button
+                onClick={() => setSelectedTradeUpIds([])}
                 style={{ background: 'transparent', border: 'none', color: '#ff3b30', fontSize: '12px', cursor: 'pointer' }}
               >
                 Zurücksetzen
               </button>
             )}
           </div>
-          
+
           {selectedItems.length === 0 ? (
             <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '24px', background: 'rgba(255,255,255,0.01)', border: '1px dashed rgba(255,255,255,0.1)', borderRadius: '16px', textAlign: 'center', gap: '8px' }}>
               <FlaskConical size={32} color="#00F0FF" />
@@ -2209,12 +2215,12 @@ export default function App() {
                 const rarityName = getSkinRarity(item.name);
                 const rColor = rarityColors[rarityName] || '#fff';
                 return (
-                  <div 
+                  <div
                     key={item.id}
                     style={{ flexShrink: 0, position: 'relative', width: '56px', height: '56px', background: 'rgba(255,255,255,0.03)', border: `1px solid ${rColor}50`, borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '4px' }}
                   >
                     <img src={item.img} alt={item.name} style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain' }} />
-                    <button 
+                    <button
                       onClick={() => setSelectedTradeUpIds(prev => prev.filter(id => id !== item.id))}
                       style={{ position: 'absolute', top: '-4px', right: '-4px', width: '16px', height: '16px', borderRadius: '50%', background: '#ff3b30', border: 'none', color: '#fff', fontSize: '9px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}
                     >
@@ -2228,8 +2234,8 @@ export default function App() {
         </div>
 
         {selectedItems.length === 10 && (
-          <button 
-            onClick={runTradeUpSim} 
+          <button
+            onClick={runTradeUpSim}
             className="onboarding-btn primary-btn"
             style={{ width: '100%', background: 'linear-gradient(135deg, #00f0ff 0%, #00ff77 100%)', color: '#000', fontWeight: 'bold', border: 'none', borderRadius: '14px', padding: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', boxShadow: '0 8px 20px rgba(0, 240, 255, 0.25)', marginBottom: '20px' }}
           >
@@ -2241,20 +2247,20 @@ export default function App() {
           <div style={{ fontSize: '11px', color: 'rgba(255,255,255,0.4)', fontWeight: 'bold', textTransform: 'uppercase', marginBottom: '8px' }}>
             Verfügbare Skins
           </div>
-          
+
           <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', maxHeight: '40vh', overflowY: 'auto' }}>
             {eligibleFiltered.map(item => {
               const rarityName = getSkinRarity(item.name);
               const rColor = rarityColors[rarityName] || '#94a3b8';
               return (
-                <div 
+                <div
                   key={item.id}
                   style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '10px 14px', background: 'rgba(255,255,255,0.01)', border: '1px solid rgba(255,255,255,0.04)', borderRadius: '12px' }}
                 >
                   <div style={{ width: '40px', height: '40px', background: 'rgba(0,0,0,0.3)', borderRadius: '8px', padding: '4px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                     <img src={item.img} alt={item.name} style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain' }} />
                   </div>
-                  
+
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <div style={{ fontSize: '13px', fontWeight: 'bold', color: '#fff', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                       {item.name}
@@ -2263,10 +2269,10 @@ export default function App() {
                       {rarityName}
                     </div>
                   </div>
-                  
+
                   <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                     <span style={{ fontSize: '12px', fontWeight: 'bold', color: '#10b981' }}>{formatPrice(item.price, currency, 'STEAM')}</span>
-                    <button 
+                    <button
                       onClick={() => {
                         if (selectedTradeUpIds.length < 10) {
                           setSelectedTradeUpIds(prev => [...prev, item.id]);
@@ -2281,7 +2287,7 @@ export default function App() {
                 </div>
               );
             })}
-            
+
             {eligibleFiltered.length === 0 && (
               <div style={{ color: 'rgba(255,255,255,0.3)', fontSize: '12px', textAlign: 'center', padding: '20px' }}>
                 Keine passenden Skins im Inventar vorhanden.
@@ -2307,7 +2313,7 @@ export default function App() {
                   <h4 style={{ margin: '0 0 4px 0', fontSize: '18px', fontWeight: 'bold', color: '#fff' }}>{simResult.name}</h4>
                   <div style={{ fontSize: '12px', fontWeight: 'bold', color: rarityColors[simResult.rarity] }}>{simResult.rarity}</div>
                 </div>
-                
+
                 <div>
                   <div style={{ fontSize: '11px', color: 'rgba(255,255,255,0.4)', textTransform: 'uppercase' }}>Upgrade Wert</div>
                   <div style={{ fontSize: '28px', fontWeight: 'bold', color: '#fff', margin: '4px 0' }}>{formatPrice(simResult.price, currency, 'STEAM')}</div>
@@ -2320,8 +2326,8 @@ export default function App() {
                   Float des Ergebnisses: <span style={{ fontFamily: 'monospace', color: '#fff', fontWeight: 'bold' }}>{simResult.float.toFixed(6)}</span> ({simResult.wear})
                 </div>
 
-                <button 
-                  className="onboarding-btn primary-btn" 
+                <button
+                  className="onboarding-btn primary-btn"
                   style={{ width: '100%' }}
                   onClick={() => {
                     setShowSimResultModal(false);
@@ -2396,11 +2402,11 @@ export default function App() {
             <label style={{ fontSize: '11px', color: 'rgba(255,255,255,0.4)', fontWeight: 'bold', textTransform: 'uppercase' }}>Investierter Betrag</label>
             <div style={{ display: 'flex', alignItems: 'center', background: 'rgba(0,0,0,0.3)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '10px', padding: '10px 14px' }}>
               <span style={{ fontSize: '16px', fontWeight: 'bold', color: '#fff', marginRight: '8px' }}>{currency === 'EUR' ? '€' : '$'}</span>
-              <input 
-                type="number" 
-                value={investAmount} 
-                onChange={(e) => setInvestAmount(e.target.value)} 
-                style={{ background: 'transparent', border: 'none', color: '#fff', fontSize: '16px', fontWeight: 'bold', outline: 'none', width: '100%' }} 
+              <input
+                type="number"
+                value={investAmount}
+                onChange={(e) => setInvestAmount(e.target.value)}
+                style={{ background: 'transparent', border: 'none', color: '#fff', fontSize: '16px', fontWeight: 'bold', outline: 'none', width: '100%' }}
                 placeholder="1000"
               />
             </div>
@@ -2424,7 +2430,7 @@ export default function App() {
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
             <label style={{ fontSize: '11px', color: 'rgba(255,255,255,0.4)', fontWeight: 'bold', textTransform: 'uppercase' }}>Investment-Kategorie</label>
-            <select 
+            <select
               value={category}
               onChange={(e) => setCategory(e.target.value)}
               style={{ background: 'rgba(0,0,0,0.3)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '10px', padding: '10px 14px', color: '#fff', fontSize: '13px', fontWeight: 'bold', outline: 'none', cursor: 'pointer' }}
@@ -2435,9 +2441,9 @@ export default function App() {
             </select>
           </div>
 
-          <button 
+          <button
             type="button"
-            onClick={calculateWhatIf} 
+            onClick={calculateWhatIf}
             className="onboarding-btn primary-btn"
             style={{ marginTop: '8px', background: 'linear-gradient(135deg, #00f0ff 0%, #00ff77 100%)', color: '#000', fontWeight: 'bold' }}
           >
@@ -2448,14 +2454,14 @@ export default function App() {
         {result && (
           <div style={{ background: 'rgba(16,185,129,0.04)', border: '1px solid rgba(16,185,129,0.25)', borderRadius: '20px', padding: '18px', textAlign: 'center' }} className="slide-in-right">
             <div style={{ fontSize: '10px', fontWeight: 'bold', color: '#00F0FF', letterSpacing: '2px', textTransform: 'uppercase' }}>Simulationsergebnis</div>
-            
+
             <div style={{ margin: '14px 0' }}>
               <div style={{ fontSize: '11px', color: 'rgba(255,255,255,0.4)' }}>Wert heute</div>
               <div style={{ fontSize: '32px', fontWeight: 'bold', color: '#fff', marginTop: '2px' }}>
                 {formatPrice(result.finalVal, currency, 'STEAM')}
               </div>
             </div>
-            
+
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', borderTop: '1px solid rgba(255,255,255,0.05)', paddingTop: '14px' }}>
               <div>
                 <div style={{ fontSize: '10px', color: 'rgba(255,255,255,0.4)' }}>Reingewinn</div>
@@ -2480,7 +2486,7 @@ export default function App() {
     const [tab, setTab] = useState(0);
     const [loadingMap, setLoadingMap] = useState({});
 
-    const items = tab === 0 
+    const items = tab === 0
       ? Array.from(new Map(realInventoryItems.map(item => [item.marketHashName, item])).values())
       : skins;
 
@@ -2526,7 +2532,7 @@ export default function App() {
         </div>
 
         <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '4px' }}>
-          <button 
+          <button
             type="button"
             onClick={checkAll}
             style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '8px', padding: '6px 12px', color: '#fff', fontSize: '11px', fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer' }}
@@ -2541,20 +2547,20 @@ export default function App() {
             const skinportPrice = pricesDb && pricesDb[item.marketHashName]
               ? pricesDb[item.marketHashName]
               : item.price;
-            
+
             const steamPrice = steamMedianPrices[item.marketHashName];
             const spread = steamPrice && steamPrice > 0 ? ((steamPrice - skinportPrice) / steamPrice) * 100 : null;
             const profit = spread !== null && spread >= 15.0;
 
             return (
-              <div 
+              <div
                 key={item.id}
                 style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '10px 14px', background: 'rgba(255,255,255,0.01)', border: '1px solid rgba(255,255,255,0.04)', borderRadius: '12px' }}
               >
                 <div style={{ width: '40px', height: '40px', background: 'rgba(0,0,0,0.3)', borderRadius: '8px', padding: '4px', display: 'flex', alignItems: 'center', justifyContent: 'center', border: `1px solid ${rarityColors[getSkinRarity(item.name)] || '#fff'}30` }}>
                   <img src={item.img} alt={item.name} style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain' }} />
                 </div>
-                
+
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={{ fontSize: '13px', fontWeight: 'bold', color: '#fff', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                     {item.name}
@@ -2635,7 +2641,7 @@ export default function App() {
       <div className="sheet-content scrollbar-hide">
         <div style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.05)', borderRadius: '20px', padding: '16px', marginBottom: '20px' }}>
           <div style={{ fontSize: '13px', fontWeight: 'bold', color: '#fff', marginBottom: '12px' }}>Neuen Preisalarm einrichten</div>
-          
+
           <form onSubmit={createAlert} style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
               <label style={{ fontSize: '10px', color: 'rgba(255,255,255,0.4)', fontWeight: 'bold' }}>Skin auswählen</label>
@@ -2651,7 +2657,7 @@ export default function App() {
                 ))}
               </select>
             </div>
-            
+
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
                 <label style={{ fontSize: '10px', color: 'rgba(255,255,255,0.4)', fontWeight: 'bold' }}>Alarmtyp</label>
@@ -2664,7 +2670,7 @@ export default function App() {
                   <option value="below" style={{ background: '#0a0a0a' }}>{"Fällt unter (<=)"}</option>
                 </select>
               </div>
-              
+
               <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
                 <label style={{ fontSize: '10px', color: 'rgba(255,255,255,0.4)', fontWeight: 'bold' }}>Zielpreis ({currency === 'EUR' ? '€' : '$'})</label>
                 <input
@@ -2678,9 +2684,9 @@ export default function App() {
                 />
               </div>
             </div>
-            
-            <button 
-              type="submit" 
+
+            <button
+              type="submit"
               className="onboarding-btn primary-btn"
               style={{ background: 'linear-gradient(135deg, #00f0ff 0%, #00ff77 100%)', color: '#000', fontWeight: 'bold', marginTop: '4px' }}
             >
@@ -2693,10 +2699,10 @@ export default function App() {
           <div style={{ fontSize: '11px', color: 'rgba(255,255,255,0.4)', fontWeight: 'bold', textTransform: 'uppercase', marginBottom: '8px' }}>
             Deine aktiven Preisalarme
           </div>
-          
+
           <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', maxHeight: '30vh', overflowY: 'auto' }}>
             {alerts.map(alert => (
-              <div 
+              <div
                 key={alert.id}
                 style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 16px', background: 'rgba(255,255,255,0.01)', border: '1px solid rgba(255,255,255,0.04)', borderRadius: '12px' }}
               >
@@ -2709,8 +2715,8 @@ export default function App() {
                     {formatPrice(alert.target, currency, 'STEAM')}
                   </div>
                 </div>
-                
-                <button 
+
+                <button
                   onClick={() => handleDeleteAlert(alert.id)}
                   style={{ background: 'rgba(255,59,48,0.15)', border: 'none', borderRadius: '50%', width: '26px', height: '26px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#ff3b30', cursor: 'pointer', flexShrink: 0 }}
                 >
@@ -2756,7 +2762,7 @@ export default function App() {
       <>
         {/* Floating Action Button */}
         <div className="fab-container">
-          <button 
+          <button
             className={`fab-btn ${showActionHub ? 'active' : ''}`}
             onClick={() => setShowActionHub(!showActionHub)}
             title="SkinStock Hub"
@@ -2858,14 +2864,14 @@ export default function App() {
     if (activeSheet === 'watchlist') {
       title = lang === 'de' ? 'Beobachtungsliste' : 'Watchlist';
       content = (
-        <WatchlistSheet 
-          filteredSkins={filteredSkins} 
-          currency={currency} 
-          valuationMode={valuationMode} 
-          setSkins={setSkins} 
-          playTradeSound={playTradeSound} 
-          setSelectedSkinId={setSelectedSkinId} 
-          formatPrice={formatPrice} 
+        <WatchlistSheet
+          filteredSkins={filteredSkins}
+          currency={currency}
+          valuationMode={valuationMode}
+          setSkins={setSkins}
+          playTradeSound={playTradeSound}
+          setSelectedSkinId={setSelectedSkinId}
+          formatPrice={formatPrice}
         />
       );
     } else if (activeSheet === 'achievements') {
@@ -2874,23 +2880,23 @@ export default function App() {
     } else if (activeSheet === 'collections') {
       title = lang === 'de' ? 'Sammlungen (Collections)' : 'Collections';
       content = (
-        <CollectionsSheet 
-          realInventoryItems={realInventoryItems} 
-          currency={currency} 
-          valuationMode={valuationMode} 
-          formatPrice={formatPrice} 
-          setSelectedSkinId={setSelectedSkinId} 
+        <CollectionsSheet
+          realInventoryItems={realInventoryItems}
+          currency={currency}
+          valuationMode={valuationMode}
+          formatPrice={formatPrice}
+          setSelectedSkinId={setSelectedSkinId}
         />
       );
     } else if (activeSheet === 'tradeup') {
       title = lang === 'de' ? 'Trade-Up Rechner' : 'Trade-Up';
       content = (
-        <TradeUpSheet 
-          realInventoryItems={realInventoryItems} 
-          pricesDb={pricesDb} 
-          currency={currency} 
-          formatPrice={formatPrice} 
-          unlockAchievement={unlockAchievement} 
+        <TradeUpSheet
+          realInventoryItems={realInventoryItems}
+          pricesDb={pricesDb}
+          currency={currency}
+          formatPrice={formatPrice}
+          unlockAchievement={unlockAchievement}
         />
       );
     } else if (activeSheet === 'whatif') {
@@ -2899,29 +2905,29 @@ export default function App() {
     } else if (activeSheet === 'arbitrage') {
       title = lang === 'de' ? 'Arbitrage-Finder' : 'Arbitrage Finder';
       content = (
-        <ArbitrageSheet 
-          realInventoryItems={realInventoryItems} 
+        <ArbitrageSheet
+          realInventoryItems={realInventoryItems}
           skins={skins}
-          pricesDb={pricesDb} 
-          steamMedianPrices={steamMedianPrices} 
-          currency={currency} 
-          formatPrice={formatPrice} 
-          fetchSteamMedianPrice={fetchSteamMedianPrice} 
-          setSelectedSkinId={setSelectedSkinId} 
+          pricesDb={pricesDb}
+          steamMedianPrices={steamMedianPrices}
+          currency={currency}
+          formatPrice={formatPrice}
+          fetchSteamMedianPrice={fetchSteamMedianPrice}
+          setSelectedSkinId={setSelectedSkinId}
         />
       );
     } else if (activeSheet === 'pricealerts') {
       title = lang === 'de' ? 'Preisalarme' : 'Price Alerts';
       content = (
-        <PriceAlertsSheet 
-          skins={skins} 
-          realInventoryItems={realInventoryItems} 
-          currency={currency} 
-          formatPrice={formatPrice} 
-          alerts={alerts} 
-          setAlerts={setAlerts} 
-          playTradeSound={playTradeSound} 
-          handleDeleteAlert={handleDeleteAlert} 
+        <PriceAlertsSheet
+          skins={skins}
+          realInventoryItems={realInventoryItems}
+          currency={currency}
+          formatPrice={formatPrice}
+          alerts={alerts}
+          setAlerts={setAlerts}
+          playTradeSound={playTradeSound}
+          handleDeleteAlert={handleDeleteAlert}
         />
       );
     }
@@ -2943,33 +2949,33 @@ export default function App() {
 
   const renderSkinDetailModal = () => {
     if (!selectedSkinId || selectedSkinId === 'total' || selectedSkinId === 'none') return null;
-    
+
     const skin = selectedSkinId.startsWith('real-')
       ? realInventoryItems.find(s => s.id === selectedSkinId)
       : skins.find(s => s.id === selectedSkinId);
-      
+
     if (!skin) return null;
-    
+
     const simPrice = getSimulatedPrice(skin, selectedSkinFloat);
     const simWear = getWearNameFromFloat(selectedSkinFloat);
     const collectionName = findCollectionForSkin(skin.name) || 'None';
-    
+
     const rarityName = getSkinRarity(skin.name);
     const rarityColor = rarityColors[rarityName] || '#94a3b8';
-    
+
     const cost = skin.basePrice || skin.price;
     const profitVal = simPrice - cost;
     const roiPct = cost > 0 ? ((simPrice - cost) / cost) * 100 : 0;
-    
+
     const smaVal = selectedSkinSma || simPrice;
     const rsiVal = selectedSkinRsi || 50;
     const signal = selectedSkinSignal || 'HOLD';
-    
+
     const asks = simulatedOrderBook.asks || [];
     const bids = simulatedOrderBook.bids || [];
-    
+
     const inWatchlist = skins.some(s => s.name === skin.name);
-    
+
     return (
       <div className="sheet-overlay show" onClick={() => setSelectedSkinId(null)}>
         <div className="sheet-container detail-modal-card" onClick={(e) => e.stopPropagation()}>
@@ -2979,25 +2985,25 @@ export default function App() {
               <X size={16} />
             </button>
           </div>
-          
+
           <div className="detail-modal-content scrollbar-hide">
             <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '16px', textAlign: 'center', marginBottom: '24px' }}>
-              <div 
+              <div
                 className={`rarity-glow-${rarityName.toLowerCase().replace(/[^a-z0-9]/g, '')}`}
-                style={{ 
-                  width: '120px', 
-                  height: '120px', 
-                  borderRadius: '24px', 
-                  background: 'rgba(255,255,255,0.02)', 
-                  display: 'flex', 
-                  alignItems: 'center', 
+                style={{
+                  width: '120px',
+                  height: '120px',
+                  borderRadius: '24px',
+                  background: 'rgba(255,255,255,0.02)',
+                  display: 'flex',
+                  alignItems: 'center',
                   justifyContent: 'center',
                   padding: '12px'
                 }}
               >
                 <img src={skin.img} alt={skin.name} style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain', filter: 'drop-shadow(0 10px 15px rgba(0,0,0,0.5))' }} />
               </div>
-              
+
               <div>
                 <h4 style={{ margin: '0 0 6px 0', fontSize: '18px', fontWeight: 'bold', color: '#fff' }}>{skin.name}</h4>
                 <div style={{ display: 'flex', gap: '8px', justifyContent: 'center', flexWrap: 'wrap' }}>
@@ -3012,7 +3018,7 @@ export default function App() {
                 </div>
               </div>
             </div>
-            
+
             <div style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.06)', borderRadius: '16px', padding: '16px', marginBottom: '16px', textAlign: 'center' }}>
               <div style={{ fontSize: '11px', color: 'rgba(255,255,255,0.4)', textTransform: 'uppercase', letterSpacing: '1px' }}>
                 {lang === 'de' ? 'Simulierter Preis' : 'Simulated Price'}
@@ -3024,7 +3030,7 @@ export default function App() {
                 {profitVal >= 0 ? '+' : ''}{formatPrice(profitVal, currency, valuationMode)} ({profitVal >= 0 ? '+' : ''}{roiPct.toFixed(1)}% ROI)
               </div>
             </div>
-            
+
             <div style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.06)', borderRadius: '16px', padding: '16px', marginBottom: '16px' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
                 <span style={{ fontSize: '12px', color: 'rgba(255,255,255,0.4)' }}>Wear-Simulator</span>
@@ -3034,18 +3040,18 @@ export default function App() {
                 Float: {selectedSkinFloat.toFixed(4)}
               </div>
               <div className="float-slider-container">
-                <input 
-                  type="range" 
-                  min="0" 
-                  max="1" 
-                  step="0.0001" 
-                  value={selectedSkinFloat} 
-                  onChange={(e) => setSelectedSkinFloat(parseFloat(e.target.value))} 
+                <input
+                  type="range"
+                  min="0"
+                  max="1"
+                  step="0.0001"
+                  value={selectedSkinFloat}
+                  onChange={(e) => setSelectedSkinFloat(parseFloat(e.target.value))}
                   className="float-custom-slider"
                 />
               </div>
             </div>
-            
+
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '16px' }}>
               <div style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.06)', borderRadius: '16px', padding: '12px' }}>
                 <div style={{ fontSize: '10px', color: 'rgba(255,255,255,0.4)', textTransform: 'uppercase' }}>Einkaufspreis</div>
@@ -3053,7 +3059,7 @@ export default function App() {
                   {formatPrice(cost, currency, 'STEAM')}
                 </div>
               </div>
-              
+
               <div style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.06)', borderRadius: '16px', padding: '12px' }}>
                 <div style={{ fontSize: '10px', color: 'rgba(255,255,255,0.4)', textTransform: 'uppercase' }}>Technical Signal</div>
                 <div style={{ marginTop: '4px' }}>
@@ -3077,7 +3083,7 @@ export default function App() {
                 </div>
               </div>
             </div>
-            
+
             <div style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.06)', borderRadius: '16px', padding: '16px', marginBottom: '24px' }}>
               <div style={{ fontSize: '12px', fontWeight: 'bold', color: '#fff', marginBottom: '10px' }}>Simuliertes Orderbuch</div>
               <table className="order-book-table">
@@ -3109,9 +3115,9 @@ export default function App() {
                 </tbody>
               </table>
             </div>
-            
+
             <div style={{ display: 'flex', gap: '12px' }}>
-              <button 
+              <button
                 type="button"
                 className="onboarding-btn secondary-btn"
                 style={{ flex: 1 }}
@@ -3127,8 +3133,8 @@ export default function App() {
                 <Eye size={16} style={{ marginRight: '6px' }} />
                 {inWatchlist ? 'Watchlist verlassen' : 'Auf Watchlist'}
               </button>
-              
-              <button 
+
+              <button
                 type="button"
                 className="onboarding-btn primary-btn"
                 style={{ flex: 1 }}

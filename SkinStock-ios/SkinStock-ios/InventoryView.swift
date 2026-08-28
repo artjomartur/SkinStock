@@ -14,12 +14,33 @@ struct InventoryView: View {
     var body: some View {
         NavigationStack {
             ScrollView {
-                if inventoryService.inventory.isEmpty {
+                if inventoryService.isFetching {
+                    VStack {
+                        ProgressView()
+                            .padding(.bottom, 10)
+                        Text("Inventar wird geladen...")
+                            .foregroundColor(.secondary)
+                    }
+                    .padding(.top, 100)
+                } else if let error = inventoryService.error {
+                    VStack(spacing: 20) {
+                        Image(systemName: "exclamationmark.triangle")
+                            .font(.system(size: 50))
+                            .foregroundColor(.red)
+                        Text("Fehler beim Laden:")
+                            .foregroundColor(.red)
+                        Text(error)
+                            .foregroundColor(.secondary)
+                            .multilineTextAlignment(.center)
+                            .padding(.horizontal)
+                    }
+                    .padding(.top, 100)
+                } else if inventoryService.inventory.isEmpty {
                     VStack(spacing: 20) {
                         Image(systemName: "archivebox")
                             .font(.system(size: 50))
                             .foregroundColor(.gray)
-                        Text("Dein Inventar ist leer oder lädt...")
+                        Text("Dein Inventar ist leer.")
                             .foregroundColor(.secondary)
                     }
                     .padding(.top, 100)

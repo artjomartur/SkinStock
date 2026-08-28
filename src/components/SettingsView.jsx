@@ -1,21 +1,22 @@
 import React from 'react';
 import { LogOut } from 'lucide-react';
 
-export default function SettingsView({ 
-  lang, 
-  realInventoryItems, 
-  handleDisconnectInventory, 
-  handleImportInventory, 
-  steamIdInput, 
-  setSteamIdInput, 
-  isFetchingInventory, 
-  user, 
-  handleLogout 
+export default function SettingsView({
+  lang,
+  realInventoryItems,
+  handleDisconnectInventory,
+  handleImportInventory,
+  steamIdInput,
+  setSteamIdInput,
+  isFetchingInventory,
+  user,
+  handleLogout,
+  inventoryError
 }) {
   return (
     <div className="settings-view" style={{ padding: '24px', maxWidth: '600px', margin: '0 auto' }}>
       <h2>{lang === 'de' ? 'Einstellungen' : 'Settings'}</h2>
-      
+
       <div className="settings-card" style={{ background: 'rgba(255,255,255,0.05)', padding: '20px', borderRadius: '12px', marginTop: '20px' }}>
         <h3 style={{ marginBottom: '16px' }}>{lang === 'de' ? 'Steam Inventar' : 'Steam Inventory'}</h3>
         {realInventoryItems.length > 0 ? (
@@ -41,6 +42,11 @@ export default function SettingsView({
             <button type="submit" className="steam-import-btn" disabled={isFetchingInventory}>
               {isFetchingInventory ? 'Loading...' : 'Import'}
             </button>
+            {inventoryError && (
+              <p style={{ marginTop: '12px', color: '#ff3b30', fontSize: '13px' }}>
+                {inventoryError}
+              </p>
+            )}
           </form>
         )}
       </div>
@@ -49,7 +55,7 @@ export default function SettingsView({
         <div className="settings-card" style={{ background: 'rgba(255,255,255,0.05)', padding: '20px', borderRadius: '12px', marginTop: '20px' }}>
           <h3 style={{ marginBottom: '16px' }}>Account</h3>
           <button onClick={handleLogout} className="steam-import-btn" style={{ background: 'rgba(255,59,48,0.2)', color: '#ff3b30' }}>
-            <LogOut size={16} style={{ display: 'inline', marginRight: '8px' }}/>
+            <LogOut size={16} style={{ display: 'inline', marginRight: '8px' }} />
             {lang === 'de' ? 'Abmelden' : 'Log Out'}
           </button>
         </div>
@@ -59,17 +65,17 @@ export default function SettingsView({
       <div className="settings-card" style={{ background: 'rgba(255,255,255,0.05)', padding: '20px', borderRadius: '12px', marginTop: '20px', textAlign: 'center' }}>
         <h3 style={{ marginBottom: '8px' }}>{lang === 'de' ? 'SkinStock für unterwegs' : 'SkinStock on the go'}</h3>
         <p style={{ color: '#94a3b8', fontSize: '13px', lineHeight: '1.5', marginBottom: '16px' }}>
-          {lang === 'de' 
+          {lang === 'de'
             ? 'Hol dir die SkinStock App bald für iOS und Android! Echtzeit-Preisalarme per Push-Meldung, Widgets für deinen Homescreen und nativer Flüssig-Wear-Simulator.'
             : 'Get the SkinStock App soon for iOS and Android! Real-time price alerts via push notifications, homescreen widgets, and native fluid wear simulator.'}
         </p>
-        
+
         {/* Store Badges SVG */}
         <div style={{ display: 'flex', justifyContent: 'center', gap: '16px', flexWrap: 'wrap', marginBottom: '20px' }}>
           <a href="#store-coming-soon" style={{ cursor: 'default', textDecoration: 'none' }} onClick={(e) => e.preventDefault()}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px', background: '#000', border: '1px solid rgba(255,255,255,0.15)', borderRadius: '8px', padding: '6px 14px', width: '135px', boxSizing: 'border-box', textAlign: 'left' }}>
               <svg viewBox="0 0 24 24" width="20" height="20" fill="#fff" style={{ flexShrink: 0 }}>
-                <path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.81-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M15.97 4.17c.66-.81 1.11-1.93.99-3.06-1 .04-2.22.67-2.94 1.5-.63.73-1.18 1.87-1 2.97 1.12.09 2.27-.6 2.95-1.41z"/>
+                <path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.81-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M15.97 4.17c.66-.81 1.11-1.93.99-3.06-1 .04-2.22.67-2.94 1.5-.63.73-1.18 1.87-1 2.97 1.12.09 2.27-.6 2.95-1.41z" />
               </svg>
               <div>
                 <div style={{ fontSize: '7px', color: '#fff', textTransform: 'uppercase' }}>Coming soon to</div>
@@ -81,7 +87,7 @@ export default function SettingsView({
           <a href="#store-coming-soon" style={{ cursor: 'default', textDecoration: 'none' }} onClick={(e) => e.preventDefault()}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px', background: '#000', border: '1px solid rgba(255,255,255,0.15)', borderRadius: '8px', padding: '6px 14px', width: '135px', boxSizing: 'border-box', textAlign: 'left' }}>
               <svg viewBox="0 0 24 24" width="20" height="20" fill="#fff" style={{ flexShrink: 0 }}>
-                <path d="M5 3.25c-.26 0-.52.07-.74.22L13.12 12l-8.86 8.53c.22.15.48.22.74.22.21 0 .42-.05.61-.15l13.62-7.85c.61-.35.98-1 .98-1.75s-.37-1.4-1-1.75L6.2 3.4c-.19-.1-.4-.15-.6-.15z"/>
+                <path d="M5 3.25c-.26 0-.52.07-.74.22L13.12 12l-8.86 8.53c.22.15.48.22.74.22.21 0 .42-.05.61-.15l13.62-7.85c.61-.35.98-1 .98-1.75s-.37-1.4-1-1.75L6.2 3.4c-.19-.1-.4-.15-.6-.15z" />
               </svg>
               <div>
                 <div style={{ fontSize: '7px', color: '#fff', textTransform: 'uppercase' }}>Coming soon to</div>
