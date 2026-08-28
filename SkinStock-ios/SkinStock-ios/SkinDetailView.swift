@@ -46,20 +46,9 @@ struct SkinDetailView: View {
                     // 3. Transluzente Glasscheibe mit schwebendem Item
                     ZStack {
                         RoundedRectangle(cornerRadius: 32, style: .continuous)
-                            .fill(.ultraThinMaterial)
+                            .fill(Color.clear)
                             .frame(height: 220)
-                            .overlay(
-                                RoundedRectangle(cornerRadius: 32, style: .continuous)
-                                    .stroke(
-                                        LinearGradient(
-                                            colors: [.white.opacity(0.4), .white.opacity(0.05), item.rarity.color.opacity(0.3)],
-                                            startPoint: .topLeading,
-                                            endPoint: .bottomTrailing
-                                        ),
-                                        lineWidth: 1
-                                    )
-                            )
-                            .shadow(color: item.rarity.color.opacity(0.12), radius: 30, x: 0, y: 15)
+                            .glassEffect(cornerRadius: 32)
                             .padding(.horizontal, 20)
                         
                         VStack(spacing: 8) {
@@ -190,9 +179,8 @@ struct SkinDetailView: View {
                         LiquidFloatSlider(value: $floatValue)
                             .padding(.vertical, 4)
                     }
-                    .padding(20)
-                    .background(RoundedRectangle(cornerRadius: 20).fill(Color.white.opacity(0.04)))
-                    .overlay(RoundedRectangle(cornerRadius: 20).stroke(Color.white.opacity(0.08), lineWidth: 0.5))
+                    .padding(24)
+                    .glassEffect(cornerRadius: 24)
                     .padding(.horizontal, 20)
                     
                     // Einkaufspreis-Karte
@@ -260,9 +248,8 @@ struct SkinDetailView: View {
                             .padding(.top, 4)
                         }
                     }
-                    .padding(20)
-                    .background(RoundedRectangle(cornerRadius: 20).fill(Color.white.opacity(0.04)))
-                    .overlay(RoundedRectangle(cornerRadius: 20).stroke(Color.white.opacity(0.08), lineWidth: 0.5))
+                    .padding(24)
+                    .glassEffect(cornerRadius: 24)
                     .padding(.horizontal, 20)
                     
                     // Chart & Picker
@@ -312,9 +299,8 @@ struct SkinDetailView: View {
                             .frame(maxWidth: .infinity)
                         }
                     }
-                    .padding(20)
-                    .background(RoundedRectangle(cornerRadius: 20).fill(Color.white.opacity(0.04)))
-                    .overlay(RoundedRectangle(cornerRadius: 20).stroke(Color.white.opacity(0.08), lineWidth: 0.5))
+                    .padding(24)
+                    .glassEffect(cornerRadius: 24)
                     .padding(.horizontal, 20)
                     
                     Spacer().frame(height: 40)

@@ -10,24 +10,23 @@ public struct LiquidGlassModifier: ViewModifier {
         content
             .background(
                 RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
-                    .fill(.ultraThinMaterial)
-                    // Inner shadow for depth
-                    .shadow(color: .black.opacity(0.15), radius: 2, x: 0, y: 1)
+                    .fill(Color.white.opacity(0.03))
+                    .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: cornerRadius, style: .continuous))
             )
             .overlay(
                 // Specular highlight (simulating light hitting the top edge of thick glass)
                 RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
                     .stroke(
                         LinearGradient(
-                            colors: [.white.opacity(0.8), .white.opacity(0.0)],
+                            colors: [.white.opacity(0.2), .white.opacity(0.05), .white.opacity(0.0)],
                             startPoint: .topLeading,
                             endPoint: .bottomTrailing
                         ),
-                        lineWidth: 1.5
+                        lineWidth: 1.0
                     )
             )
             // Chromatic aberration / volumetric shadow
-            .shadow(color: .black.opacity(0.3), radius: 20, x: 0, y: 12)
+            .shadow(color: .black.opacity(0.4), radius: 30, x: 0, y: 15)
     }
 }
 

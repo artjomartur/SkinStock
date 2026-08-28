@@ -196,15 +196,8 @@ struct InventoryGridItemView: View {
                 }
             }
         }
-        .padding(10)
-        .background(
-            RoundedRectangle(cornerRadius: 18)
-                .fill(Color.white.opacity(0.02))
-        )
-        .overlay(
-            RoundedRectangle(cornerRadius: 18)
-                .stroke(Color.white.opacity(0.06), lineWidth: 0.5)
-        )
+        .padding(12)
+        .glassEffect(cornerRadius: 20)
     }
 }
 

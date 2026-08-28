@@ -288,8 +288,8 @@ struct PortfolioScoreView: View {
             .frame(maxWidth: .infinity)
         }
         .padding(20)
-        .background(RoundedRectangle(cornerRadius: 16).fill(Color.primary.opacity(0.05)))
-        .overlay(RoundedRectangle(cornerRadius: 16).stroke(Color.primary.opacity(0.1), lineWidth: 0.5))
+        .glassEffect(cornerRadius: 24)
+        .padding(.horizontal, 24)
     }
 }
 
@@ -532,8 +532,8 @@ struct CollectionsView: View {
                 }
             }
         }
-        .padding(16)
-        .background(RoundedRectangle(cornerRadius: 16).fill(Color.white.opacity(0.04)))
-        .overlay(RoundedRectangle(cornerRadius: 16).stroke(Color.white.opacity(0.08), lineWidth: 0.5))
+        .padding(20)
+        .glassEffect(cornerRadius: 24)
+        .padding(.horizontal, 24)
     }
 }

@@ -191,10 +191,9 @@ struct ContentView: View {
                         }
                         .pickerStyle(SegmentedPickerStyle())
                     }
-                    .padding()
+                    .padding(24)
                     .frame(maxWidth: .infinity, alignment: .leading)
-                    .background(RoundedRectangle(cornerRadius: 16).fill(Color.primary.opacity(0.04)))
-                    .overlay(RoundedRectangle(cornerRadius: 16).stroke(Color.primary.opacity(0.1), lineWidth: 1))
+                    .glassEffect(cornerRadius: 24)
                     
                     // Goal Progress Bar
                     if userSettings.targetValue > 0 {
@@ -376,15 +375,8 @@ struct SkinCardView: View {
                     .foregroundColor(item.rarity.color)
             }
         }
-        .padding(12)
-        .background(
-            RoundedRectangle(cornerRadius: 18)
-                .fill(Color.primary.opacity(0.03))
-        )
-        .overlay(
-            RoundedRectangle(cornerRadius: 18)
-                .stroke(Color.primary.opacity(0.06), lineWidth: 0.5)
-        )
+        .padding(16)
+        .glassEffect(cornerRadius: 20)
     }
 }
 
@@ -447,10 +439,9 @@ struct GoalProgressView: View {
                     .foregroundColor(.secondary)
             }
         }
-        .padding(16)
-        .background(RoundedRectangle(cornerRadius: 16).fill(Color.primary.opacity(0.04)))
-        .overlay(RoundedRectangle(cornerRadius: 16).stroke(Color.primary.opacity(0.08), lineWidth: 0.5))
-        .padding(.horizontal, 20)
+        .padding(20)
+        .glassEffect(cornerRadius: 24)
+        .padding(.horizontal, 24)
     }
 }
 

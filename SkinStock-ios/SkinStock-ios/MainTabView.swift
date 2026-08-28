@@ -186,10 +186,8 @@ struct MainTabView: View {
                 .padding(.top, 10)
             }
             .padding(.vertical, 24)
-            .background(RoundedRectangle(cornerRadius: 30).fill(Color.white.opacity(0.04)))
-            .overlay(RoundedRectangle(cornerRadius: 30).stroke(Color.white.opacity(0.12), lineWidth: 1))
+            .glassEffect(cornerRadius: 30)
             .padding(.horizontal, 24)
-            .shadow(color: Color.black.opacity(0.5), radius: 30, x: 0, y: 15)
         }
     }
     
@@ -222,8 +220,7 @@ struct MainTabView: View {
                     .foregroundColor(.secondary)
             }
             .padding(12)
-            .background(RoundedRectangle(cornerRadius: 16).fill(Color.white.opacity(0.03)))
-            .overlay(RoundedRectangle(cornerRadius: 16).stroke(Color.white.opacity(0.06), lineWidth: 0.5))
+            .glassEffect(cornerRadius: 16)
         }
     }
     
@@ -311,21 +308,7 @@ struct MainTabView: View {
             ZStack {
                 Circle()
                     .frame(width: 58, height: 58)
-                    .background(
-                        Circle().fill(.ultraThinMaterial)
-                    )
-                    .overlay(
-                        Circle()
-                            .stroke(
-                                LinearGradient(
-                                    colors: [Color.white.opacity(0.35), Color.white.opacity(0.05)],
-                                    startPoint: .top,
-                                    endPoint: .bottom
-                                ),
-                                lineWidth: 1.0
-                            )
-                    )
-                    .shadow(color: Color.black.opacity(0.25), radius: 15, x: 0, y: 10)
+                    .glassEffect(cornerRadius: 29)
                 
                 Circle()
                     .fill(
