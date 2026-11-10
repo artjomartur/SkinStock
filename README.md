@@ -129,6 +129,39 @@
 
 ---
 
+## 📸 App Preview & Screenshots
+
+<div align="center">
+  <table border="0">
+    <tr>
+      <td align="center" width="70%" valign="top">
+        <img src="assets/screenshot-dashboard.png" alt="SkinStock Desktop Dashboard" width="100%" style="border-radius: 16px; border: 1px solid rgba(255,255,255,0.1); box-shadow: 0 16px 40px rgba(0,0,0,0.6);" />
+        <br />
+        <b>Real-Time Portfolio Ticker & Interactive Charting</b>
+      </td>
+      <td align="center" width="30%" valign="top">
+        <img src="assets/screenshot-mobile.png" alt="SkinStock Mobile View" width="100%" style="border-radius: 24px; border: 1px solid rgba(255,255,255,0.1); box-shadow: 0 16px 40px rgba(0,0,0,0.6);" />
+        <br />
+        <b>Mobile App & PWA (9:16)</b>
+      </td>
+    </tr>
+    <tr>
+      <td align="center" width="50%" valign="top">
+        <img src="assets/screenshot-inventory.png" alt="SkinStock Inventory Grid" width="100%" style="border-radius: 16px; border: 1px solid rgba(255,255,255,0.1);" />
+        <br />
+        <b>Live Inventory Asset Grid & Search</b>
+      </td>
+      <td align="center" width="50%" valign="top">
+        <img src="assets/screenshot-analytics.png" alt="SkinStock Advanced Analytics" width="100%" style="border-radius: 16px; border: 1px solid rgba(255,255,255,0.1);" />
+        <br />
+        <b>Risk Profiling, Volatility & Profit/Loss Distribution</b>
+      </td>
+    </tr>
+  </table>
+</div>
+
+---
+
 ## 🛠️ Tech Stack & Architecture
 
 SkinStock is engineered with a modern, high-performance hybrid stack:

@@ -1,0 +1,634 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SkinStock • Interactive Product Video Showcase</title>
+  <link rel="icon" type="image/png" href="/logo.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;600;700&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #07090e;
+      --card-bg: rgba(18, 22, 34, 0.7);
+      --border: rgba(255, 255, 255, 0.08);
+      --accent: #10b981;
+      --accent-glow: rgba(16, 185, 129, 0.35);
+      --pink: #ff2e93;
+      --cyan: #00f0ff;
+      --gold: #f59e0b;
+      --text: #f8fafc;
+      --text-muted: #94a3b8;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      background-color: var(--bg);
+      color: var(--text);
+      font-family: 'Inter', -apple-system, sans-serif;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      overflow-x: hidden;
+      position: relative;
+    }
+
+    /* Ambient Glow Background */
+    .glow-orb {
+      position: absolute;
+      width: 500px;
+      height: 500px;
+      border-radius: 50%;
+      filter: blur(140px);
+      pointer-events: none;
+      z-index: 0;
+      opacity: 0.25;
+      animation: pulse 8s ease-in-out infinite alternate;
+    }
+    .glow-1 { top: -100px; left: -100px; background: var(--accent); }
+    .glow-2 { bottom: -100px; right: -100px; background: var(--pink); animation-delay: -4s; }
+    .glow-3 { top: 40%; left: 50%; transform: translate(-50%, -50%); background: var(--cyan); opacity: 0.15; }
+
+    @keyframes pulse {
+      0% { transform: scale(1); opacity: 0.2; }
+      100% { transform: scale(1.15); opacity: 0.35; }
+    }
+
+    /* Header Nav */
+    header {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      z-index: 100;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 16px 32px;
+      background: rgba(7, 9, 14, 0.8);
+      backdrop-filter: blur(20px);
+      border-bottom: 1px solid var(--border);
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      text-decoration: none;
+      color: #fff;
+    }
+
+    .brand img {
+      width: 36px;
+      height: 36px;
+      border-radius: 10px;
+      box-shadow: 0 4px 14px var(--accent-glow);
+    }
+
+    .brand-title {
+      font-family: 'Space Grotesk', sans-serif;
+      font-weight: 700;
+      font-size: 1.25rem;
+      letter-spacing: -0.02em;
+    }
+
+    .beta-pill {
+      background: rgba(245, 158, 11, 0.15);
+      color: var(--gold);
+      border: 1px solid rgba(245, 158, 11, 0.3);
+      padding: 2px 8px;
+      border-radius: 12px;
+      font-size: 0.75rem;
+      font-weight: 700;
+    }
+
+    .format-switcher {
+      display: flex;
+      background: rgba(255, 255, 255, 0.05);
+      padding: 4px;
+      border-radius: 12px;
+      border: 1px solid var(--border);
+      gap: 4px;
+    }
+
+    .format-btn {
+      background: transparent;
+      border: none;
+      color: var(--text-muted);
+      padding: 6px 14px;
+      border-radius: 8px;
+      font-size: 0.85rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .format-btn.active {
+      background: var(--accent);
+      color: #000;
+      box-shadow: 0 2px 10px var(--accent-glow);
+    }
+
+    /* Main Stage */
+    main {
+      position: relative;
+      z-index: 10;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 100px 24px 60px;
+      max-width: 1200px;
+      width: 100%;
+    }
+
+    .stage-container {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      perspective: 1200px;
+      margin-bottom: 24px;
+      width: 100%;
+    }
+
+    /* Device Frames */
+    .device-viewport {
+      position: relative;
+      transition: all 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+      box-shadow: 0 30px 80px rgba(0, 0, 0, 0.8), 0 0 40px var(--accent-glow);
+      background: #000;
+      overflow: hidden;
+    }
+
+    /* Mobile 9:16 iPhone Frame */
+    .device-viewport.mode-mobile {
+      width: 360px;
+      height: 740px;
+      border-radius: 48px;
+      border: 10px solid #1e2230;
+      box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.1), 0 30px 80px rgba(0, 0, 0, 0.9);
+    }
+
+    .device-viewport.mode-mobile::before {
+      content: '';
+      position: absolute;
+      top: 14px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 90px;
+      height: 24px;
+      background: #000;
+      border-radius: 12px;
+      z-index: 50;
+    }
+
+    /* Desktop 16:9 Frame */
+    .device-viewport.mode-desktop {
+      width: 960px;
+      height: 560px;
+      border-radius: 20px;
+      border: 2px solid var(--border);
+    }
+
+    .device-screen {
+      width: 100%;
+      height: 100%;
+      position: relative;
+      overflow: hidden;
+      background: #090c12;
+    }
+
+    .device-screen img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      position: absolute;
+      top: 0;
+      left: 0;
+      opacity: 0;
+      transition: opacity 0.6s ease, transform 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+      transform: scale(1.04);
+    }
+
+    .device-screen img.active {
+      opacity: 1;
+      transform: scale(1);
+    }
+
+    /* Live HUD Overlay / Beat Drop Effect */
+    .hud-overlay {
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      pointer-events: none;
+      z-index: 40;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      padding: 24px;
+    }
+
+    .hud-tag {
+      align-self: flex-start;
+      background: rgba(0, 0, 0, 0.7);
+      backdrop-filter: blur(12px);
+      border: 1px solid var(--accent);
+      color: var(--accent);
+      padding: 6px 14px;
+      border-radius: 20px;
+      font-size: 0.75rem;
+      font-weight: 700;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+      box-shadow: 0 4px 20px var(--accent-glow);
+    }
+
+    .hud-caption-box {
+      background: rgba(7, 9, 14, 0.85);
+      backdrop-filter: blur(16px);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 16px 20px;
+      max-width: 90%;
+      align-self: center;
+      text-align: center;
+      transition: all 0.3s ease;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+    }
+
+    .hud-caption-title {
+      font-family: 'Space Grotesk', sans-serif;
+      font-size: 1.1rem;
+      font-weight: 700;
+      color: #fff;
+      margin-bottom: 4px;
+    }
+
+    .hud-caption-desc {
+      font-size: 0.85rem;
+      color: var(--text-muted);
+      line-height: 1.4;
+    }
+
+    /* Controls Bar */
+    .player-controls {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      background: var(--card-bg);
+      backdrop-filter: blur(16px);
+      border: 1px solid var(--border);
+      padding: 12px 24px;
+      border-radius: 24px;
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+      margin-bottom: 32px;
+    }
+
+    .play-btn {
+      background: var(--accent);
+      color: #000;
+      border: none;
+      width: 44px;
+      height: 44px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      font-size: 1.2rem;
+      font-weight: bold;
+      transition: transform 0.2s, box-shadow 0.2s;
+    }
+
+    .play-btn:hover {
+      transform: scale(1.08);
+      box-shadow: 0 0 20px var(--accent-glow);
+    }
+
+    .timeline-bar {
+      width: 240px;
+      height: 6px;
+      background: rgba(255, 255, 255, 0.1);
+      border-radius: 3px;
+      overflow: hidden;
+      cursor: pointer;
+      position: relative;
+    }
+
+    .timeline-progress {
+      height: 100%;
+      background: linear-gradient(90deg, var(--accent) 0%, var(--cyan) 100%);
+      width: 0%;
+      transition: width 0.1s linear;
+    }
+
+    .scene-pills {
+      display: flex;
+      gap: 8px;
+    }
+
+    .scene-dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      background: rgba(255, 255, 255, 0.2);
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .scene-dot.active {
+      background: var(--accent);
+      transform: scale(1.3);
+      box-shadow: 0 0 10px var(--accent);
+    }
+
+    /* Scene Director Storyboard Cards */
+    .storyboard-section {
+      width: 100%;
+      margin-top: 20px;
+    }
+
+    .section-title {
+      font-family: 'Space Grotesk', sans-serif;
+      font-size: 1.5rem;
+      font-weight: 700;
+      margin-bottom: 16px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .storyboard-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+      gap: 16px;
+      width: 100%;
+    }
+
+    .story-card {
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 16px;
+      cursor: pointer;
+      transition: all 0.2s;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .story-card:hover, .story-card.active {
+      border-color: var(--accent);
+      transform: translateY(-4px);
+      box-shadow: 0 12px 28px rgba(0, 0, 0, 0.5);
+    }
+
+    .story-card.active::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 4px;
+      height: 100%;
+      background: var(--accent);
+    }
+
+    .card-timestamp {
+      font-size: 0.75rem;
+      font-weight: 700;
+      color: var(--accent);
+      text-transform: uppercase;
+      margin-bottom: 6px;
+      letter-spacing: 0.05em;
+    }
+
+    .card-title {
+      font-weight: 700;
+      font-size: 1rem;
+      color: #fff;
+      margin-bottom: 6px;
+    }
+
+    .card-desc {
+      font-size: 0.8rem;
+      color: var(--text-muted);
+      line-height: 1.4;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="glow-orb glow-1"></div>
+  <div class="glow-orb glow-2"></div>
+  <div class="glow-orb glow-3"></div>
+
+  <header>
+    <a href="/" class="brand">
+      <img src="/logo.png" alt="SkinStock Icon">
+      <span class="brand-title">SkinStock</span>
+      <span class="beta-pill">v1.0.0-beta</span>
+    </a>
+
+    <div class="format-switcher">
+      <button class="format-btn active" id="btn-mobile" onclick="setMode('mobile')">📱 9:16 Reels / TikTok</button>
+      <button class="format-btn" id="btn-desktop" onclick="setMode('desktop')">🖥️ 16:9 Showcase Tour</button>
+    </div>
+  </header>
+
+  <main>
+    <div class="stage-container">
+      <div class="device-viewport mode-mobile" id="viewport">
+        <div class="device-screen">
+          <img src="/assets/screenshot-mobile.png" id="img-scene-0" class="active" alt="Dashboard Scene">
+          <img src="/assets/screenshot-dashboard.png" id="img-scene-1" alt="Trading Chart Scene">
+          <img src="/assets/screenshot-inventory.png" id="img-scene-2" alt="Inventory Grid Scene">
+          <img src="/assets/screenshot-analytics.png" id="img-scene-3" alt="Analytics Risk Scene">
+          <img src="/assets/screenshot-settings.png" id="img-scene-4" alt="Settings & Widget Scene">
+        </div>
+
+        <div class="hud-overlay">
+          <div class="hud-tag" id="hud-tag">⚡ LIVE TICKER</div>
+          <div class="hud-caption-box">
+            <div class="hud-caption-title" id="hud-title">Real-Time CS2 Portfolio</div>
+            <div class="hud-caption-desc" id="hud-desc">Live-Bewertung deines gesamten Inventars mit Steam- & Cashout-Raten auf die Sekunde genau.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Controls -->
+    <div class="player-controls">
+      <button class="play-btn" id="play-btn" onclick="togglePlay()">⏸</button>
+      <div class="timeline-bar" onclick="seek(event)">
+        <div class="timeline-progress" id="progress"></div>
+      </div>
+      <div class="scene-pills" id="dots">
+        <div class="scene-dot active" onclick="jumpTo(0)"></div>
+        <div class="scene-dot" onclick="jumpTo(1)"></div>
+        <div class="scene-dot" onclick="jumpTo(2)"></div>
+        <div class="scene-dot" onclick="jumpTo(3)"></div>
+        <div class="scene-dot" onclick="jumpTo(4)"></div>
+      </div>
+    </div>
+
+    <!-- Storyboard Director Sections -->
+    <div class="storyboard-section">
+      <div class="section-title">
+        <span>🎬</span> Regie-Szenen & Schnitt-Ablauf (High-Energy CS2 Hype)
+      </div>
+
+      <div class="storyboard-grid">
+        <div class="story-card active" onclick="jumpTo(0)" id="card-0">
+          <div class="card-timestamp">0:00 - 0:05 • Hook</div>
+          <div class="card-title">1. Der Hook & Live-Saldo</div>
+          <div class="card-desc">„Weißt du wirklich, wie viel dein CS2-Inventar gerade wert ist?“ Blick auf das Portfolio mit fallendem Confetti & Live-Gewinn.</div>
+        </div>
+
+        <div class="story-card" onclick="jumpTo(1)" id="card-1">
+          <div class="card-timestamp">0:05 - 0:12 • Ticker & Chart</div>
+          <div class="card-title">2. TradingView Charts & Cashout</div>
+          <div class="card-desc">Switch zwischen Steam Market und Skinport Cashout-Preisen. Interaktive Candlestick-Kurve mit 24h-Trend.</div>
+        </div>
+
+        <div class="story-card" onclick="jumpTo(2)" id="card-2">
+          <div class="card-timestamp">0:12 - 0:18 • Asset Flex</div>
+          <div class="card-title">3. Inventar-Grid & Doppler-Phasen</div>
+          <div class="card-desc">Schneller Scroll durch Messer, Handschuhe, StatTrak™ Waffen und Kisten. Float-Erkennung auf die 4. Nachkommastelle.</div>
+        </div>
+
+        <div class="story-card" onclick="jumpTo(3)" id="card-3">
+          <div class="card-timestamp">0:18 - 0:24 • Smart Analytics</div>
+          <div class="card-title">4. Risikoprofil & Top-Performer</div>
+          <div class="card-desc">Gewinn- & Verlustbalken, Volatilität (7.59%) und automatische Flop/Top-Skin Erkennung für maximale Rendite.</div>
+        </div>
+
+        <div class="story-card" onclick="jumpTo(4)" id="card-4">
+          <div class="card-timestamp">0:24 - 0:30 • Call-to-Action</div>
+          <div class="card-title">5. Beta Release & iOS Widget</div>
+          <div class="card-desc">SkinStock v1.0.0-beta ist live! Homescreen Widget Vorschau, Link in Bio / App Store / Web Beta.</div>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <script>
+    const scenes = [
+      {
+        tag: "⚡ LIVE TICKER",
+        title: "Real-Time CS2 Portfolio",
+        desc: "Live-Bewertung deines gesamten Inventars mit Steam- & Cashout-Raten auf die Sekunde genau.",
+        duration: 5000
+      },
+      {
+        tag: "📈 TRADING CHARTS",
+        title: "TradingView Kurven & Ticker",
+        desc: "Behalte Marktschwankungen im Blick. 1W, 1M, 1Y Zeiträume und Dual-Valuation (Steam vs. Skinport).",
+        duration: 7000
+      },
+      {
+        tag: "💎 ASSET FLEX",
+        title: "Inventar & Seltenheits-Grid",
+        desc: "Exakte Float-Werte, Sticker-Wertberechnung und automatische Doppler-Phasenerkennung.",
+        duration: 6000
+      },
+      {
+        tag: "📊 ERWEITERTE ANALYSEN",
+        title: "Risiko, Volatilität & Rendite",
+        desc: "Dein persönliches Risikoprofil, historische Schwankungen und Top-Performer Kisten im Überblick.",
+        duration: 6000
+      },
+      {
+        tag: "🚀 PUBLIC BETA",
+        title: "Jetzt in der Beta starten!",
+        desc: "Hol dir SkinStock v1.0.0-beta für Web, iOS Widgets & Android. Kostenlos testen!",
+        duration: 6000
+      }
+    ];
+
+    let currentScene = 0;
+    let isPlaying = true;
+    let sceneTimer = null;
+    let startTime = Date.now();
+    let currentDuration = scenes[0].duration;
+
+    function setMode(mode) {
+      const vp = document.getElementById('viewport');
+      const btnM = document.getElementById('btn-mobile');
+      const btnD = document.getElementById('btn-desktop');
+
+      if (mode === 'mobile') {
+        vp.className = 'device-viewport mode-mobile';
+        btnM.classList.add('active');
+        btnD.classList.remove('active');
+      } else {
+        vp.className = 'device-viewport mode-desktop';
+        btnD.classList.add('active');
+        btnM.classList.remove('active');
+      }
+    }
+
+    function showScene(idx) {
+      currentScene = idx;
+      
+      // Update Images
+      for (let i = 0; i < scenes.length; i++) {
+        const img = document.getElementById(`img-scene-${i}`);
+        if (img) img.classList.toggle('active', i === idx);
+        
+        const dot = document.querySelectorAll('.scene-dot')[i];
+        if (dot) dot.classList.toggle('active', i === idx);
+
+        const card = document.getElementById(`card-${i}`);
+        if (card) card.classList.toggle('active', i === idx);
+      }
+
+      // Update HUD
+      const s = scenes[idx];
+      document.getElementById('hud-tag').textContent = s.tag;
+      document.getElementById('hud-title').textContent = s.title;
+      document.getElementById('hud-desc').textContent = s.desc;
+
+      startTime = Date.now();
+      currentDuration = s.duration;
+    }
+
+    function nextScene() {
+      const next = (currentScene + 1) % scenes.length;
+      showScene(next);
+    }
+
+    function jumpTo(idx) {
+      showScene(idx);
+    }
+
+    function togglePlay() {
+      isPlaying = !isPlaying;
+      document.getElementById('play-btn').textContent = isPlaying ? '⏸' : '▶';
+    }
+
+    // Animation Loop for Timeline Progress
+    function tick() {
+      if (isPlaying) {
+        const elapsed = Date.now() - startTime;
+        const pct = Math.min(100, (elapsed / currentDuration) * 100);
+        document.getElementById('progress').style.width = pct + '%';
+
+        if (elapsed >= currentDuration) {
+          nextScene();
+        }
+      }
+      requestAnimationFrame(tick);
+    }
+
+    requestAnimationFrame(tick);
+  </script>
+</body>
+</html>
