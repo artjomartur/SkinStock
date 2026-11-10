@@ -1,14 +1,16 @@
 {
   "name": "skinstock",
+  "version": "1.0.0-beta",
+  "description": "Real-time CS2 Market Ticker, Portfolio & Trade-Up Tracker (Beta)",
   "private": true,
-  "version": "0.0.0",
   "type": "module",
   "scripts": {
     "dev": "vite",
     "build": "vite build",
     "lint": "eslint .",
     "preview": "npm run build && wrangler dev",
-    "deploy": "npm run build && wrangler deploy"
+    "deploy": "npm run build && wrangler deploy",
+    "test:browser": "node scripts/debug.js"
   },
   "dependencies": {
     "@capacitor-firebase/authentication": "^8.3.0",

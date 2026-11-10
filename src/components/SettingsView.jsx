@@ -128,6 +128,13 @@ export default function SettingsView({
           </div>
         </div>
       </div>
+
+      <div style={{ textAlign: 'center', marginTop: '32px', opacity: 0.5, fontSize: '12px', display: 'flex', flexDirection: 'column', gap: '4px', alignItems: 'center' }}>
+        <span style={{ background: 'rgba(245, 158, 11, 0.15)', color: '#f59e0b', padding: '2px 8px', borderRadius: '12px', fontSize: '11px', fontWeight: 600, border: '1px solid rgba(245, 158, 11, 0.3)' }}>
+          v1.0.0-beta
+        </span>
+        <span style={{ color: '#94a3b8' }}>SkinStock CS2 Asset Tracker & Portfolio</span>
+      </div>
     </div>
   );
 }
